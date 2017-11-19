@@ -3,6 +3,7 @@ TODO:
     - reimplement voice player (with simultaneous cross-server play)
     - split things into different files (learn how to use cogs) (maybe make module for utility functions, etc?)
     - add the ability for server owners to add reactions to messages with specified keywords
+    - make a class for the bot and replace global vars w/ member vars
 """
 
 import discord
@@ -86,7 +87,7 @@ async def reply(dest, msg):
 # private message a user
 # input: uid; string; id of user to message
 #        msg; string; message content to send
-async def private_message(uid, msg):             
+async def private_message(uid, msg):
     user = await find(uid)
         
     if (user is None):
@@ -118,7 +119,7 @@ async def msg_admin_channel(msg, server):
 
 # add reaction to message if any keyword is in message
 # input: message; discord.Message; message to react to
-#        keyword; string or list; keyword(s) to look for in message
+#        keyword; string or list; keyword(s) to look for in message content, author name or id
 #        emoji; string or list; emoji(s) to react with
 #        partial; bool=True; should react if partial keywords are found
 async def react(message, keyword, emoji, partial=True):
@@ -132,16 +133,34 @@ async def react(message, keyword, emoji, partial=True):
         found = False
         
         if (partial): # search for any occurence of key in message
-            if (any(key in message.content.lower() for key in keyword)):
-                found = True
+            for key in keyword:
+                if (key in message.content.lower()):
+                    found = True
+                elif (key in message.author.name.lower()):
+                    found = True
+                elif (key in message.author.id):
+                    found = True
         else: # search for word by itself
-            if (any(re.match(r"\b" + key + r"\b", message.content.lower()) for key in keyword)):
-                found = True
+            for key in keyword:
+                if (re.match(r"\b" + key + r"\b", message.content.lower())):
+                    found = True
+                elif (key == message.author.name):
+                    found = True
+                elif (key == message.author.id):
+                    found = True
         
         if found:
+            # react with custom emojis
             for e in bot.get_all_emojis():
                 if (any(em == e.name for em in emoji) and e.server == message.server):
                     await bot.add_reaction(message, e)
+                    
+            # react with normal emojis and ignore custom ones
+            for e in emoji:
+                if (any(e in em.name for em in bot.get_all_emojis())):
+                    continue
+                
+                await bot.add_reaction(message, e)
     
     except Exception as e:
         if ("Reaction blocked" in str(e)):
@@ -205,12 +224,6 @@ def find_channel(name, server):
 def format_member_name(user):
     return "%s#%s" % (user.name, str(user.discriminator))
 
-# is developer for error messages
-# input: user, discord.User; user to check id of
-# output: bool; if the user id is equal to the developer's id
-def is_dev(user):
-    return (str(user.id) == str(DEV_ID))
-
 # alerts a user if an error occurs, will always alert developer
 # input: e; error object; the error to output
 #        uid; string=""; the user's unique id
@@ -236,6 +249,25 @@ async def error_alert(e, uid="", extra=""):
         
     if (uid != DEV_ID and DEV_ID):
             await private_message(DEV_ID, err)
+            
+"""///////////////
+//    checks    //
+///////////////"""
+
+# checks if a user is the listed developer
+# input: obj; discord.Member or discord.Message; the user to check or message to extract user from
+# output: bool; if the member's ID matches the developer's
+def is_dev(obj):
+    global DEV_ID
+    
+    if (isinstance(obj, discord.Member)):
+        if (obj.id == DEV_ID):
+            return True
+    elif (isinstance(obj, discord.Message)):
+        if (obj.author.id == DEV_ID):
+            return True
+        
+    return False
 
 """//////////////////
 //    functions    //
@@ -280,6 +312,7 @@ async def get_insult():
 @bot.command(description="liquidizes an image, can be url or attachment (if attachment, add !liquid as a comment)",
              brief="liquidizes an image, can be url or attachment",
              pass_context=True)
+@commands.cooldown(2, 5, commands.BucketType.server)
 async def liquid(ctx, url : str=""):
     try:
         message = ctx.message
@@ -524,6 +557,11 @@ async def info(ctx, *, name : str=""):
         info_msg = get_user_info(ctx.message.author)
 
     await reply(ctx.message, info_msg)
+    
+@bot.command(description="make the bot say something (OWNER ONLY)", brief="make the bot say something", pass_context=True)
+@commands.check(lambda ctx: is_dev(ctx.message))
+async def say(ctx, *, msg : str):
+    await bot.say(msg)
 
 """///////////////////////
 //    error handling    //
@@ -571,7 +609,6 @@ async def on_message(message):
         # insult anyone who @s us
         if (bot.user in message.mentions and not message.mention_everyone):
             await reply(message, "fuck you, you %s." % await get_insult())
-            return
         
         # respond to "^ this", "this", "^", etc.
         if (message.content.startswith("^") or message.content.lower() == "this"):
@@ -585,6 +622,7 @@ async def on_message(message):
                 return
             
         # TODO: reactions will go here
+        await react(message, "212702125744979979", "upvote")
         
         # process commands
         await bot.process_commands(message)
