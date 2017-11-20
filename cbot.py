@@ -33,7 +33,7 @@ handler.setFormatter(logging.Formatter("%(asctime)s:%(levelname)s:%(name)s: %(me
 //    init    //
 /////////////"""
 
-description = """CBot 2.0
+description = """CBot 2.0 [CURRENTLY UNDER DEVELOPMENT]
 Got feedback? Found a bug? Report it to me: Frost#0261"""
 bot = commands.Bot(command_prefix="!", description=description, pm_help=True)
 
@@ -62,7 +62,7 @@ async def bot_info():
     for s in bot.servers:
         if (s.unavailable): # can't retrieve info about server, shouldn't usually happen
             print("\t{id} - server is unavailable!".format(id=s.id))
-        else:    
+        else:
             print("\t{name} owned by {owner}#{ownerid}".format(name=s.name, owner=s.owner.name, ownerid=s.owner.discriminator))
             
 """//////////////////
@@ -218,6 +218,29 @@ def find_channel(name, server):
     server = str(server)
     return discord.utils.get(bot.get_all_channels(), server__name=server, name=name)
 
+# finds last image in channel
+# input: channel; discord.Channel; channel to search for images in
+# output: string or None; url of image found or None if no images were found
+async def find_last_image(channel):
+    async for message in bot.logs_from(channel):
+        if (message.attachments):
+            for attach in message.attachments:
+                if (not attach):
+                    continue
+                if (attach["url"]):
+                    return attach["url"]
+    
+        if (message.embeds):            
+            for embed in message.embeds:                
+                if (not embed):
+                    continue
+
+                if (embed["type"] == "image"):
+                    if (embed["url"]):
+                        return embed["url"]
+                    
+    return None
+
 # format member name as user#discriminator
 # input: user; discord.User; the user to format
 # output: string; formatted string in the form username#discriminator (ex. CBot#8071)
@@ -327,7 +350,10 @@ async def liquid(ctx, url : str=""):
                 urls.append(attach["url"])
                 
         if (not urls):
-            return
+            urls.append(await find_last_image(message.channel))
+            
+            if (not urls):
+                return
         
         if (len(urls) > 5):
             urls = urls[:5]
@@ -558,7 +584,7 @@ async def info(ctx, *, name : str=""):
 
     await reply(ctx.message, info_msg)
     
-@bot.command(description="make the bot say something (OWNER ONLY)", brief="make the bot say something", pass_context=True)
+@bot.command(description="make the bot say something (OWNER ONLY)", brief="make the bot say something (OWNER ONLY)", pass_context=True)
 @commands.check(lambda ctx: is_dev(ctx.message))
 async def say(ctx, *, msg : str):
     await bot.say(msg)
