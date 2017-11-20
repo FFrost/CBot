@@ -14,14 +14,11 @@ import asyncio, aiohttp
 import wand, wand.color, wand.drawing
 import youtube_dl
 from random import randint, uniform
-from youtube_dl.utils import DownloadError
 from lxml import html
-from discord import opus
-from ctypes.util import find_library
 
 # load opus library for voice
-opus_lib = find_library("opus")
-opus.load_opus(opus_lib)
+if (not discord.opus.is_loaded()):
+    discord.opus.load_opus("opus")
 
 # set up logging
 logger = logging.getLogger("discord")
