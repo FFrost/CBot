@@ -14,7 +14,6 @@ import asyncio, aiohttp
 import wand, wand.color, wand.drawing
 import youtube_dl
 from random import randint, uniform
-from youtube_dl.utils import DownloadError
 from lxml import html
 from discord import opus
 from ctypes.util import find_library
