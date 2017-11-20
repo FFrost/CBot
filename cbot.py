@@ -40,6 +40,8 @@ bot = commands.Bot(command_prefix="!", description=description, pm_help=True)
 
 # id to send errors to
 DEV_ID = ""
+
+# max filesize for discord
 DISCORD_MAX_FILESIZE = 10 * 1024 * 1024
 
 """//////////////
