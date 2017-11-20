@@ -40,6 +40,7 @@ bot = commands.Bot(command_prefix="!", description=description, pm_help=True)
 
 # id to send errors to
 DEV_ID = ""
+DISCORD_MAX_FILESIZE = 10 * 1024 * 1024
 
 """//////////////
 //    setup    //
@@ -328,7 +329,6 @@ async def get_insult():
 /////////////////"""
 
 # find images in message or attachments and pass to liquify function
-# TODO: if no args are given, find last message with image as content/attachment and liquidize that
 @bot.command(description="liquidizes an image, can be url or attachment (if attachment, add !liquid as a comment)",
              brief="liquidizes an image, can be url or attachment",
              pass_context=True)
@@ -382,6 +382,8 @@ async def liquid(ctx, url : str=""):
 #        url; string; the url of the image to download and liquify
 # output: int; return code of the operation
 async def do_magic(channel, url):
+    global DISCORD_MAX_FILESIZE
+
     ret_codes = {"success": 1, "filesize": 2, "invalid": 3, "dimensions": 4, "bad_url": 5}
     
     try: 
@@ -418,7 +420,7 @@ async def do_magic(channel, url):
                         
                         if (content_length < 1):
                             return
-                        elif (content_length > 10 * 1024 * 1024): # 10mb
+                        elif (content_length > DISCORD_MAX_FILESIZE):
                             return ret_codes["filesize"]
                     else:
                         return
@@ -475,10 +477,10 @@ async def do_magic(channel, url):
         magickd = "magickd.%s" % ext
         img.save(filename=magickd)
         
-        # check file size (discord's limit is 10mb)
+        # check file size
         size = os.stat(filename).st_size # filesize in bytes
         
-        if (size > 10 * 1024 * 1024): # 10mb
+        if (size > DISCORD_MAX_FILESIZE):
             return ret_codes["filesize"]
         
         # upload liquidized image
