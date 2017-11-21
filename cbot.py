@@ -218,27 +218,58 @@ def find_channel(name, server):
     server = str(server)
     return discord.utils.get(bot.get_all_channels(), server__name=server, name=name)
 
+# find last attachment in message
+# input: message; discord.Message; message to search for attachments
+# output: string or None; url of the attachment or None if not found
+def find_attachment(message):
+    if (message.attachments):
+        for attach in message.attachments:
+            if (attach):
+                return attach["url"]
+                
+    return None
+
+# TODO: create enum for embed type? message.embeds returns a dict so maybe not
+# find last embed in message
+# input: message; discord.Message; message to search for embeds
+#        embed_type; string; type of embed to search for, video or image
+# output: string or None; url of the embed or None if not found
+def find_embed(message, embed_type): # video, image
+    if (message.embeds):            
+        for embed in message.embeds:                
+            if (embed and embed["type"] == embed_type):
+                return embed["url"]
+                    
+    return None
+
+# find last embed in channel
+# input: channel; discord.Channel; channel to search for embeds
+#        embed_type; string; type of embed to search for, video or image
+# output: string or None; url of the embed or None if not found
+async def find_last_embed(channel, embed_type):
+    async for message in bot.logs_from(channel):
+        embed = find_embed(message, embed_type)
+
+        if (embed):
+            return embed
+        
+    return None
+
 # finds last image in channel
 # input: channel; discord.Channel; channel to search for images in
 # output: string or None; url of image found or None if no images were found
 async def find_last_image(channel):
     async for message in bot.logs_from(channel):
-        if (message.attachments):
-            for attach in message.attachments:
-                if (not attach):
-                    continue
-                if (attach["url"]):
-                    return attach["url"]
-    
-        if (message.embeds):            
-            for embed in message.embeds:                
-                if (not embed):
-                    continue
-
-                if (embed["type"] == "image"):
-                    if (embed["url"]):
-                        return embed["url"]
-                    
+        attachments = find_attachment(message)
+        
+        if (attachments):
+            return attachments
+        
+        embed = find_embed(message, "image")
+                
+        if (embed):
+            return embed
+        
     return None
 
 # format member name as user#discriminator
