@@ -69,8 +69,8 @@ async def bot_info():
 //    messaging    //
 //////////////////"""
 
-# @ a user in message
-# input: dest; discord.User or discord.Channel; destination to send message
+# send a user a message and mention them in it
+# input: dest; discord.User, discord.Message, or string; destination to send message to (string should be id of user)
 #        msg; string; message to send
 # output: discord.Message; the reply message object sent to the user
 async def reply(dest, msg):
@@ -79,6 +79,13 @@ async def reply(dest, msg):
     elif (isinstance(dest, discord.Message)):
         destination = dest.channel
         user = dest.author
+    elif (isinstance(dest, str)):
+        user = await find(dest)
+        
+        if (user):
+            destination = user
+        else:
+            return None
     else:
         return None
         
@@ -365,7 +372,7 @@ async def get_insult():
 @bot.command(description="liquidizes an image, can be url or attachment (if attachment, add !liquid as a comment)",
              brief="liquidizes an image, can be url or attachment",
              pass_context=True)
-@commands.cooldown(2, 5, commands.BucketType.server)
+@commands.cooldown(2, 5, commands.BucketType.channel)
 async def liquid(ctx, url : str=""):
     try:
         message = ctx.message
