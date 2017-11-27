@@ -4,6 +4,7 @@ TODO:
     - split things into different files (learn how to use cogs) (maybe make module for utility functions, etc?)
     - add the ability for server owners to add reactions to messages with specified keywords
     - make a class for the bot and replace global vars w/ member vars
+    - add options for developer notification/admin settings/etc
 """
 
 import discord
@@ -143,31 +144,37 @@ async def react(message, keyword, emoji, partial=True):
             for key in keyword:
                 if (key in message.content.lower()):
                     found = True
+                    break
                 elif (key in message.author.name.lower()):
                     found = True
+                    break
                 elif (key in message.author.id):
                     found = True
+                    break
         else: # search for word by itself
             for key in keyword:
                 if (re.match(r"\b" + key + r"\b", message.content.lower())):
                     found = True
+                    break
                 elif (key == message.author.name):
                     found = True
+                    break
                 elif (key == message.author.id):
                     found = True
+                    break
         
         if found:
             # react with custom emojis
             for e in bot.get_all_emojis():
                 if (any(em == e.name for em in emoji) and e.server == message.server):
                     await bot.add_reaction(message, e)
-                    
-            # react with normal emojis and ignore custom ones
-            for e in emoji:
-                if (any(e in em.name for em in bot.get_all_emojis())):
-                    continue
-                
-                await bot.add_reaction(message, e)
+                else:
+                    # react with normal emojis and ignore custom ones
+                    # TODO: do we really need this try/except?
+                    try:
+                        await bot.add_reaction(message, e)
+                    except Exception:
+                        pass
     
     except Exception as e:
         if ("Reaction blocked" in str(e)):
@@ -643,6 +650,9 @@ async def on_command_error(error, ctx):
     """
         
     if (isinstance(error, commands.CommandNotFound)):
+        return
+    
+    if (isinstance(error, commands.CheckFailure)):
         return
         
     await reply(ctx.message, error)
