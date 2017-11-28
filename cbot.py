@@ -10,12 +10,13 @@ TODO:
 import discord
 from discord.ext import commands
 
-import logging, os, datetime, codecs, re, time, inspect, ipaddress
+import logging, os, datetime, codecs, re, time, inspect, ipaddress, json
 import asyncio, aiohttp
 import wand, wand.color, wand.drawing
 import youtube_dl
 from random import randint, uniform
 from lxml import html
+from urllib.parse import quote
 
 # load opus library for voice
 if (not discord.opus.is_loaded()):
@@ -71,7 +72,7 @@ async def bot_info():
 //////////////////"""
 
 # send a user a message and mention them in it
-# input: dest; discord.User, discord.Message, or string; destination to send message to (string should be id of user)
+# input: dest; discord.User, discord.Message, discord.ext.commands.Context, or string; destination to send message to (string should be id of user)
 #        msg; string; message to send
 # output: discord.Message; the reply message object sent to the user
 async def reply(dest, msg):
@@ -87,6 +88,9 @@ async def reply(dest, msg):
             destination = user
         else:
             return None
+    elif (isinstance(dest, commands.Context)):
+        destination = dest.message.channel
+        user = dest.message.author
     else:
         return None
         
@@ -613,7 +617,7 @@ async def random(ctx, low : str, high : str):
     else:    
         result = str(r)
             
-    await reply(ctx.message, "rolled a %s" % result)
+    await reply(ctx, "rolled a %s" % result)
 
 @bot.command(description="info of a Discord user", brief="info of a Discord user", pass_context=True)
 async def info(ctx, *, name : str=""):
@@ -621,19 +625,63 @@ async def info(ctx, *, name : str=""):
         user = await find(name)
                 
         if (not user):
-            await reply(ctx.message, "Failed to find user `%s`" % name)
+            await reply(ctx, "Failed to find user `%s`" % name)
             return
                 
         info_msg = get_user_info(user)
     else:
         info_msg = get_user_info(ctx.message.author)
 
-    await reply(ctx.message, info_msg)
+    await reply(ctx, info_msg)
     
 @bot.command(description="make the bot say something (OWNER ONLY)", brief="make the bot say something (OWNER ONLY)", pass_context=True)
 @commands.check(lambda ctx: is_dev(ctx.message))
 async def say(ctx, *, msg : str):
     await bot.say(msg)
+    
+# TODO: get multiple images and allow browsing through results
+@bot.command(description="first result from Google Images", brief="first image result from Google Images", pass_context=True)
+async def img(ctx, *, query : str):
+    query = quote(query)
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/43.0.2357.134 Safari/537.36"}
+    url = "https://www.google.com/search?q={}&tbm=isch&gs_l=img".format(query)
+    
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url, headers=headers) as r:              
+            if (r.status != 200):
+                await reply(ctx, "Query for `{}` failed (maybe try again)".format(query))
+                return
+            
+            text = await r.text()
+            
+            if ("did not match any image results" in text):
+                await reply(ctx, "No results found for `{}`".format(query))
+                return
+
+            tree = html.fromstring(text)
+            
+            path = tree.xpath("//div[@data-async-rclass='search']/div[@data-ri='0']/div/text()") # data-ri=image_num (0 = first image, 1 = second, etc)
+            
+            if (not path):
+                await reply(ctx, "Query for `{}` failed (maybe try again)".format(query))
+                
+            if (isinstance(path, list)):
+                path = path[0].strip()
+            elif (isinstance(path, str)):
+                path = path.strip()
+                
+            path = json.loads(path) # convert to dict
+            img_url = path["ou"]
+            
+            embed = discord.Embed()
+            embed.title = "Search results"
+            embed.set_footer(text="Page 1/1 (1 entries)") # TODO: make this dynamic
+            embed.set_author(name=ctx.message.author.name, icon_url=ctx.message.author.avatar_url)
+            embed.color = discord.Color.blue()
+            embed.set_image(url=img_url)
+            
+            await bot.send_message(ctx.message.channel, embed=embed)
+                
 
 """///////////////////////
 //    error handling    //
@@ -655,7 +703,7 @@ async def on_command_error(error, ctx):
     if (isinstance(error, commands.CheckFailure)):
         return
         
-    await reply(ctx.message, error)
+    await reply(ctx, error)
         
 """//////////////
 //    hooks    //
@@ -697,7 +745,6 @@ async def on_message(message):
                 return
             
         # TODO: reactions will go here
-        await react(message, "212702125744979979", "upvote")
         
         # process commands
         await bot.process_commands(message)
