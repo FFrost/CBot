@@ -322,6 +322,22 @@ async def error_alert(e, uid="", extra=""):
     if (uid != DEV_ID and DEV_ID):
             await private_message(DEV_ID, err)
             
+def create_image_embed(ctx, title="", footer="", image="", color=discord.Color.blue()):
+    embed = discord.Embed()
+    
+    embed.title = title
+    
+    if (footer):
+        embed.set_footer(text=footer)
+    
+    embed.set_author(name=ctx.message.author.name, icon_url=ctx.message.author.avatar_url)
+    
+    embed.color = color
+    
+    embed.set_image(url=image)
+    
+    return embed
+            
 """///////////////
 //    checks    //
 ///////////////"""
@@ -398,10 +414,13 @@ async def liquid(ctx, url : str=""):
                 urls.append(attach["url"])
                 
         if (not urls):
-            urls.append(await find_last_image(message.channel))
+            last_img = await find_last_image(message.channel)
             
-            if (not urls):
+            if (not last_img):
+                await reply(ctx, "No images found.")
                 return
+            
+            urls.append(last_img)
         
         if (len(urls) > 5):
             urls = urls[:5]
@@ -673,12 +692,7 @@ async def img(ctx, *, query : str):
             path = json.loads(path) # convert to dict
             img_url = path["ou"]
             
-            embed = discord.Embed()
-            embed.title = "Search results"
-            embed.set_footer(text="Page 1/1 (1 entries)") # TODO: make this dynamic
-            embed.set_author(name=ctx.message.author.name, icon_url=ctx.message.author.avatar_url)
-            embed.color = discord.Color.blue()
-            embed.set_image(url=img_url)
+            embed = create_image_embed(ctx, title="Search results", footer="Page 1/1 (1 entries)", image=img_url)
             
             await bot.send_message(ctx.message.channel, embed=embed)
                 
