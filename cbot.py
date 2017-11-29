@@ -46,6 +46,8 @@ DEV_ID = ""
 # max filesize for discord
 DISCORD_MAX_FILESIZE = 10 * 1024 * 1024
 
+EMOJI_CHARS = {"arrow_backward": "◀", "arrow_forward": "▶", "stop_button": "⏹"}
+
 """//////////////
 //    setup    //
 //////////////"""
@@ -337,6 +339,14 @@ def create_image_embed(ctx, title="", footer="", image="", color=discord.Color.b
     embed.set_image(url=image)
     
     return embed
+
+async def add_img_reactions(message):
+    #for _, emoji in EMOJI_CHARS.items():
+    #    await bot.add_reaction(message, emoji)
+        
+    await bot.add_reaction(message, EMOJI_CHARS["arrow_backward"])
+    await bot.add_reaction(message, EMOJI_CHARS["arrow_forward"])
+    await bot.add_reaction(message, EMOJI_CHARS["stop_button"])
             
 """///////////////
 //    checks    //
@@ -661,9 +671,11 @@ async def say(ctx, *, msg : str):
 # TODO: get multiple images and allow browsing through results
 @bot.command(description="first result from Google Images", brief="first image result from Google Images", pass_context=True)
 async def img(ctx, *, query : str):
-    query = quote(query)
+    channel = ctx.message.channel
+    await bot.send_typing(channel)
+    
     headers = {"User-Agent": "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/43.0.2357.134 Safari/537.36"}
-    url = "https://www.google.com/search?q={}&tbm=isch&gs_l=img".format(query)
+    url = "https://www.google.com/search?q={}&tbm=isch&gs_l=img&safe=on".format(quote(query)) # escape query for url
     
     async with aiohttp.ClientSession() as session:
         async with session.get(url, headers=headers) as r:              
@@ -694,8 +706,27 @@ async def img(ctx, *, query : str):
             
             embed = create_image_embed(ctx, title="Search results", footer="Page 1/1 (1 entries)", image=img_url)
             
-            await bot.send_message(ctx.message.channel, embed=embed)
-                
+            img_msg = await bot.send_message(channel, embed=embed)
+            #await bot.add_reaction(message, e)
+            await add_img_reactions(img_msg)
+        
+@bot.command(description="undo bot's last message", brief="undo bot's last message", pass_context=True)    
+async def undo(ctx, num_to_delete=1):
+    cur = 0
+
+    async for message in bot.logs_from(ctx.message.channel):
+        if (cur >= num_to_delete):
+            break
+        
+        if (message.author == bot.user):
+            await bot.delete_message(message)
+            cur += 1
+        
+    temp = await bot.say("Deleted last {} message(s)".format(num_to_delete))
+    await asyncio.sleep(5)
+    
+    if (temp):
+        await bot.delete_message(temp) 
 
 """///////////////////////
 //    error handling    //
@@ -807,6 +838,30 @@ async def on_server_remove(server):
     
     except Exception as e:
         await error_alert(e)
+        
+# called when a message has a reaction added to it
+@bot.event
+async def on_reaction_add(reaction, user):
+    message = reaction.message
+      
+    if (user == bot.user):
+        return
+    
+    if (message.author == bot.user):
+        if (message.embeds):
+            embed = message.embeds[0]
+                    
+            if (embed["author"]["name"] == user.name):
+                emoji = reaction.emoji
+                                
+                if (emoji == EMOJI_CHARS["stop_button"]):
+                    await bot.delete_message(message)
+                elif (emoji == EMOJI_CHARS["arrow_forward"]):
+                    # TODO
+                    pass
+                elif (emoji == EMOJI_CHARS["arrow_backward"]):
+                    # TODO
+                    pass
 
 """////////////////////////
 //    running the bot    //
