@@ -5,6 +5,7 @@ TODO:
     - add the ability for server owners to add reactions to messages with specified keywords
     - make a class for the bot and replace global vars w/ member vars
     - add options for developer notification/admin settings/etc
+    - add a time limit on how long a user can scroll through images (after x mins of inactivity, remove reactions and clear from cache)
 """
 
 import discord
@@ -17,6 +18,7 @@ import youtube_dl
 from random import randint, uniform
 from lxml import html
 from urllib.parse import quote
+from collections import OrderedDict
 
 # load opus library for voice
 if (not discord.opus.is_loaded()):
@@ -46,7 +48,14 @@ DEV_ID = ""
 # max filesize for discord
 DISCORD_MAX_FILESIZE = 10 * 1024 * 1024
 
-EMOJI_CHARS = {"arrow_backward": "◀", "arrow_forward": "▶", "stop_button": "⏹"}
+# emojis for browsing image searches
+EMOJI_CHARS = OrderedDict()
+EMOJI_CHARS["arrow_backward"] = "◀"
+EMOJI_CHARS["arrow_forward"] = "▶"
+EMOJI_CHARS["stop_button"] = "⏹"
+
+# dict to hold cached google images search pages
+SEARCH_CACHE = OrderedDict()
 
 """//////////////
 //    setup    //
@@ -136,13 +145,13 @@ async def msg_admin_channel(msg, server):
 #        keyword; string or list; keyword(s) to look for in message content, author name or id
 #        emoji; string or list; emoji(s) to react with
 #        partial; bool=True; should react if partial keywords are found
-async def react(message, keyword, emoji, partial=True):
+async def react(message, keyword, emojis, partial=True):
     try:
         if (not isinstance(keyword, list)):
             keyword = [keyword]
         
-        if (not isinstance(emoji, list)):
-            emoji = [emoji]
+        if (not isinstance(emojis, list)):
+            emojis = [emojis]
         
         found = False
         
@@ -171,16 +180,17 @@ async def react(message, keyword, emoji, partial=True):
         
         if found:
             # react with custom emojis
-            for e in bot.get_all_emojis():
-                if (any(em == e.name for em in emoji) and e.server == message.server):
+            for custom_emoji in bot.get_all_emojis():
+                if (custom_emoji.name in emojis and custom_emoji.server == message.server):
+                    await bot.add_reaction(message, custom_emoji)
+            
+            for e in emojis:                
+                # react with normal emojis and ignore custom ones
+                # TODO: do we really need this try/except?
+                try:
                     await bot.add_reaction(message, e)
-                else:
-                    # react with normal emojis and ignore custom ones
-                    # TODO: do we really need this try/except?
-                    try:
-                        await bot.add_reaction(message, e)
-                    except Exception:
-                        pass
+                except Exception:
+                    pass
     
     except Exception as e:
         if ("Reaction blocked" in str(e)):
@@ -324,7 +334,7 @@ async def error_alert(e, uid="", extra=""):
     if (uid != DEV_ID and DEV_ID):
             await private_message(DEV_ID, err)
             
-def create_image_embed(ctx, title="", footer="", image="", color=discord.Color.blue()):
+def create_image_embed(user, title="", footer="", image="", color=discord.Color.blue()):
     embed = discord.Embed()
     
     embed.title = title
@@ -332,7 +342,7 @@ def create_image_embed(ctx, title="", footer="", image="", color=discord.Color.b
     if (footer):
         embed.set_footer(text=footer)
     
-    embed.set_author(name=ctx.message.author.name, icon_url=ctx.message.author.avatar_url)
+    embed.set_author(name=user.name, icon_url=user.avatar_url)
     
     embed.color = color
     
@@ -341,12 +351,8 @@ def create_image_embed(ctx, title="", footer="", image="", color=discord.Color.b
     return embed
 
 async def add_img_reactions(message):
-    #for _, emoji in EMOJI_CHARS.items():
-    #    await bot.add_reaction(message, emoji)
-        
-    await bot.add_reaction(message, EMOJI_CHARS["arrow_backward"])
-    await bot.add_reaction(message, EMOJI_CHARS["arrow_forward"])
-    await bot.add_reaction(message, EMOJI_CHARS["stop_button"])
+    for _, emoji in EMOJI_CHARS.items():
+        await bot.add_reaction(message, emoji)
             
 """///////////////
 //    checks    //
@@ -648,7 +654,7 @@ async def random(ctx, low : str, high : str):
             
     await reply(ctx, "rolled a %s" % result)
 
-@bot.command(description="info of a Discord user", brief="info of a Discord user", pass_context=True)
+@bot.command(description="info about a Discord user", brief="info about a Discord user", pass_context=True)
 async def info(ctx, *, name : str=""):
     if (name):
         user = await find(name)
@@ -668,9 +674,10 @@ async def info(ctx, *, name : str=""):
 async def say(ctx, *, msg : str):
     await bot.say(msg)
     
-# TODO: get multiple images and allow browsing through results
 @bot.command(description="first result from Google Images", brief="first image result from Google Images", pass_context=True)
 async def img(ctx, *, query : str):
+    global SEARCH_CACHE
+    
     channel = ctx.message.channel
     await bot.send_typing(channel)
     
@@ -685,32 +692,105 @@ async def img(ctx, *, query : str):
             
             text = await r.text()
             
-            if ("did not match any image results" in text):
-                await reply(ctx, "No results found for `{}`".format(query))
-                return
+    if ("did not match any image results" in text):
+        await reply(ctx, "No results found for `{}`".format(query))
+        return
 
-            tree = html.fromstring(text)
+    tree = html.fromstring(text)
             
-            path = tree.xpath("//div[@data-async-rclass='search']/div[@data-ri='0']/div/text()") # data-ri=image_num (0 = first image, 1 = second, etc)
+    # count the number of divs that contain images
+    path = tree.xpath("//div[@data-async-rclass='search']/div")
+    max_index = len(path)
             
-            if (not path):
-                await reply(ctx, "Query for `{}` failed (maybe try again)".format(query))
-                
-            if (isinstance(path, list)):
-                path = path[0].strip()
-            elif (isinstance(path, str)):
-                path = path.strip()
-                
-            path = json.loads(path) # convert to dict
-            img_url = path["ou"]
+    img_url = get_img_url_from_tree(tree, 0)
             
-            embed = create_image_embed(ctx, title="Search results", footer="Page 1/1 (1 entries)", image=img_url)
+    embed = create_image_embed(ctx.message.author, title="Search results", footer="Page 1/{}".format(max_index), image=img_url)
             
-            img_msg = await bot.send_message(channel, embed=embed)
-            #await bot.add_reaction(message, e)
-            await add_img_reactions(img_msg)
+    img_msg = await bot.send_message(channel, embed=embed)
+
+    await add_img_reactions(img_msg)
+            
+    # add the tree to the cache
+    SEARCH_CACHE[img_msg.id] = {"tree": tree, "index": 0, "max": max_index, "time": time.time()}
+            
+# searches a tree for a div matching google images's image element and grabs the image url from it
+# input: tree; lxml.etree._Element; a tree element of the google images page to parse
+#        index; int=0; the index of the image to display, 0 being the first image on the page
+# output: img_url; string; url of the image at the specified index
+def get_img_url_from_tree(tree, index=0):
+    path = tree.xpath("//div[@data-async-rclass='search']/div[@data-ri='{}']/div/text()".format(index)) # data-ri=image_num (0 = first image, 1 = second, etc)
         
-@bot.command(description="undo bot's last message", brief="undo bot's last message", pass_context=True)    
+    if (isinstance(path, list)):
+        path = path[0].strip()
+    elif (isinstance(path, str)):
+        path = path.strip()
+                
+    path = json.loads(path) # convert to dict
+    img_url = path["ou"]
+    
+    return img_url
+            
+# edits a message with the new embed
+# input: user; discord.Member; the user who originally requested the image search
+#        message; discord.Message; the message to edit
+#        i; int=1; the index modifier, which direction to display images in, forwards or backwards from current index, can be 1 or -1
+async def update_img_search(user, message, i=1):
+    global SEARCH_CACHE
+    
+    cached_msg = SEARCH_CACHE[message.id]
+    tree = cached_msg["tree"]
+    index = cached_msg["index"] + i
+    max_index = cached_msg["max"]
+    
+    if (index < 0):
+        return
+    
+    if (index > max_index):
+        return
+    
+    img_url = get_img_url_from_tree(tree, index)
+            
+    embed = create_image_embed(user, title="Search results", footer="Page {}/{}".format(index + 1, max_index), image=img_url)
+    
+    msg = await bot.edit_message(message, embed=embed)
+     
+    await add_img_reactions(msg)
+    
+    # update cache
+    SEARCH_CACHE[msg.id] = {"tree": tree, "index": index, "max": max_index, "time": time.time()}
+    
+# deletes an embed and removes it from the cache
+# input: message; discord.Message; the message to delete
+async def remove_img_search(message):
+    global SEARCH_CACHE
+    
+    del SEARCH_CACHE[message.id]
+    await bot.delete_message(message)
+    
+# handles reactions and calls appropriate functions
+# input: reaction; discord.Reaction; the reaction applied to the message
+#        user; discord.Member; the user that applied the reaction
+async def reaction_hook(reaction, user):
+    message = reaction.message
+      
+    if (user == bot.user):
+        return
+    
+    if (message.author == bot.user):
+        if (message.embeds):
+            embed = message.embeds[0]
+                    
+            if (embed["author"]["name"] == user.name):
+                emoji = reaction.emoji
+                                
+                if (emoji == EMOJI_CHARS["stop_button"]):
+                    await remove_img_search(message) # delete message
+                elif (emoji == EMOJI_CHARS["arrow_forward"]):
+                    await update_img_search(user, message, 1) # increment index
+                elif (emoji == EMOJI_CHARS["arrow_backward"]):
+                    await update_img_search(user, message, -1) # decrement index
+        
+@bot.command(description="undo bot's last message(s)", brief="undo bot's last message(s)", pass_context=True)    
 async def undo(ctx, num_to_delete=1):
     cur = 0
 
@@ -721,7 +801,13 @@ async def undo(ctx, num_to_delete=1):
         if (message.author == bot.user):
             await bot.delete_message(message)
             cur += 1
-        
+    
+    # TODO: check if we have perms to do this
+    try:
+        await bot.delete_message(ctx.message)
+    except Exception:
+        pass
+    
     temp = await bot.say("Deleted last {} message(s)".format(num_to_delete))
     await asyncio.sleep(5)
     
@@ -842,26 +928,14 @@ async def on_server_remove(server):
 # called when a message has a reaction added to it
 @bot.event
 async def on_reaction_add(reaction, user):
-    message = reaction.message
-      
-    if (user == bot.user):
-        return
-    
-    if (message.author == bot.user):
-        if (message.embeds):
-            embed = message.embeds[0]
-                    
-            if (embed["author"]["name"] == user.name):
-                emoji = reaction.emoji
-                                
-                if (emoji == EMOJI_CHARS["stop_button"]):
-                    await bot.delete_message(message)
-                elif (emoji == EMOJI_CHARS["arrow_forward"]):
-                    # TODO
-                    pass
-                elif (emoji == EMOJI_CHARS["arrow_backward"]):
-                    # TODO
-                    pass
+    # call image search hook
+    await reaction_hook(reaction, user)
+
+# called when a message has a reaction removed from it
+@bot.event
+async def on_reaction_remove(reaction, user):
+    # call image search hook
+    await reaction_hook(reaction, user)
 
 """////////////////////////
 //    running the bot    //
