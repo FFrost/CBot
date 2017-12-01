@@ -745,7 +745,7 @@ async def update_img_search(user, message, i=1):
     if (index < 0):
         return
     
-    if (index > max_index):
+    if (index >= max_index):
         return
     
     img_url = get_img_url_from_tree(tree, index)
