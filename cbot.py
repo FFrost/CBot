@@ -957,24 +957,14 @@ if (not os.path.exists("cbot.txt")):
     token = bot_init()
 else:
     token = ""
-    tries = 0
     
-    while (not token and tries < 5):
-        if (tries > 5):
-            print("[Error] CBot tried 5 times to get token and failed!")
-            exit()
-            
-        tries += 1
-        
+    while (not token):
         try:
             with open("cbot.txt", "r") as f:
                 r = f.readline().split(";")
                 
                 token = r[0]
-                DEV_ID = r[1]
-            
-            break
-        
+                DEV_ID = r[1]        
         except Exception:
             token = bot_init()
 
