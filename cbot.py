@@ -334,6 +334,13 @@ async def error_alert(e, uid="", extra=""):
     if (uid != DEV_ID and DEV_ID):
             await private_message(DEV_ID, err)
             
+# creates a discord.Embed featuring an image
+# input: user; discord.Member; the author of the embed
+#        title; string=""; the title of the embed
+#        footer; string=""; the footer of the embed
+#        image; string=""; url of the image to embed
+#        color; discord.Color; the color of the embed
+# output: embed; discord.Embed; the generated embed
 def create_image_embed(user, title="", footer="", image="", color=discord.Color.blue()):
     embed = discord.Embed()
     
@@ -350,6 +357,8 @@ def create_image_embed(user, title="", footer="", image="", color=discord.Color.
     
     return embed
 
+# adds reactions for browsing an image to a message
+# input: message; discord.Message; message to add reactions to
 async def add_img_reactions(message):
     for _, emoji in EMOJI_CHARS.items():
         await bot.add_reaction(message, emoji)
@@ -357,6 +366,7 @@ async def add_img_reactions(message):
 # 'safely' remove a file
 # TODO: not that safe, sanity check path / dir just to be safe... we don't want people ever abusing this
 #       os.remove only raises OSError?
+# input: filename; string; filename to remove
 def remove_file_safe(filename):
     if (os.path.exists(filename)):
         os.remove(filename)
@@ -553,10 +563,12 @@ async def do_magic(channel, url):
         # TODO: run gif magic code here too
         #       be careful of alpha channel though... just in case
         if (img.animation):
+            remove_file_safe(tmp_file_path)
             return ret_codes["invalid"]
         
         # image dimensions too large
         if (img.size >= (3000, 3000)):
+            remove_file_safe(tmp_file_path)
             return ret_codes["dimensions"]
         
         # TODO: is it worth converting the image to a better format (like png)?
@@ -574,8 +586,7 @@ async def do_magic(channel, url):
         img_blob = img.make_blob()
         
         if (len(img_blob) > DISCORD_MAX_FILESIZE):
-            # remove_file_safe(filename)
-            
+            remove_file_safe(tmp_file_path)
             return ret_codes["filesize"]
             
         magickd_file_path = tmp_file_path.rsplit(".", 1)[0] + "_magickd." + ext
@@ -590,8 +601,7 @@ async def do_magic(channel, url):
         await asyncio.sleep(1)
         
         # delete leftover file(s)
-        # tmp_file.close()
-        # remove_file_safe(filename)
+        remove_file_safe(tmp_file_path)
         remove_file_safe(magickd_file_path)
             
         return ret_codes["success"] # good
