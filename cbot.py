@@ -11,7 +11,7 @@ TODO:
 import discord
 from discord.ext import commands
 
-import logging, os, datetime, codecs, re, time, inspect, ipaddress, json
+import logging, os, datetime, codecs, re, time, inspect, ipaddress, json, tempfile
 import asyncio, aiohttp
 import wand, wand.color, wand.drawing
 import youtube_dl
@@ -353,6 +353,13 @@ def create_image_embed(user, title="", footer="", image="", color=discord.Color.
 async def add_img_reactions(message):
     for _, emoji in EMOJI_CHARS.items():
         await bot.add_reaction(message, emoji)
+        
+# 'safely' remove a file
+# TODO: not that safe, sanity check path / dir just to be safe... we don't want people ever abusing this
+#       os.remove only raises OSError?
+def remove_file_safe(filename):
+    if (os.path.exists(filename)):
+        os.remove(filename)
             
 """///////////////
 //    checks    //
@@ -522,10 +529,13 @@ async def do_magic(channel, url):
                     
                     if (mime.lower() != "image"):
                         return ret_codes["invalid"]
-                    
-                    filename = "liquid." + ext
-                    
-                    with (open(filename, "wb")) as f:
+
+                    # make a new 'unique' tmp file with the correct extension
+                    tmp_file = tempfile.NamedTemporaryFile(delete=False, suffix="." + ext)
+                    tmp_file_path = tmp_file.name
+
+                    # write bytes to tmp file
+                    with tmp_file as f:
                         while True:
                             chunk = await r.content.read(1024)
                             
@@ -536,53 +546,53 @@ async def do_magic(channel, url):
                 else:
                     return ret_codes["bad_url"]
                         
-        # do the magick
-        img = wand.image.Image(filename=filename)
+        # get a wand image object
+        img = wand.image.Image(filename=tmp_file_path)
         
-        if (img.animation): # no animated gifs
-            # delete leftover files after
-            if (os.path.exists(filename)):
-                os.remove(filename)
-                
+        # no animated gifs
+        # TODO: run gif magic code here too
+        #       be careful of alpha channel though... just in case
+        if (img.animation):
             return ret_codes["invalid"]
         
+        # image dimensions too large
+        if (img.size >= (3000, 3000)):
+            return ret_codes["dimensions"]
+        
+        # TODO: is it worth converting the image to a better format (like png)?
         img.format = ext
         img.alpha_channel = True
         
-        if (img.size >= (3000, 3000)):
-            # delete leftover files after
-            if (os.path.exists(filename)):
-                os.remove(filename)
-                
-            return ret_codes["dimensions"]
-        
+        # do the magick
         img.transform(resize="800x800>")
         img.liquid_rescale(width=int(img.width * 0.5), height=int(img.height * 0.5), delta_x=1)
         img.liquid_rescale(width=int(img.width * 1.5), height=int(img.height * 1.5), delta_x=2)
         
-        magickd = "magickd.%s" % ext
-        img.save(filename=magickd)
+        # before saving, check the size of the output file
+        # note - dex: on windows, this seems to be 'size' instead of 'size on disk'... 
+        #             not sure if that matters when it comes to discord's max filesize
+        img_blob = img.make_blob()
         
-        # check file size
-        size = os.stat(filename).st_size # filesize in bytes
-        
-        if (size > DISCORD_MAX_FILESIZE):
+        if (len(img_blob) > DISCORD_MAX_FILESIZE):
+            # remove_file_safe(filename)
+            
             return ret_codes["filesize"]
+            
+        magickd_file_path = tmp_file_path.rsplit(".", 1)[0] + "_magickd." + ext
+            
+        # now save the magickd image
+        img.save(filename=magickd_file_path)
         
         # upload liquidized image
-        await bot.send_file(channel, magickd)
+        await bot.send_file(channel, magickd_file_path)
         
         # just in case
         await asyncio.sleep(1)
         
-        # delete leftover files after
-        # downloaded image
-        if (os.path.exists(filename)):
-            os.remove(filename)
-        
-        # liquidized image
-        if (os.path.exists(magickd)):
-            os.remove(magickd)
+        # delete leftover file(s)
+        # tmp_file.close()
+        # remove_file_safe(filename)
+        remove_file_safe(magickd_file_path)
             
         return ret_codes["success"] # good
     
