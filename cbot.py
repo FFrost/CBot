@@ -20,6 +20,13 @@ from lxml import html
 from urllib.parse import quote
 from collections import OrderedDict
 
+# TODO: import fails on windows without "." but succeeds on linux, and vice versa. need to figure out why
+from platform import system
+if (system() == "Windows"):
+    from .enums import LiquidCodes
+else:
+    from enums import LiquidCodes
+
 # load opus library for voice
 if (not discord.opus.is_loaded()):
     discord.opus.load_opus("opus")
@@ -261,14 +268,13 @@ def find_attachment(message):
 
 # TODO: create enum for embed type? message.embeds returns a dict so maybe not
 # find last embed in message
-# input: message; discord.Message; message to search for embeds
-#        embed_type; string; type of embed to search for, video or image
+# input: message; discord.Message; message to search for image embeds
 # output: string or None; url of the embed or None if not found
-def find_embed(message, embed_type): # video, image
+def find_image_embed(message): # video, image
     if (message.embeds):            
-        for embed in message.embeds:                
-            if (embed and embed["type"] == embed_type):
-                return embed["url"]
+        for embed in message.embeds:
+            if (embed and embed["image"]):
+                return embed["image"]["url"]
                     
     return None
 
@@ -278,7 +284,7 @@ def find_embed(message, embed_type): # video, image
 # output: string or None; url of the embed or None if not found
 async def find_last_embed(channel, embed_type):
     async for message in bot.logs_from(channel):
-        embed = find_embed(message, embed_type)
+        embed = find_image_embed(message)
 
         if (embed):
             return embed
@@ -286,17 +292,19 @@ async def find_last_embed(channel, embed_type):
     return None
 
 # finds last image in channel
-# input: channel; discord.Channel; channel to search for images in
+# input: message; discord.Message; message from which channel will be extracted and point to search before
 # output: string or None; url of image found or None if no images were found
-async def find_last_image(channel):
-    async for message in bot.logs_from(channel):
+async def find_last_image(message):
+    channel = message.channel
+    
+    async for message in bot.logs_from(channel, before=message):
         attachments = find_attachment(message)
         
         if (attachments):
             return attachments
         
-        embed = find_embed(message, "image")
-                
+        embed = find_image_embed(message)
+        
         if (embed):
             return embed
         
@@ -437,142 +445,155 @@ async def liquid(ctx, url : str=""):
     try:
         message = ctx.message
         
-        urls = []
-        
-        if (url):
-            urls.append(url)
-        
-        if (message.attachments):
-            for attach in message.attachments:
-                urls.append(attach["url"])
+        if (not url):        
+            if (message.attachments):
+                url = message.attachments[0]["url"]
+            else:
+                last_img = await find_last_image(message)
                 
-        if (not urls):
-            last_img = await find_last_image(message.channel)
-            
-            if (not last_img):
-                await reply(ctx, "No images found.")
-                return
-            
-            urls.append(last_img)
+                if (last_img): 
+                    url = last_img
+                
+        if (not url):
+            await reply("No image found")
+            return
         
-        if (len(urls) > 5):
-            urls = urls[:5]
+        msg = await reply(message, "Liquidizing image...")
         
-        msg = await reply(message, "Liquidizing image%s..." % ("s" if (len(urls) > 1) else ""))
+        path = await download_image(url)
         
-        for url in urls:
-            code = await do_magic(message.channel, url)
+        if (isinstance(path, str)):
+            code = await do_magic(message.channel, path)
             
-            if (not code):
-                await reply(message, "Failed to liquidize image: `%s`" % url)
-            elif (code == 2):
-                await reply(message, "Failed to liquidize image (max filesize: 10mb): `%s`" % url)
-            elif (code == 3):
-                await reply(message, "Failed to liquidize image (invalid image): `%s`" % url)
-            elif (code == 4):
-                await reply(message, "Failed to liquidize image (max dimensions: 3000x3000): `%s`" % url)
-            elif (code == 5):
-                await reply(message, "Failed to liquidize image (could not download url): `%s`" % url)
+            if (code != LiquidCodes.SUCCESS):
+                await liquid_error_message(message, code, url)
+        else:
+            await liquid_error_message(message, path, url)
         
         await bot.delete_message(msg)
         
     except Exception as e:
-        await reply(message, "Failed to liquidize image%s." % ("s" if (len(urls) > 1) else ""))
+        await reply(message, "Failed to liquidize image `{}`".format(url))
         await error_alert(e)
+        
+# message the user an error if liquidizing fails
+# input: message; discord.Message; message to reply to
+#        code; LiquidCodes; the error code
+#        url; string; the url that was attempted to be liquidized
+async def liquid_error_message(message, code, url):
+    if (code == LiquidCodes.MISC_ERROR):
+        await reply(message, "Failed to liquidize image: `{}`".format(url))
+    elif (code == LiquidCodes.MAX_FILESIZE):
+        await reply(message, "Failed to liquidize image (max filesize: 10mb): `{}`".format(url))
+    elif (code == LiquidCodes.INVALID_FORMAT):
+        await reply(message, "Failed to liquidize image (invalid image): `{}`".format(url))
+    elif (code == LiquidCodes.MAX_DIMENSIONS):
+        await reply(message, "Failed to liquidize image (max dimensions: 3000x3000): `{}`".format(url))
+    elif (code == LiquidCodes.BAD_URL):
+        await reply(message, "Failed to liquidize image (could not download url): `{}`".format(url))
+
+# download an image from a url and save it as a temp file
+# input: url; string; image to download
+# output: if successful: string; path to temp file;
+#         if unsuccessful: LiquidCodes; error code
+async def download_image(url):
+    # check for private ip
+    try:
+        ip = ipaddress.ip_address(url)
+        
+        if (ip.is_private):
+            return LiquidCodes.BAD_URL
+        
+    except Exception: # if it's not an ip (i.e. an actual url like a website)
+        pass
+    
+    if (not url.startswith("http")):
+        url = "http://" + url
+    
+    conn = aiohttp.TCPConnector(verify_ssl=False) # for https
+    async with aiohttp.ClientSession(connector=conn) as session:
+        async with session.get(url) as r:
+            if (r.status == 200):
+                if ("Content-Type" in r.headers):
+                    content_type = r.headers["Content-Type"]
+                else:
+                    return LiquidCodes.BAD_URL
+                
+                if ("Content-Length" in r.headers):
+                    content_length = r.headers["Content-Length"]
+                else:
+                    return LiquidCodes.BAD_URL
+                
+                # check if empty file
+                if (content_length):
+                    content_length = int(content_length)
+                    
+                    if (content_length < 1):
+                        return LiquidCodes.BAD_URL
+                    elif (content_length > DISCORD_MAX_FILESIZE):
+                        return LiquidCodes.MAX_FILESIZE
+                else:
+                    return LiquidCodes.BAD_URL
+                
+                # check for file type
+                if (not content_type):
+                    return LiquidCodes.BAD_URL
+                
+                content_type = content_type.split("/")
+                
+                mime = content_type[0]
+                ext = content_type[1]
+                
+                if (mime.lower() != "image"):
+                    return LiquidCodes.INVALID_FORMAT
+
+                # make a new 'unique' tmp file with the correct extension
+                tmp_file = tempfile.NamedTemporaryFile(delete=False, suffix="." + ext)
+                tmp_file_path = tmp_file.name
+
+                # write bytes to tmp file
+                with tmp_file as f:
+                    while True:
+                        chunk = await r.content.read(1024)
+                        
+                        if (not chunk):
+                            break
+                        
+                        f.write(chunk)
+                        
+                return tmp_file_path
+            else:
+                return LiquidCodes.BAD_URL
+            
+    return LiquidCodes.MISC_ERROR
 
 # liquify image
 # input: channel; discord.Channel; the channel to send the image in
 #        url; string; the url of the image to download and liquify
 # output: int; return code of the operation
-async def do_magic(channel, url):
+async def do_magic(channel, path):
     global DISCORD_MAX_FILESIZE
 
-    ret_codes = {"success": 1, "filesize": 2, "invalid": 3, "dimensions": 4, "bad_url": 5}
-    
-    try: 
-        # check for private ip
-        try:
-            ip = ipaddress.ip_address(url)
-            
-            if (ip.is_private):
-                return
-            
-        except Exception: # if it's not an ip (i.e. an actual url like a website)
-            pass
-        
-        if (not url.startswith("http")):
-            url = "http://" + url
-        
-        conn = aiohttp.TCPConnector(verify_ssl=False) # for https
-        async with aiohttp.ClientSession(connector=conn) as session:
-            async with session.get(url) as r:
-                if (r.status == 200):
-                    if ("Content-Type" in r.headers):
-                        content_type = r.headers["Content-Type"]
-                    else:
-                        return
-                    
-                    if ("Content-Length" in r.headers):
-                        content_length = r.headers["Content-Length"]
-                    else:
-                        return
-                    
-                    # check if empty file
-                    if (content_length):
-                        content_length = int(content_length)
-                        
-                        if (content_length < 1):
-                            return
-                        elif (content_length > DISCORD_MAX_FILESIZE):
-                            return ret_codes["filesize"]
-                    else:
-                        return
-                    
-                    # check for file type
-                    if (not content_type):
-                        return
-                    
-                    content_type = content_type.split("/")
-                    
-                    mime = content_type[0]
-                    ext = content_type[1]
-                    
-                    if (mime.lower() != "image"):
-                        return ret_codes["invalid"]
-
-                    # make a new 'unique' tmp file with the correct extension
-                    tmp_file = tempfile.NamedTemporaryFile(delete=False, suffix="." + ext)
-                    tmp_file_path = tmp_file.name
-
-                    # write bytes to tmp file
-                    with tmp_file as f:
-                        while True:
-                            chunk = await r.content.read(1024)
-                            
-                            if (not chunk):
-                                break
-                            
-                            f.write(chunk)
-                else:
-                    return ret_codes["bad_url"]
-                        
+    try:                    
         # get a wand image object
-        img = wand.image.Image(filename=tmp_file_path)
+        img = wand.image.Image(filename=path)
         
         # no animated gifs
         # TODO: run gif magic code here too
         #       be careful of alpha channel though... just in case
         if (img.animation):
-            remove_file_safe(tmp_file_path)
-            return ret_codes["invalid"]
+            remove_file_safe(path)
+            return LiquidCodes.INVALID_FORMAT
         
         # image dimensions too large
         if (img.size >= (3000, 3000)):
-            remove_file_safe(tmp_file_path)
-            return ret_codes["dimensions"]
+            remove_file_safe(path)
+            return LiquidCodes.MAX_DIMENSIONS
+        
+        file_path, ext = os.path.splitext(path)
         
         # TODO: is it worth converting the image to a better format (like png)?
-        img.format = ext
+        img.format = ext[1:] # drop the "."
         img.alpha_channel = True
         
         # do the magick
@@ -586,10 +607,10 @@ async def do_magic(channel, url):
         img_blob = img.make_blob()
         
         if (len(img_blob) > DISCORD_MAX_FILESIZE):
-            remove_file_safe(tmp_file_path)
-            return ret_codes["filesize"]
+            remove_file_safe(path)
+            return LiquidCodes.MAX_FILESIZE
             
-        magickd_file_path = tmp_file_path.rsplit(".", 1)[0] + "_magickd." + ext
+        magickd_file_path = file_path + "_magickd" + ext
             
         # now save the magickd image
         img.save(filename=magickd_file_path)
@@ -601,17 +622,19 @@ async def do_magic(channel, url):
         await asyncio.sleep(1)
         
         # delete leftover file(s)
-        remove_file_safe(tmp_file_path)
+        remove_file_safe(path)
         remove_file_safe(magickd_file_path)
             
-        return ret_codes["success"] # good
+        return LiquidCodes.SUCCESS
     
     # TODO: do something with this maybe? convert image to a different format and try again?
-    except wand.exceptions.WandException:
-        return
+    except wand.exceptions.WandException as e:
+        print("wand exception", e)
+        return LiquidCodes.INVALID_FORMAT
     
-    except Exception:
-        return
+    except Exception as e:
+        print(e)
+        return LiquidCodes.MISC_ERROR
     
 @bot.command(description="random number generator, supports hexadecimal and floats", brief="random number generator, supports hex/floats", pass_context=True)
 async def random(ctx, low : str, high : str):
