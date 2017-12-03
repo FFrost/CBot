@@ -689,6 +689,25 @@ async def info(ctx, *, name : str=""):
 
     await reply(ctx, info_msg)
     
+@bot.command(description="get a user's avatar", brief="get a user's avatar", pass_context=True)
+async def avatar(ctx, *, name : str=""):
+    if (ctx.message.mentions):
+        users = ctx.message.mentions
+    elif (name):
+        user = await find(name)
+        
+        if (not user):
+            await reply(ctx, "Failed to find user `{}`".format(name))
+            return
+        else:
+            users = [user]
+    else:
+        users = [ctx.message.author]
+    
+    for user in users:
+        embed = create_image_embed(user, image=user.avatar_url)
+        await bot.send_message(ctx.message.channel, embed=embed)
+    
 @bot.command(description="make the bot say something (OWNER ONLY)", brief="make the bot say something (OWNER ONLY)", pass_context=True)
 @commands.check(lambda ctx: is_dev(ctx.message))
 async def say(ctx, *, msg : str):
