@@ -809,7 +809,7 @@ async def remove_img_search(message):
 # handles reactions and calls appropriate functions
 # input: reaction; discord.Reaction; the reaction applied to the message
 #        user; discord.Member; the user that applied the reaction
-async def reaction_hook(reaction, user):
+async def image_search_reaction_hook(reaction, user):
     message = reaction.message
       
     if (user == bot.user):
@@ -821,6 +821,9 @@ async def reaction_hook(reaction, user):
                     
             if (embed["author"]["name"] == user.name):
                 emoji = reaction.emoji
+                
+                if (message.reactions and reaction in message.reactions):
+                    await bot.remove_reaction(message, emoji, user) # remove the reaction so the user can react again
                                 
                 if (emoji == EMOJI_CHARS["stop_button"]):
                     await remove_img_search(message) # delete message
@@ -968,13 +971,7 @@ async def on_server_remove(server):
 @bot.event
 async def on_reaction_add(reaction, user):
     # call image search hook
-    await reaction_hook(reaction, user)
-
-# called when a message has a reaction removed from it
-@bot.event
-async def on_reaction_remove(reaction, user):
-    # call image search hook
-    await reaction_hook(reaction, user)
+    await image_search_reaction_hook(reaction, user)
 
 """////////////////////////
 //    running the bot    //
