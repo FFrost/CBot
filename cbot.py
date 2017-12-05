@@ -273,8 +273,11 @@ def find_attachment(message):
 def find_image_embed(message): # video, image
     if (message.embeds):            
         for embed in message.embeds:
-            if (embed and "image" in embed):
-                return embed["image"]["url"]
+            if (embed):
+                if ("type" in embed and embed["type"] == "image"):
+                    return embed["url"]
+                elif ("image" in embed):
+                    return embed["image"]["url"]
                     
     return None
 
