@@ -19,6 +19,7 @@ from random import randint, uniform
 from lxml import html
 from urllib.parse import quote
 from collections import OrderedDict
+from http.client import responses
 
 # TODO: import fails on windows without "." but succeeds on linux, and vice versa. need to figure out why
 from platform import system
@@ -866,7 +867,7 @@ async def image_search_reaction_hook(reaction, user):
                     await update_img_search(user, message, -1) # decrement index
                     
 @bot.command(description="reverse image search", brief="reverse image search", pass_context=True, aliases=["rev"])
-@commands.cooldown(2, 5, commands.BucketType.channel)
+@commands.cooldown(3, 5, commands.BucketType.channel)
 async def reverse(ctx, *, query : str=""):
     message = ctx.message
     
@@ -876,10 +877,7 @@ async def reverse(ctx, *, query : str=""):
         if (message.attachments):
             query = message.attachments[0]["url"]
         else:
-            last_img = await find_last_image(message)
-            
-            if (last_img): 
-                query = last_img
+            query = await find_last_image(message)
             
     if (not query):
         await reply("No image found")
@@ -891,7 +889,10 @@ async def reverse(ctx, *, query : str=""):
     async with aiohttp.ClientSession() as session:
         async with session.get(url, headers=headers) as r:              
             if (r.status != 200):
-                await reply(ctx, "Query for `{}` failed (maybe try again)".format(query))
+                await reply(ctx, "Query for `{query}` failed with status code `{code} ({string})` (maybe try again)".format(
+                    query=query,
+                    code=r.status,
+                    string=responses[r.status]))
                 return
             
             text = await r.text()
@@ -909,7 +910,7 @@ async def reverse(ctx, *, query : str=""):
             elif (isinstance(path, str)):
                 path = path.strip()
                 
-            embed = create_image_embed(message.author, title="Best guess for this image:".format(path), description=path, thumbnail=query, color=discord.Color.red())
+            embed = create_image_embed(message.author, title="Best guess for this image:", description=path, thumbnail=query, color=discord.Color.green())
             
             await bot.send_message(message.channel, embed=embed)
         
