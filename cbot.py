@@ -273,7 +273,7 @@ def find_attachment(message):
 def find_image_embed(message): # video, image
     if (message.embeds):            
         for embed in message.embeds:
-            if (embed and embed["image"]):
+            if (embed and "image" in embed):
                 return embed["image"]["url"]
                     
     return None
@@ -349,10 +349,13 @@ async def error_alert(e, uid="", extra=""):
 #        image; string=""; url of the image to embed
 #        color; discord.Color; the color of the embed
 # output: embed; discord.Embed; the generated embed
-def create_image_embed(user, title="", footer="", image="", color=discord.Color.blue()):
+def create_image_embed(user, title="", description="", footer="", image="", thumbnail="", color=discord.Color.blue()):
     embed = discord.Embed()
     
     embed.title = title
+    
+    if (description):
+        embed.description = description
     
     if (footer):
         embed.set_footer(text=footer)
@@ -361,7 +364,11 @@ def create_image_embed(user, title="", footer="", image="", color=discord.Color.
     
     embed.color = color
     
-    embed.set_image(url=image)
+    if (image):
+        embed.set_image(url=image)
+        
+    if (thumbnail):
+        embed.set_thumbnail(url=thumbnail)
     
     return embed
 
@@ -736,7 +743,7 @@ async def avatar(ctx, *, name : str=""):
 async def say(ctx, *, msg : str):
     await bot.say(msg)
     
-@bot.command(description="first result from Google Images", brief="first image result from Google Images", pass_context=True)
+@bot.command(description="first result from Google Images", brief="first image result from Google Images", pass_context=True, aliases=["image"])
 async def img(ctx, *, query : str):
     global SEARCH_CACHE
     
@@ -805,10 +812,10 @@ async def update_img_search(user, message, i=1):
     max_index = cached_msg["max"]
     
     if (index < 0):
-        return
+        index = max_index - 1
     
-    if (index >= max_index):
-        return
+    if (index > max_index - 1):
+        index = 0
     
     img_url = get_img_url_from_tree(tree, index)
             
@@ -854,6 +861,53 @@ async def image_search_reaction_hook(reaction, user):
                     await update_img_search(user, message, 1) # increment index
                 elif (emoji == EMOJI_CHARS["arrow_backward"]):
                     await update_img_search(user, message, -1) # decrement index
+                    
+@bot.command(description="reverse image search", brief="reverse image search", pass_context=True, aliases=["rev"])
+async def reverse(ctx, *, query : str=""):
+    message = ctx.message
+    
+    await bot.send_typing(message.channel)
+    
+    if (not query):        
+        if (message.attachments):
+            query = message.attachments[0]["url"]
+        else:
+            last_img = await find_last_image(message)
+            
+            if (last_img): 
+                query = last_img
+            
+    if (not query):
+        await reply("No image found")
+        return
+    
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/43.0.2357.134 Safari/537.36"}
+    url = "https://images.google.com/searchbyimage?image_url={}&encoded_image=&image_content=&filename=&hl=en".format(quote(query))
+    
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url, headers=headers) as r:              
+            if (r.status != 200):
+                await reply(ctx, "Query for `{}` failed (maybe try again)".format(query))
+                return
+            
+            text = await r.text()
+
+            tree = html.fromstring(text)
+            
+            path = tree.xpath("//div[@class='_hUb']/a/text()")
+            
+            if (not path):
+                await reply(ctx, "Query for `{}` failed (maybe try again)".format(query))
+                return
+                
+            if (isinstance(path, list)):
+                path = path[0].strip()
+            elif (isinstance(path, str)):
+                path = path.strip()
+                
+            embed = create_image_embed(message.author, title="Best guess for this image:".format(path), description=path, thumbnail=query, color=discord.Color.red())
+            
+            await bot.send_message(message.channel, embed=embed)
         
 @bot.command(description="undo bot's last message(s)", brief="undo bot's last message(s)", pass_context=True)    
 async def undo(ctx, num_to_delete=1):
@@ -877,7 +931,7 @@ async def undo(ctx, num_to_delete=1):
     await asyncio.sleep(5)
     
     if (temp):
-        await bot.delete_message(temp) 
+        await bot.delete_message(temp)
 
 """///////////////////////
 //    error handling    //
