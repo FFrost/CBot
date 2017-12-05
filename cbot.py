@@ -863,6 +863,7 @@ async def image_search_reaction_hook(reaction, user):
                     await update_img_search(user, message, -1) # decrement index
                     
 @bot.command(description="reverse image search", brief="reverse image search", pass_context=True, aliases=["rev"])
+@commands.cooldown(2, 5, commands.BucketType.channel)
 async def reverse(ctx, *, query : str=""):
     message = ctx.message
     
