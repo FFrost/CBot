@@ -237,7 +237,13 @@ def get_date():
 # output: string; formatted string of message content
 def format_log_message(message):
     content = message.content.replace(bot.user.id, "{name}#{disc}".format(name=bot.user.name, disc=bot.user.discriminator))
-    return "{time} [{channel}] {name}: {message}".format(time=get_cur_time(), channel=message.channel, name=message.author, message=content)
+    server_name = message.server.name if message.server else "Private Message"
+    
+    return "{time} [{server}] [{channel}] {name}: {message}".format(time=get_cur_time(),
+                                                                    server=server_name,
+                                                                    channel=message.channel,
+                                                                    name=message.author,
+                                                                    message=content)
 
 # find a user by full or partial name or id
 # input: name; string; keyword to search usernames for
@@ -448,9 +454,7 @@ async def get_insult():
 /////////////////"""
 
 # find images in message or attachments and pass to liquify function
-@bot.command(description="liquidizes an image, can be url or attachment (if attachment, add !liquid as a comment)",
-             brief="liquidizes an image, can be url or attachment",
-             pass_context=True)
+@bot.command(description="liquidizes an image", brief="liquidizes an image", pass_context=True)
 @commands.cooldown(2, 5, commands.BucketType.channel)
 async def liquid(ctx, url : str=""):
     try:
@@ -832,12 +836,26 @@ async def update_img_search(user, message, i=1):
     # update cache
     SEARCH_CACHE[msg.id] = {"tree": tree, "index": index, "max": max_index, "time": time.time()}
     
-# deletes an embed and removes it from the cache
-# input: message; discord.Message; the message to delete
-async def remove_img_search(message):
+# TODO: check every ~minute and clear searches that have been inactive for > 5 mins
+# remove an image from the cache and prevent it from being scrolled
+# input: message; discord.Message; message to clear
+async def remove_img_from_cache(message):
     global SEARCH_CACHE
     
     del SEARCH_CACHE[message.id]
+    
+    try:
+        await bot.clear_reactions(message)
+    except Exception:
+        pass
+    
+# deletes an embed and removes it from the cache
+# input: message; discord.Message; the message to delete
+async def remove_img_search(message, index=0):
+    global SEARCH_CACHE
+    
+    del SEARCH_CACHE[message.id]
+    #SEARCH_CACHE.pop(index)
     await bot.delete_message(message)
     
 # handles reactions and calls appropriate functions
@@ -866,7 +884,8 @@ async def image_search_reaction_hook(reaction, user):
                 elif (emoji == EMOJI_CHARS["arrow_backward"]):
                     await update_img_search(user, message, -1) # decrement index
                     
-@bot.command(description="reverse image search", brief="reverse image search", pass_context=True, aliases=["rev"])
+# TODO: reenable this if we find a workaround for rate limits
+@bot.command(description="reverse image search", brief="reverse image search", pass_context=True, aliases=["rev"], enabled=False)
 @commands.cooldown(3, 5, commands.BucketType.channel)
 async def reverse(ctx, *, query : str=""):
     message = ctx.message
