@@ -589,7 +589,7 @@ async def download_image(url):
 async def do_magic(channel, path):
     global DISCORD_MAX_FILESIZE
 
-    try:                    
+    try:
         # get a wand image object
         img = wand.image.Image(filename=path)
         
@@ -788,7 +788,7 @@ async def img(ctx, *, query : str):
     await add_img_reactions(img_msg)
             
     # add the tree to the cache
-    SEARCH_CACHE[img_msg.id] = {"tree": tree, "index": 0, "max": max_index, "time": time.time()}
+    SEARCH_CACHE[img_msg.id] = {"tree": tree, "index": 0, "max": max_index, "time": time.time(), "command_msg": ctx.message}
             
 # searches a tree for a div matching google images's image element and grabs the image url from it
 # input: tree; lxml.etree._Element; a tree element of the google images page to parse
@@ -818,6 +818,7 @@ async def update_img_search(user, message, i=1):
     tree = cached_msg["tree"]
     index = cached_msg["index"] + i
     max_index = cached_msg["max"]
+    command_msg = cached_msg["command_msg"]
     
     if (index < 0):
         index = max_index - 1
@@ -834,7 +835,7 @@ async def update_img_search(user, message, i=1):
     await add_img_reactions(msg)
     
     # update cache
-    SEARCH_CACHE[msg.id] = {"tree": tree, "index": index, "max": max_index, "time": time.time()}
+    SEARCH_CACHE[msg.id] = {"tree": tree, "index": index, "max": max_index, "time": time.time(), "command_msg": command_msg}
     
 # TODO: check every ~minute and clear searches that have been inactive for > 5 mins
 # remove an image from the cache and prevent it from being scrolled
@@ -853,6 +854,13 @@ async def remove_img_from_cache(message):
 # input: message; discord.Message; the message to delete
 async def remove_img_search(message, index=0):
     global SEARCH_CACHE
+    
+    # TODO: check if we have permission to do this
+    try:
+        await bot.delete_message(SEARCH_CACHE[message.id]["command_msg"])
+        
+    except Exception:
+        pass
     
     del SEARCH_CACHE[message.id]
     #SEARCH_CACHE.pop(index)
