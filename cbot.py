@@ -1,11 +1,14 @@
 """
-TODO:
+TODO now:
     - reimplement voice player (with simultaneous cross-server play)
     - split things into different files (learn how to use cogs) (maybe make module for utility functions, etc?)
     - add the ability for server owners to add reactions to messages with specified keywords
     - make a class for the bot and replace global vars w/ member vars
     - add options for developer notification/admin settings/etc
     - add a time limit on how long a user can scroll through images (after x mins of inactivity, remove reactions and clear from cache)
+    
+next:
+    - store bot token/other settings/etc in database instead of txt files
 """
 
 import discord
@@ -64,6 +67,9 @@ EMOJI_CHARS["stop_button"] = "⏹"
 
 # dict to hold cached google images search pages
 SEARCH_CACHE = OrderedDict()
+
+# path to file to store bot token
+TOKEN_PATH = os.path.dirname(os.path.realpath(__file__)) + "/cbot.txt"
 
 """//////////////
 //    setup    //
@@ -1086,26 +1092,26 @@ async def on_reaction_add(reaction, user):
 //    running the bot    //
 ////////////////////////"""
 
-# prompts user to input bot token and optional user id for event messaging and saves to "cbot.txt" in the format token;devid
+# prompts user to input bot token and optional user id for event messaging and saves in the format token;devid
 def bot_init():
-    global DEV_ID
+    global DEV_ID, TOKEN_PATH
     
     token = input("Enter the bot's token: ")
     DEV_ID = input("Enter your Discord ID ONLY if you want the bot to message you when events happen (leave blank if you don't): ")
     
-    with open("cbot.txt", "w") as f:
+    with open(TOKEN_PATH, "w") as f:
         f.write("{};{}".format(token, DEV_ID))
         
     return token
 
-if (not os.path.exists("cbot.txt")):
+if (not os.path.exists(TOKEN_PATH)):
     token = bot_init()
 else:
     token = ""
     
     while (not token):
         try:
-            with open("cbot.txt", "r") as f:
+            with open(TOKEN_PATH, "r") as f:
                 r = f.readline().split(";")
                 
                 token = r[0]
