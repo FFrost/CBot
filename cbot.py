@@ -14,7 +14,7 @@ next:
 import discord
 from discord.ext import commands
 
-import logging, os, datetime, codecs, re, time, inspect, ipaddress, json, tempfile
+import logging, os, datetime, codecs, re, time, inspect, ipaddress, json, tempfile, traceback
 import asyncio, aiohttp
 import wand, wand.color, wand.drawing
 import youtube_dl
@@ -68,8 +68,11 @@ EMOJI_CHARS["stop_button"] = "⏹"
 # dict to hold cached google images search pages
 SEARCH_CACHE = OrderedDict()
 
+# real path to bot file directory
+REAL_PATH = os.path.dirname(os.path.realpath(__file__))
+
 # path to file to store bot token
-TOKEN_PATH = os.path.dirname(os.path.realpath(__file__)) + "/cbot.txt"
+TOKEN_PATH = REAL_PATH + "/cbot.txt"
 
 """//////////////
 //    setup    //
@@ -237,6 +240,23 @@ def get_cur_time():
 # format current date
 def get_date():
     return "{:%m-%d-%y}".format(datetime.datetime.now())
+
+# add real filepath to relative filepath when writing a file
+# input: filename; string; filename to write to
+#        mode; string; what mode to open the file in, r, w, or a
+#        string; string; what should be written
+#        add_time; bool; if should the current time be prepended
+def write_to_file(filename, mode, string, add_time=False):
+    if (add_time):
+        string = "[{}] {}".format(get_cur_time(), string)
+    
+    with open(REAL_PATH + "/" + filename, mode) as f:            
+        f.write(string + "\n")
+
+# logs an error to file
+# input: error; string; the error to write
+def log_error_to_file(error):  
+    write_to_file("cbot_errors.txt", "a", error, add_time=True)
 
 # format message to log
 # input: message; discord.Message; message to format to be output
@@ -974,6 +994,13 @@ async def undo(ctx, num_to_delete=1):
 """///////////////////////
 //    error handling    //
 ///////////////////////"""
+
+@bot.event
+async def on_error(event, *args, **kwargs):  
+    trace = traceback.format_exc()
+    
+    log_error_to_file(trace)
+    await error_alert(e=trace, extra=get_cur_time())
 
 @bot.event
 async def on_command_error(error, ctx): 
