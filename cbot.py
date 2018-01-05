@@ -1,9 +1,7 @@
 """
 TODO now:
     - reimplement voice player (with simultaneous cross-server play)
-    - split things into different files (learn how to use cogs) (maybe make module for utility functions, etc?)
     - add the ability for server owners to add reactions to messages with specified keywords
-    - make a class for the bot and replace global vars w/ member vars
     - add options for developer notification/admin settings/etc
     - add a time limit on how long a user can scroll through images (after x mins of inactivity, remove reactions and clear from cache)
     
