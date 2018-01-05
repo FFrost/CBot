@@ -77,7 +77,7 @@ class Utility:
             
     @commands.command(description="source code", brief="source code", pass_context=True, aliases=["src"])
     async def source(self, ctx):
-        await self.bot.messaging.reply(ctx.message, "https://github.com/FFrost/cbot")
+        await self.bot.messaging.reply(ctx.message, "https://github.com/FFrost/CBot")
 
 class Fun:
     def __init__(self, bot):
