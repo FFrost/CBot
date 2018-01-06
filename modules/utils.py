@@ -11,7 +11,7 @@ from urllib.parse import quote
 from collections import OrderedDict
 from http.client import responses
 
-class Utils():
+class Utils:
     def __init__(self, bot):
         self.bot = bot
        

@@ -1,8 +1,7 @@
 from enum import Enum
 
-class Enums():
-    def __init__(self):
-        self.DISCORD_MAX_FILESIZE = 10 * 1024 * 1024
+class Enums:
+    DISCORD_MAX_FILESIZE = 10 * 1024 * 1024
      
     class LiquidCodes(Enum):
         SUCCESS = 1

@@ -379,7 +379,8 @@ class Fun:
     @commands.command(description="first result from Google Images",
                       brief="first image result from Google Images",
                       pass_context=True,
-                      aliases=["image"])
+                      aliases=["image"],
+                      no_pm=True)
     async def img(self, ctx, *, query : str):
         channel = ctx.message.channel
         await self.bot.send_typing(channel)

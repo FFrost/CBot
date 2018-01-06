@@ -4,7 +4,7 @@ from discord.ext import commands
 import inspect, re
 from collections import OrderedDict
 
-class Messaging():
+class Messaging:
     def __init__(self, bot):
         self.bot = bot
         

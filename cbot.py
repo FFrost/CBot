@@ -12,7 +12,7 @@ next:
 import discord
 from discord.ext import commands
 
-import utils, enums, messaging
+from modules import utils, enums, messaging
 
 import logging, os, traceback, glob
 from random import randint
@@ -41,6 +41,7 @@ class CBot(commands.Bot):
         self.TOKEN_PATH = self.REAL_PATH + "/cbot.txt"
         self.get_token()
         
+        # load all cogs from the directory
         for path in glob.glob(self.REAL_PATH + "/cogs/*.py"):
             ext = "cogs." + os.path.basename(path).replace(".py", "")
             try:
@@ -170,8 +171,6 @@ class CBot(commands.Bot):
         except Exception as e:        
             await self.messaging.error_alert(e)
     
-    # called when a user joins the server
-    
     async def on_member_join(self, member):
         try:
             if (member == self.user):
@@ -183,8 +182,6 @@ class CBot(commands.Bot):
             
         except Exception as e:
             await self.messaging.error_alert(e)
-    
-    # called when a user leaves the server
     
     async def on_member_remove(self, member):
         try:
@@ -198,8 +195,6 @@ class CBot(commands.Bot):
         except Exception as e:
             await self.messaging.error_alert(e)
     
-    # called when the bot joins a server
-    
     async def on_server_join(self, server):
         try:
             await self.messaging.private_message(self.dev_id, "{time} CBot joined server {name}#{id}".format(time=self.utils.get_cur_time(),
@@ -209,8 +204,6 @@ class CBot(commands.Bot):
         except Exception as e:
             await self.messaging.error_alert(e)
     
-    # called when the bot leaves a server
-    
     async def on_server_remove(self, server):
         try:
             await self.messaging.private_message(self.dev_id, "{time} CBot was removed from server {name}#{id}".format(time=self.utils.get_cur_time(),
@@ -219,15 +212,6 @@ class CBot(commands.Bot):
         
         except Exception as e:
             await self.messaging.error_alert(e)
-            
-    # called when a message has a reaction added to it
-    
-    """
-    async def on_reaction_add(self, reaction, user):
-        # call image search hook
-        #await image_search_reaction_hook(reaction, user)
-        pass
-    """
                 
     def run(self):
         super().run(self.token)
