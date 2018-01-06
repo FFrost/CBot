@@ -33,6 +33,8 @@ class CBot(commands.Bot):
                          description="CBot 2.0",
                          pm_help=True)
         
+        self.source_url = "https://github.com/FFrost/CBot"
+        
         self.token = ""
         self.dev_id = ""
         self.REAL_PATH = os.path.dirname(os.path.realpath(__file__))
