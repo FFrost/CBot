@@ -130,8 +130,6 @@ class CBot(commands.Bot):
         await self.messaging.reply(ctx, error)
     
     async def on_message(self, message):
-        global playing_queue, player
-        
         try:
             if (not message.content or not message.author):
                 return
