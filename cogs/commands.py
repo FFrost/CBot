@@ -89,6 +89,11 @@ class Utility:
             
             src = obj.callback.__code__
             lines, firstlineno = inspect.getsourcelines(src)
+            
+            if (obj.callback.__module__.startswith("discord")):
+                await self.bot.messaging.reply(ctx.message, "Can't get source code of built-in commands")
+                return
+            
             location = os.path.relpath(src.co_filename).replace("\\", "/").replace("cbot/", "")
                 
             url = "{source_url}/blob/master/{location}#L{firstlineno}-L{end}".format(source_url=self.bot.source_url,
