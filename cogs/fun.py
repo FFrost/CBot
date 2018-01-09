@@ -347,7 +347,12 @@ class Fun:
     #        message; discord.Message; the message to edit
     #        i; int=1; the index modifier, which direction to display images in, forwards or backwards from current index, can be 1 or -1
     async def update_img_search(self, user, message, i=1):
-        cached_msg = self.SEARCH_CACHE[message.id]
+        if (message.id in self.SEARCH_CACHE):
+            cached_msg = self.SEARCH_CACHE[message.id]
+        else:
+            await self.bot.messaging.reply(message, "Failed to load image search results")
+            return
+        
         tree = cached_msg["tree"]
         index = cached_msg["index"] + i
         max_index = cached_msg["max"]
