@@ -20,3 +20,8 @@ Work-in-progress Discord bot. Mainly a learning experience. Currently only Linux
 5. Run CBot.py: `python3 cbot.py` (for a specific version of Python ex 3.5: `python3.5 cbot.py`)
 6. CBot will ask for your bot token, enter it now
 7. ~~When prompted for your Discord ID, you might not know it. If you do, enter it now; if not, leave it blank, and after running CBot, you can find it by typing !info to the bot. Enter it into the config file (cbot.yml)~~ this is still a wip, just leave it blank for now
+
+## Todo
+* Music player support (YouTube over voice)
+* More customization options (and database to store them in)
+* yml config
