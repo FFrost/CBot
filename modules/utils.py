@@ -1,15 +1,9 @@
 import discord
 from discord.ext import commands
 
-import logging, os, datetime, codecs, re, time, inspect, ipaddress, json, tempfile, traceback
+import os, datetime
 import asyncio, aiohttp
-import wand, wand.color, wand.drawing
-import youtube_dl
-from random import randint, uniform
 from lxml import html
-from urllib.parse import quote
-from collections import OrderedDict
-from http.client import responses
 
 class Utils:
     def __init__(self, bot):
@@ -71,6 +65,9 @@ Avatar URL: {avatar}
     # input: name; string; keyword to search usernames for
     # output: discord.User or None; found user or None if no users were found  
     async def find(self, name):
+        if (not name):
+            return
+        
         return discord.utils.find(lambda m: (m.name.lower().startswith(name.lower()) or m.id == name), self.bot.get_all_members())
     
     # get channel by name

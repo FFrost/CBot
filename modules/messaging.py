@@ -42,6 +42,9 @@ class Messaging:
     # private message the developer
     # input: msg; string; message to send
     async def message_developer(self, msg):
+        if (not self.bot.dev_id):
+            return
+        
         user = await self.bot.utils.find(self.bot.dev_id)
             
         if (user is None):
@@ -87,6 +90,9 @@ class Messaging:
     #        extra; string=""; any extra information to include
     async def error_alert(self, e, uid="", extra=""):
         if (not uid):
+            if (not self.bot.dev_id):
+                return
+            
             uid = self.bot.dev_id
             
         function_name = inspect.stack()[1][3]

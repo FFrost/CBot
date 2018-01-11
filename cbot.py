@@ -14,7 +14,7 @@ from discord.ext import commands
 
 from modules import utils, enums, messaging
 
-import logging, os, traceback, glob
+import logging, os, traceback, glob, yaml
 from random import randint
 
 # load opus library for voice
@@ -38,7 +38,7 @@ class CBot(commands.Bot):
         self.token = ""
         self.dev_id = ""
         self.REAL_PATH = os.path.dirname(os.path.realpath(__file__))
-        self.TOKEN_PATH = self.REAL_PATH + "/cbot.txt"
+        self.TOKEN_PATH = self.REAL_PATH + "/cbot.yml"
         self.get_token()
         
         # load all cogs from the directory
@@ -62,9 +62,9 @@ class CBot(commands.Bot):
             
         self.token = token
         
-        dev_id = input("Enter your Discord ID ONLY if you want the bot to message you when events happen (leave blank if you don't): ")
+        self.dev_id = input("Enter your Discord ID ONLY if you want the bot to message you when events happen (leave blank if you don't): ")
         
-        if (not dev_id):
+        if (not self.dev_id):
             confirm = input("Are you sure you don't want to enter your Discord ID? (y/n): ").lower() == "y"
             
             if (confirm):
@@ -72,19 +72,29 @@ class CBot(commands.Bot):
             else:
                 self.dev_id = input("Enter your Discord ID: ")
         
+        data = {
+                "token": self.token,
+                "dev_id": self.dev_id
+               }
+        
         with open(self.TOKEN_PATH, "w") as f:
-            f.write("{};{}".format(self.token, self.dev_id))
+            yaml.dump(data, f, default_flow_style=False)
+            
+        print("Saved token to config")
         
     def get_token(self):
         if (not os.path.exists(self.TOKEN_PATH)):
             self.save_token()
         else:
             try:
-                with open(self.TOKEN_PATH, "r") as f:
-                    r = f.readline().split(";")
+                with open(self.TOKEN_PATH, "r") as f:  
+                    yaml_obj = yaml.load(f)
                     
-                    self.token = r[0]
-                    self.dev_id = r[1]        
+                    self.token = yaml_obj["token"]
+                    self.dev_id = yaml_obj["dev_id"]
+                    
+                    print("Loaded token from config")
+            
             except Exception:
                 print("Failed to read token from file, please reenter it")
                 self.save_token()
@@ -198,8 +208,8 @@ class CBot(commands.Bot):
     async def on_server_join(self, server):
         try:
             await self.messaging.private_message(self.dev_id, "{time} CBot joined server {name}#{id}".format(time=self.utils.get_cur_time(),
-                                                                                         name=server.name,
-                                                                                         id=server.id))
+                                                                                                             name=server.name,
+                                                                                                             id=server.id))
         
         except Exception as e:
             await self.messaging.error_alert(e)
@@ -207,8 +217,8 @@ class CBot(commands.Bot):
     async def on_server_remove(self, server):
         try:
             await self.messaging.private_message(self.dev_id, "{time} CBot was removed from server {name}#{id}".format(time=self.utils.get_cur_time(),
-                                                                                                   name=server.name,
-                                                                                                   id=server.id))
+                                                                                                                       name=server.name,
+                                                                                                                       id=server.id))
         
         except Exception as e:
             await self.messaging.error_alert(e)
