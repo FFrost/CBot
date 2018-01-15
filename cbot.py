@@ -112,7 +112,7 @@ class CBot(commands.Bot):
         await self.bot_info()
         
         await self.messaging.message_developer("CBot loaded!")
-        print("CBot ready")
+        print("CBot ready!")
     
     # print info about where the bot is
     async def bot_info(self):

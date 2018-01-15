@@ -6,6 +6,8 @@ from lxml import html
 import youtube_dl
 from urllib.parse import quote
 
+# inspired by PyVox (https://github.com/Hiroyu/_PyVox) and Rapptz's playlist example (https://github.com/Rapptz/discord.py/blob/async/examples/playlist.py)
+
 class Music:
     def __init__(self, bot):
         self.bot = bot
@@ -16,11 +18,11 @@ class Music:
     
     # returns the first video result from youtube with the given query
     async def get_first_yt_result(self, query):
-        ydl = youtube_dl.YoutubeDL({'prefer_ffmpeg': True}) # thanks to pyvox for the idea (https://github.com/Hiroyu/_PyVox)
+        ydl = youtube_dl.YoutubeDL()
         
         url = "https://www.youtube.com/results?search_query=" + quote(query)
         
-        conn = aiohttp.TCPConnector(verify_ssl=False) # for https
+        conn = aiohttp.TCPConnector(verify_ssl=False)
         async with aiohttp.ClientSession(connector=conn) as session:
             async with session.get(url) as req:
                 if (req.status == 200):
@@ -73,8 +75,7 @@ class Music:
             if (info):
                 embed = self.bot.utils.create_youtube_embed(info)
                 
-                #await self.bot.messaging.reply(ctx.message, result)
-                await self.bot.send_message(ctx.message.channel, embed=embed) # error
+                await self.bot.send_message(ctx.message.channel, embed=embed)
             else:
                 await self.bot.messaging.reply(ctx.message, "No info found for `{}` {}".format(query, result))
     

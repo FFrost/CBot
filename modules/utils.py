@@ -202,7 +202,7 @@ Avatar URL: {avatar}
                     "height": 720,
                     "width": 1280
                     },
-                "description": info["description"][:140] + "..."
+                "description": info["description"][:140] + ("..." if len(info["description"]) > 140 else "")
                }
         
         embed = discord.Embed().from_data(data)
