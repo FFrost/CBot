@@ -17,10 +17,6 @@ from modules import utils, enums, messaging
 import logging, os, traceback, glob, yaml
 from random import randint
 
-# load opus library for voice
-if (not discord.opus.is_loaded()):
-    discord.opus.load_opus("opus")
-
 # set up logging
 logger = logging.getLogger("discord")
 logger.setLevel(logging.DEBUG)
@@ -41,18 +37,28 @@ class CBot(commands.Bot):
         self.TOKEN_PATH = self.REAL_PATH + "/cbot.yml"
         self.get_token()
         
+        print("Loading cogs...")
+        
+        cogs = glob.glob(self.REAL_PATH + "/cogs/*.py")
+              
         # load all cogs from the directory
-        for path in glob.glob(self.REAL_PATH + "/cogs/*.py"):
+        for i, path in enumerate(cogs):
             ext = "cogs." + os.path.basename(path).replace(".py", "")
+            
             try:
                 self.load_extension(ext)
-                print("Loaded cog: {}".format(ext))
+                print("Loaded cog {}/{}: {}".format(i + 1, len(cogs), ext))
+                
             except Exception as e:
                 print("Failed to load extension \"{}\" ({})".format(ext, e))
+                
+        print("Finished loading cogs")
             
         self.utils = utils.Utils(self)
         self.enums = enums.Enums()
         self.messaging = messaging.Messaging(self)
+        
+        print("CBot initialized")
         
     def save_token(self):
         token = input("Enter the bot's token: ")
@@ -88,10 +94,10 @@ class CBot(commands.Bot):
         else:
             try:
                 with open(self.TOKEN_PATH, "r") as f:  
-                    yaml_obj = yaml.load(f)
+                    config = yaml.load(f)
                     
-                    self.token = yaml_obj["token"]
-                    self.dev_id = yaml_obj["dev_id"]
+                    self.token = config["token"]
+                    self.dev_id = config["dev_id"]
                     
                     print("Loaded token from config")
             
@@ -106,6 +112,7 @@ class CBot(commands.Bot):
         await self.bot_info()
         
         await self.messaging.message_developer("CBot loaded!")
+        print("CBot ready")
     
     # print info about where the bot is
     async def bot_info(self):

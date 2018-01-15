@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
 
-import os, datetime
+import os, datetime, time
 import asyncio, aiohttp
 from lxml import html
 
@@ -173,6 +173,48 @@ Avatar URL: {avatar}
         if (thumbnail):
             embed.set_thumbnail(url=thumbnail)
         
+        return embed
+
+    # TODO: discord changes this to type 'rich' and drops the 'video' data entirely after being sent
+    # creates a discord.Embed with an embedded YouTube video
+    # input: info; dict; youtube-dl dict of extracted info from the video
+    # output: embed; discord.Embed; generated video embed
+    def create_youtube_embed(self, info):     
+        data = {
+                "url": info["webpage_url"],
+                "title": info["title"],
+                "type": "video",
+                "thumbnail": {
+                    "url": info["thumbnail"],
+                    "height": 360,
+                    "width": 480
+                    },
+                "author": {
+                    "name": info["uploader"],
+                    "url": info["uploader_url"]
+                    },
+                "provider": {
+                    "url": "https://www.youtube.com/",
+                    "name": "YouTube"
+                    },
+                "video": {
+                    "url": info["webpage_url"].replace("watch?v=", "embed/"),
+                    "height": 720,
+                    "width": 1280
+                    },
+                "description": info["description"][:140] + "..."
+               }
+        
+        embed = discord.Embed().from_data(data)
+        
+        embed.colour = discord.Colour.dark_blue()
+        
+        embed.add_field(name=":movie_camera:", value="{:,} views".format(info["view_count"]))
+        embed.add_field(name=":watch:", value=time.strftime("%H:%M:%S", time.gmtime(info["duration"])))
+        embed.add_field(name=":thumbsup:", value="{:,} likes".format(info["like_count"], inline=True))
+        embed.add_field(name=":thumbsdown:", value="{:,} dislikes".format(info["dislike_count"], inline=True))
+        embed.add_field(name=":calendar_spiral:", value=datetime.datetime.strptime(info["upload_date"], "%Y%m%d").strftime("%b %-d, %Y"))
+
         return embed
             
     # 'safely' remove a file

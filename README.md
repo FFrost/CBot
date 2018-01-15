@@ -19,12 +19,8 @@ Work-in-progress Discord bot. Mainly a learning experience. Currently only Linux
 4. Make note of the token (looks like a string of numbers and letters, you'll need to click on it to reveal it)
 5. Run CBot.py: `python3 cbot.py` (for a specific version of Python ex 3.5: `python3.5 cbot.py`)
 6. CBot will ask for your bot token, enter it now
-7. When prompted for your Discord ID, you might not know it. If you do, enter it now; if not, leave it blank, and after running CBot, you can find it by typing !info to the bot. Enter it into the config file (cbot.yml) on the line `dev_id: 'enter your id here'`
+7. When prompted for your Discord ID, you might not know it. If you do, enter it now; if not, leave it blank, and after running CBot, you can find it by typing !info to the bot. Enter it into the config file (`cbot.yml`) on the line `dev_id: 'enter your id here'`
 
 ## Troubleshooting
 
 * If you're getting this error: `discord.errors.LoginFailure: Improper token has been passed.`, delete cbot.yml and reenter your token
-
-## Todo
-* Music player support (YouTube over voice)
-* More customization options (and database to store them in)
