@@ -78,6 +78,21 @@ class Music:
                 await self.bot.send_message(ctx.message.channel, embed=embed)
             else:
                 await self.bot.messaging.reply(ctx.message, "No info found for `{}` {}".format(query, result))
+                
+    @commands.command(description="plays a YouTube video over voice",
+                      brief="plays a YouTube video over voice",
+                      pass_context=True,
+                      enabled=False,
+                      no_pm=True)
+    async def play(self, ctx, *, query):
+        if (self.bot.utils.youtube_url_validation(query)):
+            url = query
+        else:
+            url = await self.get_first_yt_result(query)
+            
+        if (not url):
+            await self.bot.messaging.reply("No video found for `{}`".format(query))
+            return
     
 def setup(bot):
     bot.add_cog(Music(bot))

@@ -1,7 +1,6 @@
 import discord
-from discord.ext import commands
 
-import os, datetime, time
+import os, datetime, time, re
 import asyncio, aiohttp
 from lxml import html
 
@@ -216,6 +215,20 @@ Avatar URL: {avatar}
         embed.add_field(name=":calendar_spiral:", value=datetime.datetime.strptime(info["upload_date"], "%Y%m%d").strftime("%b %-d, %Y"))
 
         return embed
+    
+    # check if a url matches a youtube url format
+    # thanks to stack overflow (https://stackoverflow.com/a/19161373)
+    def youtube_url_validation(self, url):
+        youtube_regex = (
+            r'(https?://)?(www\.)?'
+            '(youtube|youtu|youtube-nocookie)\.(com|be)/'
+            '(watch\?v=|embed/|v/|.+\?v=)?([^&=%\?]{11})')
+    
+        youtube_regex_match = re.match(youtube_regex, url)
+        if youtube_regex_match:
+            return youtube_regex_match.group(6)
+    
+        return youtube_regex_match
             
     # 'safely' remove a file
     # TODO: not that safe, sanity check path / dir just to be safe... we don't want people ever abusing this
