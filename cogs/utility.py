@@ -98,7 +98,6 @@ class Utility:
             
             await self.bot.messaging.reply(ctx.message, url)
             
-    # TODO: list language codes in help message
     @commands.command(description="translates text into another language\nlist:\n" + str(LANGUAGES),
                       brief="translates text into another language",
                       pass_context=True,
@@ -117,7 +116,6 @@ class Utility:
             if (language in LANGCODES):
                 language = LANGCODES[language]
             else:
-                print("\"" + language + "\"")
                 await self.bot.messaging.reply(ctx.message, "Invalid language (see help for list)")
                 return
         
