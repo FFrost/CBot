@@ -3,10 +3,12 @@ from discord.ext import commands
 
 import os, inspect
 import asyncio
+from googletrans import Translator, LANGUAGES, LANGCODES
 
 class Utility:
     def __init__(self, bot):
         self.bot = bot
+        self.translator = Translator()
         
     @commands.command(description="info about a Discord user", brief="info about a Discord user", pass_context=True)
     async def info(self, ctx, *, name : str=""):
@@ -95,6 +97,35 @@ class Utility:
                                                              end=(firstlineno + len(lines) - 1))
             
             await self.bot.messaging.reply(ctx.message, url)
+            
+    # TODO: list language codes in help message
+    @commands.command(description="translates text into another language\nlist:\n" + str(LANGUAGES),
+                      brief="translates text into another language",
+                      pass_context=True,
+                      aliases=["tr"])
+    async def translate(self, ctx, language : str="en", *, string : str=""):    
+        if (not string):
+            string = await self.bot.utils.find_last_text(ctx.message)
+            
+            if (not string):
+                await self.bot.messaging.reply(ctx.message, "Failed to find text to translate")
+                return
+        
+        language = language.lower().strip()
+            
+        if (language not in LANGUAGES.keys()):
+            if (language in LANGCODES):
+                language = LANGCODES[language]
+            else:
+                print("\"" + language + "\"")
+                await self.bot.messaging.reply(ctx.message, "Invalid language (see help for list)")
+                return
+        
+        result = self.translator.translate(string, dest=language)
+        src = LANGUAGES[result.src]
+        dest = LANGUAGES[result.dest]
+        msg = "{src} to {dest}: {text}".format(src=src, dest=dest, text=result.text)
+        await self.bot.messaging.reply(ctx.message, msg)
             
 def setup(bot):
     bot.add_cog(Utility(bot))

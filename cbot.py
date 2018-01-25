@@ -25,7 +25,7 @@ handler.setFormatter(logging.Formatter("%(asctime)s:%(levelname)s:%(name)s: %(me
 
 class CBot(commands.Bot):
     def __init__(self):
-        super().__init__(command_prefix=commands.when_mentioned_or("!"),
+        super().__init__(command_prefix="!",
                          description="CBot 2.0",
                          pm_help=True)
         
@@ -179,6 +179,10 @@ class CBot(commands.Bot):
                         
                     await self.send_message(message.channel, this_msg)
                     return
+			
+            if (message.content.lower().startswith("same")):
+                await self.send_message(message.channel, "same")
+                return
                 
             # TODO: reactions will go here
             

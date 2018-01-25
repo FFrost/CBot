@@ -138,6 +138,14 @@ Avatar URL: {avatar}
             
         return None
     
+    # finds last text message in channel
+    # input: message; discord.Message; message from which channel will be extracted and point to search before
+    # output: string or None; text of message or None if no text messages were found
+    async def find_last_text(self, message):
+        async for message in self.bot.logs_from(message.channel, before=message):
+            if (message.content):
+                return message.content
+    
     # format member name as user#discriminator
     # input: user; discord.User; the user to format
     # output: string; formatted string in the form username#discriminator (ex. CBot#8071)
