@@ -97,12 +97,23 @@ class Utility:
                                                              end=(firstlineno + len(lines) - 1))
             
             await self.bot.messaging.reply(ctx.message, url)
-            
-    @commands.command(description="translates text into another language\nlist:\n" + str(LANGUAGES),
+    
+    @commands.command(description="translates text into another language\n" + \
+                      "list of language codes: https://cloud.google.com/translate/docs/languages",
                       brief="translates text into another language",
                       pass_context=True,
                       aliases=["tr"])
-    async def translate(self, ctx, language : str="en", *, string : str=""):    
+    async def translate(self, ctx, language : str="en", *, string : str=""):
+        language = language.lower().strip()
+            
+        if (language not in LANGUAGES.keys()):
+            if (language in LANGCODES):
+                language = LANGCODES[language]
+            else:
+                # default to english if no valid language provided
+                string = language + " " + string # command separates the first word from the rest of the string
+                language = "en"
+        
         if (not string):
             string = await self.bot.utils.find_last_text(ctx.message)
             
@@ -110,18 +121,9 @@ class Utility:
                 await self.bot.messaging.reply(ctx.message, "Failed to find text to translate")
                 return
         
-        language = language.lower().strip()
-            
-        if (language not in LANGUAGES.keys()):
-            if (language in LANGCODES):
-                language = LANGCODES[language]
-            else:
-                await self.bot.messaging.reply(ctx.message, "Invalid language (see help for list)")
-                return
-        
         result = self.translator.translate(string, dest=language)
-        src = LANGUAGES[result.src]
-        dest = LANGUAGES[result.dest]
+        src = LANGUAGES[result.src.lower()]
+        dest = LANGUAGES[result.dest.lower()]
         msg = "{src} to {dest}: {text}".format(src=src, dest=dest, text=result.text)
         await self.bot.messaging.reply(ctx.message, msg)
             
