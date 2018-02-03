@@ -18,9 +18,13 @@ class Messaging:
     # input: dest; discord.User, discord.Message, discord.ext.commands.Context, or string; destination to send message to (string should be id of user)
     #        msg; string; message to send
     # output: discord.Message; the reply message object sent to the user
-    async def reply(self, dest, msg):
+    async def reply(self, dest, msg, channel=None):
         if (isinstance(dest, discord.User)):
-            destination = user = dest
+            if (not channel):
+                destination = user = dest
+            else:
+                destination = channel
+                user = dest
         elif (isinstance(dest, discord.Message)):
             destination = dest.channel
             user = dest.author
@@ -119,6 +123,9 @@ class Messaging:
     #        emoji; string or list; emoji(s) to react with
     #        partial; bool=True; should react if partial keywords are found
     async def react(self, message, keyword, emojis, partial=True):
+        if (not self.bot.utils.get_permissions(message.channel).add_reactions):
+            return
+    
         try:
             if (not isinstance(keyword, list)):
                 keyword = [keyword]
@@ -175,8 +182,12 @@ class Messaging:
     # input: message; discord.Message; message to add reactions to
     async def add_img_reactions(self, message):
         try:
-            for _, emoji in self.EMOJI_CHARS.items():
+            for name, emoji in self.EMOJI_CHARS.items():
+                if (name == "stop_button" and not self.bot.utils.get_permissions(message.channel).manage_messages): # skip delete if we can't delete messages
+                    continue
+                
                 await self.bot.add_reaction(message, emoji)
+        
         except discord.errors.NotFound:
             pass
         except Exception as e:

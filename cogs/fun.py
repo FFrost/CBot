@@ -49,7 +49,7 @@ class Fun:
             else:
                 await self.liquid_error_message(message, path, url)
             
-            await self.bot.delete_message(msg)
+            await self.bot.utils.delete_message(msg)
             
         except Exception as e:
             await self.bot.messaging.reply(message, "Failed to liquidize image `{}`".format(url))
@@ -70,6 +70,8 @@ class Fun:
             await self.bot.messaging.reply(message, "Failed to liquidize image (max dimensions: 3000x3000): `{}`".format(url))
         elif (code == self.bot.enums.LiquidCodes.BAD_URL):
             await self.bot.messaging.reply(message, "Failed to liquidize image (could not download url): `{}`".format(url))
+        elif (code == self.bot.enums.LiquidCodes.NO_PERMISSIONS):
+            await self.bot.messaging.reply(message, "Missing attach file permissions, can't upload liquidized file")
     
     # download an image from a url and save it as a temp file
     # input: url; string; image to download
@@ -193,7 +195,12 @@ class Fun:
             img.save(filename=magickd_file_path)
             
             # upload liquidized image
-            await self.bot.send_file(channel, magickd_file_path)
+            if (self.bot.utils.get_permissions(channel).attach_files):
+                await self.bot.send_file(channel, magickd_file_path)
+            else:
+                self.bot.utils.remove_file_safe(path)
+                self.bot.utils.remove_file_safe(magickd_file_path)
+                return self.bot.enum.LiquidCodes.NO_PERMISSIONS
             
             # just in case
             await asyncio.sleep(1)
@@ -287,8 +294,7 @@ class Fun:
     @commands.command(description="first result from Google Images",
                       brief="first image result from Google Images",
                       pass_context=True,
-                      aliases=["image"],
-                      no_pm=True)
+                      aliases=["image"])
     async def img(self, ctx, *, query : str):
         channel = ctx.message.channel
         await self.bot.send_typing(channel)
@@ -317,7 +323,7 @@ class Fun:
         img_url = self.get_img_url_from_tree(tree, 0)
                 
         embed = self.bot.utils.create_image_embed(ctx.message.author, title="Search results", footer="Page 1/{}".format(max_index), image=img_url)
-                
+        
         img_msg = await self.bot.send_message(channel, embed=embed)
     
         await self.bot.messaging.add_img_reactions(img_msg)
@@ -350,7 +356,7 @@ class Fun:
         if (message.id in self.SEARCH_CACHE):
             cached_msg = self.SEARCH_CACHE[message.id]
         else:
-            await self.bot.messaging.reply(message, "Failed to load image search results")
+            await self.bot.messaging.reply(user, "Failed to load image search results", channel=message.channel)
             return
         
         tree = cached_msg["tree"]
@@ -389,15 +395,10 @@ class Fun:
     # deletes an embed and removes it from the cache
     # input: message; discord.Message; the message to delete
     async def remove_img_search(self, message, index=0):
-        # TODO: check if we have permission to do this
-        try:
-            await self.bot.delete_message(self.SEARCH_CACHE[message.id]["command_msg"])
-            
-        except Exception:
-            pass
+        await self.bot.utils.delete_message(self.SEARCH_CACHE[message.id]["command_msg"])
         
         del self.SEARCH_CACHE[message.id]
-        await self.bot.delete_message(message)
+        await self.bot.utils.delete_message(message)
         
     # handles reactions and calls appropriate functions
     # input: reaction; discord.Reaction; the reaction applied to the message
@@ -416,7 +417,8 @@ class Fun:
                     emoji = reaction.emoji
                     
                     if (message.reactions and reaction in message.reactions):
-                        await self.bot.remove_reaction(message, emoji, user) # remove the reaction so the user can react again
+                        if (self.bot.utils.get_permissions(message.channel).manage_emojis):
+                            await self.bot.remove_reaction(message, emoji, user) # remove the reaction so the user can react again
                                     
                     if (emoji == self.bot.messaging.EMOJI_CHARS["stop_button"]):
                         await self.remove_img_search(message) # delete message

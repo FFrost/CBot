@@ -10,3 +10,4 @@ class Enums:
         MAX_DIMENSIONS = 4
         BAD_URL = 5
         MISC_ERROR = 6
+        NO_PERMISSIONS = 7

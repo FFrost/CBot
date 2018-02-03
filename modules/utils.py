@@ -51,10 +51,12 @@ Avatar URL: {avatar}
     # input: message; discord.Message; message to format to be output
     # output: string; formatted string of message content
     def format_log_message(self, message):
-        content = message.content.replace(self.bot.user.id, "{name}#{disc}".format(name=self.bot.user.name, disc=self.bot.user.discriminator))
-        server_name = message.server.name if message.server else "Private Message"
+        #content = message.content.replace(self.bot.user.id, "{name}#{disc}".format(name=self.bot.user.name, disc=self.bot.user.discriminator))
+        content = message.clean_content
+        server_name = ("[{}]".format(message.server.name)) if message.server else ""
         
-        return "{time} [{server}] [{channel}] {name}: {message}".format(time=self.get_cur_time(),
+        return "{time}{space}{server} [{channel}] {name}: {message}".format(time=self.get_cur_time(),
+                                                                        space=(" " if server_name else ""),
                                                                         server=server_name,
                                                                         channel=message.channel,
                                                                         name=message.author,
@@ -245,6 +247,24 @@ Avatar URL: {avatar}
     def remove_file_safe(self, filename):
         if (os.path.exists(filename)):
             os.remove(filename)
+            
+    # get bot's permissions in a channel
+    # input: channel; discord.Channel; channel to get permissions from
+    # output: discord.Permissions; permissions in the channel
+    def get_permissions(self, channel):
+        if (channel.is_private):
+            return discord.Permissions.all_channel()
+        
+        return channel.server.me.permissions_in(channel) # needs member version of bot
+    
+    # deletes a message if the bot has permission to do so
+    # input: message; discord.Message; message to delete
+    async def delete_message(self, message):
+        if (self.get_permissions(message.channel).manage_messages):
+            if (message.channel.is_private and message.author != self.bot.user):
+                return
+            
+            await self.bot.delete_message(message)
     
     # TODO: this is clearly not a utility function, need to find a better place to put this function
     # get insults from insult generator

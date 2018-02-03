@@ -14,7 +14,7 @@ from discord.ext import commands
 
 from modules import utils, enums, messaging
 
-import logging, os, traceback, glob, yaml
+import logging, os, traceback, glob, yaml, re
 from random import randint
 
 # set up logging
@@ -179,10 +179,13 @@ class CBot(commands.Bot):
                         
                     await self.send_message(message.channel, this_msg)
                     return
-			
+                
             if (message.content.lower().startswith("same")):
                 await self.send_message(message.channel, "same")
                 return
+            
+            if (re.match("([^\s]+)" + r"\b" + " bot" + r"\b", message.content.lower())): # match <word> bot
+                await self.messaging.reply(message, await self.utils.get_insult())
                 
             # TODO: reactions will go here
             

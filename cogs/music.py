@@ -82,8 +82,8 @@ class Music:
     @commands.command(description="plays a YouTube video over voice",
                       brief="plays a YouTube video over voice",
                       pass_context=True,
-                      enabled=False,
-                      no_pm=True)
+                      no_pm=True,
+                      enabled=False)
     async def play(self, ctx, *, query):
         if (self.bot.utils.youtube_url_validation(query)):
             url = query

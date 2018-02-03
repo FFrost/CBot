@@ -50,25 +50,24 @@ class Utility:
     async def undo(self, ctx, num_to_delete=1):
         cur = 0
     
-        async for message in self.bot.logs_from(ctx.message.channel):
+        async for message in self.bot.logs_from(ctx.message.channel, before=ctx.message):
             if (cur >= num_to_delete):
                 break
             
             if (message.author == self.bot.user):
-                await self.bot.delete_message(message)
+                await self.bot.utils.delete_message(message)
                 cur += 1
         
-        # TODO: check if we have perms to do this
-        try:
-            await self.bot.delete_message(ctx.message)
-        except Exception:
-            pass
+        if (not ctx.message.channel.is_private):
+            await self.bot.utils.delete_message(ctx.message)
         
         temp = await self.bot.say("Deleted last {} message(s)".format(cur))
         await asyncio.sleep(5)
         
-        if (temp):
-            await self.bot.delete_message(temp)
+        try:
+            await self.bot.utils.delete_message(temp)
+        except Exception:
+            pass
     
     # stolen from https://github.com/Rapptz/RoboDanny/blob/c8fef9f07145cef6c05416dc2421bbe1d05e3d33/cogs/meta.py#L164
     @commands.command(description="source code", brief="source code", pass_context=True, aliases=["src"])
