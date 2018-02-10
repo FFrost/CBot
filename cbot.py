@@ -3,7 +3,6 @@ TODO now:
     - reimplement voice player (with simultaneous cross-server play)
     - add the ability for server owners to add reactions to messages with specified keywords
     - add options for developer notification/admin settings/etc
-    - add a time limit on how long a user can scroll through images (after x mins of inactivity, remove reactions and clear from cache)
     
 next:
     - store bot token/other settings/etc in database instead of txt files
@@ -111,7 +110,6 @@ class CBot(commands.Bot):
         await self.change_presence(game=discord.Game(name="!help for info"))
         await self.bot_info()
         
-        await self.messaging.message_developer("CBot loaded!")
         print("CBot ready!")
     
     # print info about where the bot is

@@ -16,6 +16,8 @@ class Fun:
         self.bot = bot
         
         self.SEARCH_CACHE = OrderedDict()
+        
+        self.bot.loop.create_task(self.remove_inactive_image_searches())
  
     # find images in message or attachments and pass to liquify function
     @commands.command(description="liquidizes an image", brief="liquidizes an image", pass_context=True)
@@ -329,7 +331,7 @@ class Fun:
         await self.bot.messaging.add_img_reactions(img_msg)
                 
         # add the tree to the cache
-        self.SEARCH_CACHE[img_msg.id] = {"tree": tree, "index": 0, "max": max_index, "time": time.time(), "command_msg": ctx.message}
+        self.SEARCH_CACHE[img_msg.id] = {"tree": tree, "index": 0, "max": max_index, "time": time.time(), "command_msg": ctx.message, "channel": channel}
                 
     # searches a tree for a div matching google images's image element and grabs the image url from it
     # input: tree; lxml.etree._Element; a tree element of the google images page to parse
@@ -363,6 +365,7 @@ class Fun:
         index = cached_msg["index"] + i
         max_index = cached_msg["max"]
         command_msg = cached_msg["command_msg"]
+        channel = cached_msg["channel"]
         
         if (index < 0):
             index = max_index - 1
@@ -379,9 +382,8 @@ class Fun:
         await self.bot.messaging.add_img_reactions(msg)
         
         # update cache
-        self.SEARCH_CACHE[msg.id] = {"tree": tree, "index": index, "max": max_index, "time": time.time(), "command_msg": command_msg}
+        self.SEARCH_CACHE[msg.id] = {"tree": tree, "index": index, "max": max_index, "time": time.time(), "command_msg": command_msg, "channel": channel}
         
-    # TODO: check every ~minute and clear searches that have been inactive for > 5 mins
     # remove an image from the cache and prevent it from being scrolled
     # input: message; discord.Message; message to clear
     async def remove_img_from_cache(self, message):
@@ -426,6 +428,15 @@ class Fun:
                         await self.update_img_search(user, message, 1) # increment index
                     elif (emoji == self.bot.messaging.EMOJI_CHARS["arrow_backward"]):
                         await self.update_img_search(user, message, -1) # decrement index
+                        
+    async def remove_inactive_image_searches(self):
+        while (not self.bot.is_closed):
+            for message_id, cache in self.SEARCH_CACHE.items():
+                if (time.time() > cache["time"] + self.bot.enums.IMAGESEARCH_TIME_TO_WAIT):
+                    msg = await self.bot.get_message(cache["channel"], message_id)
+                    await self.remove_img_from_cache(msg)
+            
+            await asyncio.sleep(5)
                         
     async def on_reaction_add(self, reaction, user):
         # call image search hook

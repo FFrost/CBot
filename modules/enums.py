@@ -3,6 +3,8 @@ from enum import Enum
 class Enums:
     DISCORD_MAX_FILESIZE = 10 * 1024 * 1024
      
+    IMAGESEARCH_TIME_TO_WAIT = 5 * 60 # 5 minutes
+    
     class LiquidCodes(Enum):
         SUCCESS = 1
         MAX_FILESIZE = 2
