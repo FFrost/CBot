@@ -436,7 +436,7 @@ class Fun:
                     msg = await self.bot.get_message(cache["channel"], message_id)
                     await self.remove_img_from_cache(msg)
             
-            await asyncio.sleep(5)
+            await asyncio.sleep(self.bot.enums.IMAGESEARCH_TIME_TO_WAIT // 2)
                         
     async def on_reaction_add(self, reaction, user):
         # call image search hook

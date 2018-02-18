@@ -1,15 +1,13 @@
 import discord
 
 import os, datetime, time, re
-import asyncio, aiohttp
-from lxml import html
 
 class Utils:
     def __init__(self, bot):
         self.bot = bot
        
     # return some info about a user as a formatted string
-    # input:    user;  discord.User;  user to lookup
+    # input: user; discord.User; user to lookup
     def get_user_info(self, user):
         info_msg = """
 Name: {name}
@@ -51,7 +49,6 @@ Avatar URL: {avatar}
     # input: message; discord.Message; message to format to be output
     # output: string; formatted string of message content
     def format_log_message(self, message):
-        #content = message.content.replace(self.bot.user.id, "{name}#{disc}".format(name=self.bot.user.name, disc=self.bot.user.discriminator))
         content = message.clean_content
         server_name = ("[{}]".format(message.server.name)) if message.server else ""
         
@@ -93,7 +90,6 @@ Avatar URL: {avatar}
                     
         return None
     
-    # TODO: create enum for embed type? message.embeds returns a dict so maybe not
     # find last embed in message
     # input: message; discord.Message; message to search for image embeds
     # output: string or None; url of the embed or None if not found
@@ -141,7 +137,7 @@ Avatar URL: {avatar}
         return None
     
     # finds last text message in channel
-    # input: message; discord.Message; message from which channel will be extracted and point to search before
+    # input: message; discord.Message; message from which channel will be used as point to search before
     # output: string or None; text of message or None if no text messages were found
     async def find_last_text(self, message):
         async for message in self.bot.logs_from(message.channel, before=message):
@@ -265,34 +261,3 @@ Avatar URL: {avatar}
                 return
             
             await self.bot.delete_message(message)
-    
-    # TODO: this is clearly not a utility function, need to find a better place to put this function
-    # get insults from insult generator
-    # output: string; the insult if found or "fucker"
-    async def get_insult(self):
-        try:
-            conn = aiohttp.TCPConnector(verify_ssl=False) # for https
-            async with aiohttp.ClientSession(connector=conn) as session:
-                async with session.get("https://www.insult-generator.org/") as r:
-                    if (r.status != 200):
-                        return "fucker"
-                    
-                    tree = html.fromstring(await r.text())            
-                    p = tree.xpath("//div[@class='insult-text']/text()")
-                    
-                    if (isinstance(p, list)):
-                        ret = p[0]
-                    elif (isinstance(p, str)):
-                        ret = p
-                    else:
-                        return "fucker"
-                    
-                    ret = ret.strip()
-                        
-                    if (not ret):
-                        return "fucker"
-                
-                    return ret
-        
-        except Exception:
-            return "fucker"

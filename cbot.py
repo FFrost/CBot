@@ -1,22 +1,19 @@
 """
-TODO now:
+TODO:
     - reimplement voice player (with simultaneous cross-server play)
     - add the ability for server owners to add reactions to messages with specified keywords
     - add options for developer notification/admin settings/etc
-    
-next:
-    - store bot token/other settings/etc in database instead of txt files
 """
 
 import discord
 from discord.ext import commands
 
-from modules import utils, enums, messaging
+from modules import utils, enums, messaging, misc
 
 import logging, os, traceback, glob, yaml, re
 from random import randint
 
-# set up logging
+# set up logger
 logger = logging.getLogger("discord")
 logger.setLevel(logging.DEBUG)
 handler = logging.FileHandler(filename="discord.log", encoding="utf-8", mode="w")
@@ -49,16 +46,18 @@ class CBot(commands.Bot):
                 print("Loaded cog {}/{}: {}".format(i + 1, len(cogs), ext))
                 
             except Exception as e:
-                print("Failed to load extension \"{}\" ({})".format(ext, e))
+                print("Failed to load cog \"{}\" ({})".format(ext, e))
                 
         print("Finished loading cogs")
             
         self.utils = utils.Utils(self)
         self.enums = enums.Enums()
         self.messaging = messaging.Messaging(self)
+        self.misc = misc.Misc(self)
         
         print("CBot initialized")
         
+    # save bot token and optional developer id to config file
     def save_token(self):
         token = input("Enter the bot's token: ")
         
@@ -87,6 +86,7 @@ class CBot(commands.Bot):
             
         print("Saved token to config")
         
+    # load token and dev id from config file or prompt user if they don't exist
     def get_token(self):
         if (not os.path.exists(self.TOKEN_PATH)):
             self.save_token()
@@ -108,16 +108,16 @@ class CBot(commands.Bot):
         print("Logged in as {name}#{disc} [{uid}]".format(name=self.user.name, disc=self.user.discriminator, uid=self.user.id))
         
         await self.change_presence(game=discord.Game(name="!help for info"))
-        await self.bot_info()
+        await self.print_bot_info()
         
         print("CBot ready!")
     
     # print info about where the bot is
-    async def bot_info(self):
+    async def print_bot_info(self):
         print("Connected to:")
         
         for s in self.servers:
-            if (s.unavailable): # can't retrieve info about server, shouldn't usually happen
+            if (s.unavailable): # can't retrieve info about server
                 print("\t{id} - server is unavailable!".format(id=s.id))
             else:
                 print("\t{name} owned by {owner}#{ownerid}".format(name=s.name, owner=s.owner.name, ownerid=s.owner.discriminator))
@@ -139,8 +139,7 @@ class CBot(commands.Bot):
             
         if (isinstance(error, commands.CommandNotFound)):
             return
-        
-        if (isinstance(error, commands.CheckFailure)):
+        elif (isinstance(error, commands.CheckFailure)):
             return
             
         await self.messaging.reply(ctx, error)
@@ -158,14 +157,13 @@ class CBot(commands.Bot):
             except Exception as e:
                 await self.messaging.error_alert(e, extra="logging")
             
-            # don't respond to yourself
+            # don't respond to ourself
             if (message.author == self.user):
                 return
             
             # insult anyone who @s us
-            # TODO: find a better way to check if command is being run than startswith("!")
-            if (self.user in message.mentions and not message.mention_everyone and not message.content.startswith("!")):
-                await self.messaging.reply(message, "fuck you, you %s." % await self.utils.get_insult())
+            if (self.user in message.mentions and not message.mention_everyone):
+                await self.messaging.reply(message, "fuck you, you %s." % await self.misc.get_insult())
             
             # respond to "^ this", "this", "^", etc.
             if (message.content.startswith("^") or message.content.lower() == "this"):
@@ -182,7 +180,8 @@ class CBot(commands.Bot):
                 await self.send_message(message.channel, "same")
                 return
             
-            if (re.match("([^\s]+)" + r"\b" + " bot" + r"\b", message.content.lower())): # match <word> bot
+            # match <word> bot
+            if (re.match("([^\s]+)" + r"\b" + " bot" + r"\b", message.content.lower())):
                 await self.messaging.reply(message, await self.utils.get_insult())
                 
             # TODO: reactions will go here
@@ -200,7 +199,8 @@ class CBot(commands.Bot):
             
             await self.messaging.msg_admin_channel("{time} {name} [{uid}] joined".format(time=self.utils.get_cur_time(),
                                                                                          name=self.utils.format_member_name(member),
-                                                                                         uid=member.id), member.server)
+                                                                                         uid=member.id),
+                                                   member.server)
             
         except Exception as e:
             await self.messaging.error_alert(e)
@@ -212,7 +212,8 @@ class CBot(commands.Bot):
             
             await self.messaging.msg_admin_channel("{time} {name} [{uid}] left".format(time=self.utils.get_cur_time(),
                                                                                        name=self.utils.format_member_name(member),
-                                                                                       uid=member.id), member.server)
+                                                                                       uid=member.id),
+                                                   member.server)
         
         except Exception as e:
             await self.messaging.error_alert(e)
