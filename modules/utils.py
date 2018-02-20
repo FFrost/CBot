@@ -1,5 +1,6 @@
 import discord
 
+import asyncio
 import os, datetime, time, re
 
 class Utils:
@@ -16,7 +17,7 @@ ID: {id}
 User created at: {date}
 Avatar URL: {avatar}
 """.format(name=user.name, disc=user.discriminator, id=user.id, date=str(user.created_at),
-                  avatar="%s" % (user.avatar_url if user.avatar_url is not None else ""))
+                  avatar=(user.avatar_url if user.avatar_url is not None else ""))
         
         return info_msg
     
@@ -148,7 +149,7 @@ Avatar URL: {avatar}
     # input: user; discord.User; the user to format
     # output: string; formatted string in the form username#discriminator (ex. CBot#8071)
     def format_member_name(self, user):
-        return "%s#%s" % (user.name, str(user.discriminator))
+        return "{}#{}".format(user.name, user.discriminator)
                 
     # creates a discord.Embed featuring an image
     # input: user; discord.Member; the author of the embed
@@ -258,6 +259,29 @@ Avatar URL: {avatar}
     async def delete_message(self, message):
         if (self.get_permissions(message.channel).manage_messages):
             if (message.channel.is_private and message.author != self.bot.user):
-                return
+                return False
             
             await self.bot.delete_message(message)
+            return True
+        
+        return False
+            
+    # deletes a number messages from a channel by user
+    # input: ctx; discord.Context; context to reference
+    #        num_to_delete; int; number of messages to delete
+    #        users; list or None; list of users to delete messages from or None to delete regardless of author
+    # output: int; number of messages successfully deleted
+    async def purge(self, ctx, num_to_delete, users):
+        num_deleted = 0
+    
+        async for message in self.bot.logs_from(ctx.message.channel, before=ctx.message, limit=500):
+            if (num_deleted >= num_to_delete):
+                break
+            
+            if (not users or message.author in users):
+                success = await self.bot.utils.delete_message(message)
+                
+                if (success):
+                    num_deleted += 1
+            
+        return num_deleted

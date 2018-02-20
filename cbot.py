@@ -10,7 +10,7 @@ from discord.ext import commands
 
 from modules import utils, enums, messaging, misc, checks
 
-import logging, os, traceback, glob, yaml, re
+import logging, os, traceback, glob, yaml, sys
 from random import randint
 
 # set up logger
@@ -27,9 +27,12 @@ class CBot(commands.Bot):
         
         self.source_url = "https://github.com/FFrost/CBot"
         
+        self.bot_restart_arg = "-restarted"
+        
         self.token = ""
         self.dev_id = ""
-        self.REAL_PATH = os.path.dirname(os.path.realpath(__file__))
+        self.REAL_FILE = os.path.realpath(__file__)
+        self.REAL_PATH = os.path.dirname(self.REAL_FILE)
         self.TOKEN_PATH = self.REAL_PATH + "/cbot.yml"
         self.get_token()
         
@@ -113,6 +116,9 @@ class CBot(commands.Bot):
         await self.print_bot_info()
         
         print("CBot ready!")
+        
+        if (self.bot_restart_arg in sys.argv):
+            await self.messaging.message_developer("CBot restarted successfully")
     
     # print info about where the bot is
     async def print_bot_info(self):
@@ -165,8 +171,8 @@ class CBot(commands.Bot):
                 return
             
             # insult anyone who @s us
-            if (self.user in message.mentions and not message.mention_everyone):
-                await self.messaging.reply(message, "fuck you, you %s." % await self.misc.get_insult())
+            if (self.user in message.mentions and not message.mention_everyone and not message.content.startswith("!")):
+                await self.messaging.reply(message, "fuck you, you {}.".format(await self.misc.get_insult()))
             
             # respond to "^ this", "this", "^", etc.
             if (message.content.startswith("^") or message.content.lower() == "this"):

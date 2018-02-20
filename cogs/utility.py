@@ -17,7 +17,7 @@ class Utility:
             user = await self.bot.utils.find(name)
                     
             if (not user):
-                await self.bot.messaging.reply(ctx, "Failed to find user `%s`" % name)
+                await self.bot.messaging.reply(ctx, "Failed to find user `{}`".format(name))
                 return
                     
             info_msg = self.bot.utils.get_user_info(user)
@@ -44,27 +44,38 @@ class Utility:
         for user in users:
             embed = self.bot.utils.create_image_embed(user, image=user.avatar_url)
             await self.bot.send_message(ctx.message.channel, embed=embed)
-            
-    @commands.command(description="undo bot's last message(s)", brief="undo bot's last message(s)", pass_context=True)    
-    async def undo(self, ctx, num_to_delete=1):
-        cur = 0
-    
-        async for message in self.bot.logs_from(ctx.message.channel, before=ctx.message):
-            if (cur >= num_to_delete):
-                break
-            
-            if (message.author == self.bot.user):
-                await self.bot.utils.delete_message(message)
-                cur += 1
+        
+    @commands.command(description="deletes the last X messages",
+                      brief="deletes the last X messages",
+                      pass_context=True)
+    async def purge(self, ctx, num_to_delete : int=1, user : str=""):
+        users = None
+        
+        if (ctx.message.mentions):
+            users = ctx.message.mentions
+        elif (user):
+            if (user == "bot"):
+                users = [self.bot.user]
+            else:
+                u = await self.bot.utils.find(user)
+                
+                if (not u):
+                    await self.bot.messaging.reply(ctx.message, "Failed to find user `{}`".format(user))
+                    return
+                else:
+                    users = [u]
+        
+        num_deleted = await self.bot.utils.purge(ctx, num_to_delete, users)
+        
+        temp = await self.bot.say("Deleted last {} message(s)".format(num_deleted))
+        await asyncio.sleep(5)
         
         if (not ctx.message.channel.is_private):
             await self.bot.utils.delete_message(ctx.message)
         
-        temp = await self.bot.say("Deleted last {} message(s)".format(cur))
-        await asyncio.sleep(5)
-        
-        try:
+        try: # if a user runs another purge command within 5 seconds, the temp message won't exist
             await self.bot.utils.delete_message(temp)
+        
         except Exception:
             pass
     

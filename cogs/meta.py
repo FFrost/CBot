@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
 
-import inspect, os, sys, subprocess
+import inspect, os, sys, subprocess, time
 
 from modules import checks
 
@@ -10,7 +10,7 @@ class Meta:
         self.bot = bot
 
     # stolen from https://github.com/Rapptz/RoboDanny/blob/c8fef9f07145cef6c05416dc2421bbe1d05e3d33/cogs/meta.py#L164
-    @commands.command(description="source code", brief="source code", pass_context=True, aliases=["src"])
+    @commands.command(description="bot source code", brief="bot source code", pass_context=True, aliases=["src"])
     async def source(self, ctx, *, command : str=""):
         if (not command):
             await self.bot.messaging.reply(ctx.message, self.bot.source_url)
@@ -50,10 +50,17 @@ class Meta:
                  brief="restarts the bot",
                  pass_context=True)
     async def restart(self):
-        path_to_cbot = sys.argv[0]
+        path_to_cbot = self.bot.REAL_FILE
+        
         await self.bot.say("Starting new instance...")
         
-        subprocess.call(["python3", str(path_to_cbot)] + sys.argv[1:])
+        args = ["python3", path_to_cbot] + sys.argv[1:]
+        
+        if (self.bot.bot_restart_arg not in args):
+            args += [self.bot.bot_restart_arg]
+        
+        await self.bot.logout()
+        subprocess.call(args)
     
     @cmd.command(description="stops the bot",
                  brief="stops the bot",

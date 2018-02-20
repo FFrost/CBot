@@ -2,8 +2,8 @@ import discord
 from discord.ext import commands
 
 import asyncio, aiohttp
-from lxml import html
 import youtube_dl
+from lxml import html
 from urllib.parse import quote
 
 # inspired by PyVox (https://github.com/Hiroyu/_PyVox) and Rapptz's playlist example (https://github.com/Rapptz/discord.py/blob/async/examples/playlist.py)

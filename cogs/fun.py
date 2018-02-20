@@ -1,15 +1,22 @@
 import discord
 from discord.ext import commands
 
-import os, codecs, re, time, ipaddress, json, tempfile
+import os, re, time, ipaddress, json, tempfile
 import asyncio, aiohttp
-import wand, wand.color, wand.drawing
-import youtube_dl
 from random import randint, uniform
 from lxml import html
 from urllib.parse import quote
 from collections import OrderedDict
 from http.client import responses
+
+liquid_command_enabled = True
+
+try:
+    import wand, wand.color, wand.drawing
+
+except Exception as e:
+    print("{}\nDisabling liquid command.".format(e))
+    liquid_command_enabled = False
 
 class Fun:
     def __init__(self, bot):
@@ -20,7 +27,10 @@ class Fun:
         self.bot.loop.create_task(self.remove_inactive_image_searches())
  
     # find images in message or attachments and pass to liquify function
-    @commands.command(description="liquidizes an image", brief="liquidizes an image", pass_context=True)
+    @commands.command(description="liquidizes an image",
+                      brief="liquidizes an image",
+                      pass_context=True,
+                      enabled=liquid_command_enabled)
     @commands.cooldown(2, 5, commands.BucketType.channel)
     async def liquid(self, ctx, url : str=""):
         try:
@@ -260,7 +270,7 @@ class Fun:
             return
                 
         if (low == high):
-            await self.bot.messaging.reply(message, "!random: numbers can't be equal")
+            await self.bot.messaging.reply(message, "rolled a {}".format(low))
             return
                 
         if (low > high):
@@ -281,9 +291,9 @@ class Fun:
                     
             result = hex_result
         else:    
-            result = str(r)
+            result = r
                 
-        await self.bot.messaging.reply(ctx, "rolled a %s" % result)
+        await self.bot.messaging.reply(ctx, "rolled a {}".format(result))
         
     # TODO: fix checks
     """  
@@ -293,8 +303,8 @@ class Fun:
         await self.bot.say(msg)
     """
     
-    @commands.command(description="first result from Google Images",
-                      brief="first image result from Google Images",
+    @commands.command(description="first image results from Google Images",
+                      brief="first image results from Google Images",
                       pass_context=True,
                       aliases=["image"])
     async def img(self, ctx, *, query : str):
