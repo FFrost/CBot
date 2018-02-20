@@ -8,7 +8,7 @@ TODO:
 import discord
 from discord.ext import commands
 
-from modules import utils, enums, messaging, misc
+from modules import utils, enums, messaging, misc, checks
 
 import logging, os, traceback, glob, yaml, re
 from random import randint
@@ -32,6 +32,8 @@ class CBot(commands.Bot):
         self.REAL_PATH = os.path.dirname(os.path.realpath(__file__))
         self.TOKEN_PATH = self.REAL_PATH + "/cbot.yml"
         self.get_token()
+        
+        checks.owner_id = self.dev_id
         
         print("Loading cogs...")
         
@@ -140,6 +142,7 @@ class CBot(commands.Bot):
         if (isinstance(error, commands.CommandNotFound)):
             return
         elif (isinstance(error, commands.CheckFailure)):
+            await self.messaging.reply(ctx.message, "You don't have permissions for this command")
             return
             
         await self.messaging.reply(ctx, error)
@@ -179,10 +182,6 @@ class CBot(commands.Bot):
             if (message.content.lower().startswith("same")):
                 await self.send_message(message.channel, "same")
                 return
-            
-            # match <word> bot
-            if (re.match("([^\s]+)" + r"\b" + " bot" + r"\b", message.content.lower())):
-                await self.messaging.reply(message, await self.utils.get_insult())
                 
             # TODO: reactions will go here
             

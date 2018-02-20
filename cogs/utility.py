@@ -1,7 +1,6 @@
 import discord
 from discord.ext import commands
 
-import os, inspect
 import asyncio
 from googletrans import Translator, LANGUAGES, LANGCODES
 
@@ -68,34 +67,6 @@ class Utility:
             await self.bot.utils.delete_message(temp)
         except Exception:
             pass
-    
-    # stolen from https://github.com/Rapptz/RoboDanny/blob/c8fef9f07145cef6c05416dc2421bbe1d05e3d33/cogs/meta.py#L164
-    @commands.command(description="source code", brief="source code", pass_context=True, aliases=["src"])
-    async def source(self, ctx, *, command : str=""):
-        if (not command):
-            await self.bot.messaging.reply(ctx.message, self.bot.source_url)
-        else:            
-            obj = self.bot.get_command(command.replace(".", " "))
-            
-            if (not obj):
-                await self.bot.messaging.reply(ctx.message, "Failed to find command {}".format(command))
-                return
-            
-            src = obj.callback.__code__
-            lines, firstlineno = inspect.getsourcelines(src)
-            
-            if (obj.callback.__module__.startswith("discord")):
-                await self.bot.messaging.reply(ctx.message, "Can't get source code of built-in commands")
-                return
-            
-            location = os.path.relpath(src.co_filename).replace("\\", "/").replace("cbot/", "")
-                
-            url = "{source_url}/blob/master/{location}#L{firstlineno}-L{end}".format(source_url=self.bot.source_url,
-                                                             location=location,
-                                                             firstlineno=firstlineno,
-                                                             end=(firstlineno + len(lines) - 1))
-            
-            await self.bot.messaging.reply(ctx.message, url)
     
     @commands.command(description="translates text into another language\n" + \
                       "list of language codes: https://cloud.google.com/translate/docs/languages",
