@@ -261,8 +261,12 @@ Avatar URL: {avatar}
             if (message.channel.is_private and message.author != self.bot.user):
                 return False
             
-            await self.bot.delete_message(message)
-            return True
+            try:
+                await self.bot.delete_message(message)
+                return True
+            
+            except Exception:
+                return False
         
         return False
             

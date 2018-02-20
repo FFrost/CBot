@@ -46,7 +46,7 @@ class Fun:
                         url = last_img
                     
             if (not url):
-                await self.bot.messaging.reply("No image found")
+                await self.bot.messaging.reply(message, "No image found")
                 return
             
             msg = await self.bot.messaging.reply(message, "Liquidizing image...")
@@ -471,7 +471,7 @@ class Fun:
                 query = await self.bot.utils.find_last_image(message)
                 
         if (not query):
-            await self.bot.messaging.reply("No image found")
+            await self.bot.messaging.reply(message, "No image found")
             return
         
         headers = {"User-Agent": "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/43.0.2357.134 Safari/537.36"}
