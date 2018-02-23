@@ -31,7 +31,7 @@ class Fun:
                       brief="liquidizes an image",
                       pass_context=True,
                       enabled=liquid_command_enabled)
-    @commands.cooldown(2, 5, commands.BucketType.channel)
+    @commands.cooldown(1, 5, commands.BucketType.channel)
     async def liquid(self, ctx, url : str=""):
         try:
             message = ctx.message
@@ -235,6 +235,7 @@ class Fun:
     @commands.command(description="random number generator, supports hexadecimal and floats",
                       brief="random number generator, supports hex/floats",
                       pass_context=True)
+    @commands.cooldown(2, 5, commands.BucketType.channel)
     async def random(self, ctx, low : str, high : str):
         message = ctx.message
                 
@@ -294,19 +295,12 @@ class Fun:
             result = r
                 
         await self.bot.messaging.reply(ctx, "rolled a {}".format(result))
-        
-    # TODO: fix checks
-    """  
-    @commands.command(description="make the bot say something (OWNER ONLY)", brief="make the bot say something (OWNER ONLY)", pass_context=True)
-    @commands.check(lambda ctx: is_dev(ctx.message))
-    async def say(self, ctx, *, msg : str):
-        await self.bot.say(msg)
-    """
     
     @commands.command(description="first image results from Google Images",
                       brief="first image results from Google Images",
                       pass_context=True,
                       aliases=["image"])
+    @commands.cooldown(1, 5, commands.BucketType.channel)
     async def img(self, ctx, *, query : str):
         channel = ctx.message.channel
         await self.bot.send_typing(channel)
@@ -458,7 +452,7 @@ class Fun:
                       pass_context=True,
                       aliases=["rev"],
                       enabled=False)
-    @commands.cooldown(3, 5, commands.BucketType.channel)
+    @commands.cooldown(1, 5, commands.BucketType.channel)
     async def reverse(self, ctx, *, query : str=""):
         message = ctx.message
         

@@ -59,6 +59,7 @@ class Music:
                       brief="first YouTube result for given query",
                       pass_context=True,
                       aliases=["youtube"])
+    @commands.cooldown(1, 5, commands.BucketType.channel)
     async def yt(self, ctx, *, query):
         await self.bot.send_typing(ctx.message.channel)
         

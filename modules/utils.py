@@ -248,19 +248,23 @@ Avatar URL: {avatar}
     # get bot's permissions in a channel
     # input: channel; discord.Channel; channel to get permissions from
     # output: discord.Permissions; permissions in the channel
-    def get_permissions(self, channel):
+    def get_permissions(self, channel, user):
         if (channel.is_private):
             return discord.Permissions.all_channel()
         
-        return channel.server.me.permissions_in(channel) # needs member version of bot
+        if (user == self.bot.user):
+            user = channel.server.me # needs member version of bot
+        
+        return user.permissions_in(channel)
     
     # deletes a message if the bot has permission to do so
     # input: message; discord.Message; message to delete
     async def delete_message(self, message):
-        if (self.get_permissions(message.channel).manage_messages):
-            if (message.channel.is_private and message.author != self.bot.user):
-                return False
-            
+        channel = message.channel
+                
+        if (channel.is_private and message.author != self.bot.user):
+            return False
+        elif (self.get_permissions(channel, self.bot.user).manage_messages):
             try:
                 await self.bot.delete_message(message)
                 return True

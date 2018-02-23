@@ -1,6 +1,8 @@
 import discord
 from discord.ext import commands
 
+from modules import checks
+
 import asyncio
 from googletrans import Translator, LANGUAGES, LANGCODES
 
@@ -10,6 +12,7 @@ class Utility:
         self.translator = Translator()
         
     @commands.command(description="info about a Discord user", brief="info about a Discord user", pass_context=True)
+    @commands.cooldown(1, 3, commands.BucketType.user)
     async def info(self, ctx, *, name : str=""):
         if (ctx.message.mentions):
             info_msg = self.bot.utils.get_user_info(ctx.message.mentions[0])
@@ -27,6 +30,7 @@ class Utility:
         await self.bot.messaging.reply(ctx, info_msg)
         
     @commands.command(description="get a user's avatar", brief="get a user's avatar", pass_context=True)
+    @commands.cooldown(1, 3, commands.BucketType.user)
     async def avatar(self, ctx, *, name : str=""):
         if (ctx.message.mentions):
             users = ctx.message.mentions
@@ -48,6 +52,8 @@ class Utility:
     @commands.command(description="deletes the last X messages",
                       brief="deletes the last X messages",
                       pass_context=True)
+    @commands.cooldown(1, 5, commands.BucketType.channel)
+    @commands.check(checks.can_manage_messages)
     async def purge(self, ctx, num_to_delete : int=1, user : str=""):
         users = None
         

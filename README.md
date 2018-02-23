@@ -23,4 +23,4 @@ Work-in-progress Discord bot. Mainly a learning experience. Currently only Linux
 
 ## Troubleshooting
 
-* If you're getting this error: `discord.errors.LoginFailure: Improper token has been passed.`, delete cbot.yml and reenter your token
+* If you're getting this error when trying to run the bot: `discord.errors.LoginFailure: Improper token has been passed.`, delete cbot.yml and reenter your token

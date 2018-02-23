@@ -1,9 +1,9 @@
 import discord
 from discord.ext import commands
 
-import inspect, os, sys, subprocess, time
-
 from modules import checks
+
+import inspect, os, sys, subprocess, time
 
 class Meta:
     def __init__(self, bot):
@@ -11,6 +11,7 @@ class Meta:
 
     # stolen from https://github.com/Rapptz/RoboDanny/blob/c8fef9f07145cef6c05416dc2421bbe1d05e3d33/cogs/meta.py#L164
     @commands.command(description="bot source code", brief="bot source code", pass_context=True, aliases=["src"])
+    @commands.cooldown(2, 5, commands.BucketType.channel)
     async def source(self, ctx, *, command : str=""):
         if (not command):
             await self.bot.messaging.reply(ctx.message, self.bot.source_url)
