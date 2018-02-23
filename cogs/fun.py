@@ -400,7 +400,7 @@ class Fun:
         
     # deletes an embed and removes it from the cache
     # input: message; discord.Message; the message to delete
-    async def remove_img_search(self, message, index=0):
+    async def remove_img_search(self, message):
         await self.bot.utils.delete_message(self.SEARCH_CACHE[message.id]["command_msg"])
         
         del self.SEARCH_CACHE[message.id]
@@ -435,10 +435,14 @@ class Fun:
                         
     async def remove_inactive_image_searches(self):
         while (not self.bot.is_closed):
-            for message_id, cache in self.SEARCH_CACHE.items():
+            search_cache_copy = self.SEARCH_CACHE.copy()
+            
+            for message_id, cache in search_cache_copy.items():
                 if (time.time() > cache["time"] + self.bot.enums.IMAGESEARCH_TIME_TO_WAIT):
                     msg = await self.bot.get_message(cache["channel"], message_id)
                     await self.remove_img_from_cache(msg)
+            
+            search_cache_copy.clear()
             
             await asyncio.sleep(self.bot.enums.IMAGESEARCH_TIME_TO_WAIT // 2)
                         

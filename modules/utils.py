@@ -248,11 +248,11 @@ Avatar URL: {avatar}
     # get bot's permissions in a channel
     # input: channel; discord.Channel; channel to get permissions from
     # output: discord.Permissions; permissions in the channel
-    def get_permissions(self, channel, user):
+    def get_permissions(self, channel, user=None):
         if (channel.is_private):
             return discord.Permissions.all_channel()
         
-        if (user == self.bot.user):
+        if (user == self.bot.user or not user):
             user = channel.server.me # needs member version of bot
         
         return user.permissions_in(channel)
