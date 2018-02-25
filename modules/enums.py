@@ -5,7 +5,7 @@ class Enums:
      
     IMAGESEARCH_TIME_TO_WAIT = 5 * 60 # 5 minutes
     
-    class LiquidCodes(Enum):
+    class ImageCodes(Enum):
         SUCCESS = 1
         MAX_FILESIZE = 2
         INVALID_FORMAT = 3

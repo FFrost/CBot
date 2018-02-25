@@ -8,6 +8,7 @@ from lxml import html
 from urllib.parse import quote
 from collections import OrderedDict
 from http.client import responses
+from PIL import Image
 
 liquid_command_enabled = True
 
@@ -56,10 +57,10 @@ class Fun:
             if (isinstance(path, str)):
                 code = await self.do_magic(message.channel, path)
                 
-                if (code != self.bot.enums.LiquidCodes.SUCCESS):
-                    await self.liquid_error_message(message, code, url)
+                if (code != self.bot.enums.ImageCodes.SUCCESS):
+                    await self.image_error_message(message, code, url)
             else:
-                await self.liquid_error_message(message, path, url)
+                await self.image_error_message(message, path, url)
             
             await self.bot.utils.delete_message(msg)
             
@@ -67,35 +68,83 @@ class Fun:
             await self.bot.messaging.reply(message, "Failed to liquidize image `{}`".format(url))
             await self.bot.messaging.error_alert(e)
             
+    async def find_and_download_image(self, message):       
+        if (message.attachments):
+            url = message.attachments[0]["url"]
+        else:
+            last_img = await self.bot.utils.find_last_image(message)
+            
+            if (last_img): 
+                url = last_img
+                
+        if (not url):
+            await self.bot.messaging.reply(message, "No image found")
+            return
+        
+        path = await self.download_image(url)
+            
+        if (isinstance(path, str)): 
+            return path
+        else:
+            await self.image_error_message(message, path, url)
+            return
+        
+    async def save_and_upload(self, message, path, image, url):
+        file_path, ext = os.path.splitext(path)
+        edited_file_path = file_path + "_edited.png"
+        
+        # now save the magickd image
+        image.save(edited_file_path, format="PNG") # ERROR
+        
+        # upload liquidized image
+        if (self.bot.utils.get_permissions(message.channel).attach_files):
+            await self.bot.send_file(message.channel, edited_file_path)
+        else:
+            self.bot.utils.remove_file_safe(path)
+            self.bot.utils.remove_file_safe(edited_file_path)
+            await self.image_error_message(message, self.bot.enums.ImageCodes.NO_PERMISSIONS, url)
+            return
+        
+        # just in case
+        await asyncio.sleep(1)
+        
+        # delete leftover file(s)
+        self.bot.utils.remove_file_safe(path)
+        self.bot.utils.remove_file_safe(edited_file_path)
+            
     # message the user an error if liquidizing fails
     # input: message; discord.Message; message to reply to
-    #        code; LiquidCodes; the error code
+    #        code; ImageCodes; the error code
     #        url; string; the url that was attempted to be liquidized
-    async def liquid_error_message(self, message, code, url):
-        if (code == self.bot.enums.LiquidCodes.MISC_ERROR):
-            await self.bot.messaging.reply(message, "Failed to liquidize image: `{}`".format(url))
-        elif (code == self.bot.enums.LiquidCodes.MAX_FILESIZE):
-            await self.bot.messaging.reply(message, "Failed to liquidize image (max filesize: 10mb): `{}`".format(url))
-        elif (code == self.bot.enums.LiquidCodes.INVALID_FORMAT):
-            await self.bot.messaging.reply(message, "Failed to liquidize image (invalid image): `{}`".format(url))
-        elif (code == self.bot.enums.LiquidCodes.MAX_DIMENSIONS):
-            await self.bot.messaging.reply(message, "Failed to liquidize image (max dimensions: 3000x3000): `{}`".format(url))
-        elif (code == self.bot.enums.LiquidCodes.BAD_URL):
-            await self.bot.messaging.reply(message, "Failed to liquidize image (could not download url): `{}`".format(url))
-        elif (code == self.bot.enums.LiquidCodes.NO_PERMISSIONS):
-            await self.bot.messaging.reply(message, "Missing attach file permissions, can't upload liquidized file")
+    async def image_error_message(self, message, code, url):
+        err_msg = ": `{}`".format(url)
+        if (not url):
+            err_msg = ""
+        
+        if (code == self.bot.enums.ImageCodes.MISC_ERROR):
+            await self.bot.messaging.reply(message, "Image error".format(err_msg))
+        elif (code == self.bot.enums.ImageCodes.MAX_FILESIZE):
+            await self.bot.messaging.reply(message, "Image filesize was too large (max filesize: 10mb)".format(err_msg))
+        elif (code == self.bot.enums.ImageCodes.INVALID_FORMAT):
+            await self.bot.messaging.reply(message, "Invalid image format".format(err_msg))
+        elif (code == self.bot.enums.ImageCodes.MAX_DIMENSIONS):
+            await self.bot.messaging.reply(message, "Image dimensions were too large (max dimensions: 3000x3000)".format(err_msg))
+        elif (code == self.bot.enums.ImageCodes.BAD_URL):
+            await self.bot.messaging.reply(message, "Failed to download image".format(err_msg))
+        elif (code == self.bot.enums.ImageCodes.NO_PERMISSIONS):
+            await self.bot.messaging.reply(message, "Missing attach file permissions, can't upload image file")
     
     # download an image from a url and save it as a temp file
     # input: url; string; image to download
     # output: if successful: string; path to temp file;
-    #         if unsuccessful: LiquidCodes; error code
+    #         if unsuccessful: ImageCodes; error code
     async def download_image(self, url):
         # check for private ip
         try:
             ip = ipaddress.ip_address(url)
             
             if (ip.is_private):
-                return self.bot.enums.LiquidCodes.BAD_URL
+                return self.bot.enums.ImageCodes.BAD_URL
             
         except Exception: # if it's not an ip (i.e. an actual url like a website)
             pass
@@ -110,27 +159,27 @@ class Fun:
                     if ("Content-Type" in r.headers):
                         content_type = r.headers["Content-Type"]
                     else:
-                        return self.bot.enums.LiquidCodes.BAD_URL
+                        return self.bot.enums.ImageCodes.BAD_URL
                     
                     if ("Content-Length" in r.headers):
                         content_length = r.headers["Content-Length"]
                     else:
-                        return self.bot.enums.LiquidCodes.BAD_URL
+                        return self.bot.enums.ImageCodes.BAD_URL
                     
                     # check if empty file
                     if (content_length):
                         content_length = int(content_length)
                         
                         if (content_length < 1):
-                            return self.bot.enums.LiquidCodes.BAD_URL
+                            return self.bot.enums.ImageCodes.BAD_URL
                         elif (content_length > self.bot.enums.DISCORD_MAX_FILESIZE):
-                            return self.bot.enums.LiquidCodes.MAX_FILESIZE
+                            return self.bot.enums.ImageCodes.MAX_FILESIZE
                     else:
-                        return self.bot.enums.LiquidCodes.BAD_URL
+                        return self.bot.enums.ImageCodes.BAD_URL
                     
                     # check for file type
                     if (not content_type):
-                        return self.bot.enums.LiquidCodes.BAD_URL
+                        return self.bot.enums.ImageCodes.BAD_URL
                     
                     content_type = content_type.split("/")
                     
@@ -138,7 +187,7 @@ class Fun:
                     ext = content_type[1]
                     
                     if (mime.lower() != "image"):
-                        return self.bot.enums.LiquidCodes.INVALID_FORMAT
+                        return self.bot.enums.ImageCodes.INVALID_FORMAT
     
                     # make a new 'unique' tmp file with the correct extension
                     tmp_file = tempfile.NamedTemporaryFile(delete=False, suffix="." + ext)
@@ -156,9 +205,9 @@ class Fun:
                             
                     return tmp_file_path
                 else:
-                    return self.bot.enums.LiquidCodes.BAD_URL
+                    return self.bot.enums.ImageCodes.BAD_URL
                 
-        return self.bot.enums.LiquidCodes.MISC_ERROR
+        return self.bot.enums.ImageCodes.MISC_ERROR
     
     # liquify image
     # input: channel; discord.Channel; the channel to send the image in
@@ -174,12 +223,12 @@ class Fun:
             #       be careful of alpha channel though... just in case
             if (img.animation):
                 self.bot.utils.remove_file_safe(path)
-                return self.bot.enums.LiquidCodes.INVALID_FORMAT
+                return self.bot.enums.ImageCodes.INVALID_FORMAT
             
             # image dimensions too large
             if (img.size >= (3000, 3000)):
                 self.bot.utils.remove_file_safe(path)
-                return self.bot.enums.LiquidCodes.MAX_DIMENSIONS
+                return self.bot.enums.ImageCodes.MAX_DIMENSIONS
             
             file_path, ext = os.path.splitext(path)
             
@@ -199,7 +248,7 @@ class Fun:
             
             if (len(img_blob) > self.bot.enums.DISCORD_MAX_FILESIZE):
                 self.bot.utils.remove_file_safe(path)
-                return self.bot.enums.LiquidCodes.MAX_FILESIZE
+                return self.bot.enums.ImageCodes.MAX_FILESIZE
                 
             magickd_file_path = file_path + "_magickd" + ext
                 
@@ -212,7 +261,7 @@ class Fun:
             else:
                 self.bot.utils.remove_file_safe(path)
                 self.bot.utils.remove_file_safe(magickd_file_path)
-                return self.bot.enum.LiquidCodes.NO_PERMISSIONS
+                return self.bot.enum.ImageCodes.NO_PERMISSIONS
             
             # just in case
             await asyncio.sleep(1)
@@ -221,16 +270,16 @@ class Fun:
             self.bot.utils.remove_file_safe(path)
             self.bot.utils.remove_file_safe(magickd_file_path)
                 
-            return self.bot.enums.LiquidCodes.SUCCESS
+            return self.bot.enums.ImageCodes.SUCCESS
         
         # TODO: do something with this maybe? convert image to a different format and try again?
         except wand.exceptions.WandException as e:
             print("wand exception", e)
-            return self.bot.enums.LiquidCodes.INVALID_FORMAT
+            return self.bot.enums.ImageCodes.INVALID_FORMAT
         
         except Exception as e:
             print(e)
-            return self.bot.enums.LiquidCodes.MISC_ERROR
+            return self.bot.enums.ImageCodes.MISC_ERROR
         
     @commands.command(description="random number generator, supports hexadecimal and floats",
                       brief="random number generator, supports hex/floats",
@@ -501,11 +550,45 @@ class Fun:
                     
                 embed = self.bot.utils.create_image_embed(message.author,
                                                           title="Best guess for this image:",
-                                                          description=path,
+                                                         description=path,
                                                           thumbnail=query,
                                                           color=discord.Color.green())
                 
                 await self.bot.messaging.bot.send_message(message.channel, embed=embed)
-
+                
+    @commands.command(description="pixelates an image",
+                      brief="pixelates an image",
+                      pass_context=True,
+                      aliases=["pix"])
+    @commands.cooldown(3, 5, commands.BucketType.channel)
+    async def pixelate(self, ctx, pixel_size : int=5, *, url : str=""):
+        if (pixel_size < 1):
+            await self.bot.messaging.reply(ctx.message, "Pixel size must be at least 1")
+            return
+            
+        if (not url):
+            path = await self.find_and_download_image(ctx.message)
+        else:
+            path = await self.download_image(url)
+            
+        if (not path):
+            await self.image_error_message(ctx.message, self.bot.enums.ImageCodes.BAD_URL, url)
+            return
+        
+        img = Image.open(path) # filename
+        
+        # no animated gifs
+        if (img.info and "loop" in img.info or "duration" in img.info):
+            self.bot.utils.remove_file_safe(path)
+            await self.bot.messaging.reply(ctx.message, "Can't pixelate animated gifs")
+            return
+        
+        old_size = img.size
+        
+        img = img.resize((img.size[0] // pixel_size, img.size[1] // pixel_size), Image.NEAREST)
+        img = img.resize(old_size, Image.NEAREST)
+        
+        await self.save_and_upload(ctx.message, path, img, url)
+       
 def setup(bot):
     bot.add_cog(Fun(bot))

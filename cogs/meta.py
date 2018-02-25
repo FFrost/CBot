@@ -81,6 +81,22 @@ class Meta:
     async def status(self, ctx, *, status : str):
         await self.bot.change_presence(game=discord.Game(name=status))
         await self.bot.messaging.reply(ctx.message, "Set status to `{}`".format(status))
+        
+    @cmd.command(description="what servers the bot is in",
+                 brief="what servers the bot is in",
+                 pass_context=True)
+    async def where(self, ctx):
+        msg = "\n```"
+        
+        for s in self.bot.servers:
+            if (s.unavailable): # can't retrieve info about server
+                msg += "{id} - server is unavailable!\n".format(id=s.id)
+            else:
+                msg += "{name} owned by {owner}#{ownerid}\n".format(name=s.name, owner=s.owner.name, ownerid=s.owner.discriminator)
+                
+        msg += "```"
+
+        await self.bot.messaging.reply(ctx.message, msg)
 
 def setup(bot):
     bot.add_cog(Meta(bot))
