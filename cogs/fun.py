@@ -32,7 +32,7 @@ class Fun:
                       brief="liquidizes an image",
                       pass_context=True,
                       enabled=liquid_command_enabled)
-    @commands.cooldown(1, 5, commands.BucketType.channel)
+    @commands.cooldown(2, 5, commands.BucketType.channel)
     async def liquid(self, ctx, url : str=""):
         try:
             message = ctx.message
@@ -68,6 +68,9 @@ class Fun:
             await self.bot.messaging.reply(message, "Failed to liquidize image `{}`".format(url))
             await self.bot.messaging.error_alert(e)
             
+    # finds the last image sent from a message
+    # input: message; discord.Message; the message the user sent and where to start the search
+    # output: str or None; path to the downloaded file or none if the download failed
     async def find_and_download_image(self, message):       
         if (message.attachments):
             url = message.attachments[0]["url"]
@@ -89,6 +92,11 @@ class Fun:
         else:
             return path
         
+    # save an image file with a new filename and upload it to a discord channel
+    # input: message; discord.Message; command message
+    #        path; str; path to the original downloaded file
+    #        image; PIL.Image; edited image file currently open
+    #        url; str; the url of the original image that was downloaded
     async def save_and_upload(self, message, path, image, url):
         file_path, ext = os.path.splitext(path)
         edited_file_path = file_path + "_edited.png"
@@ -556,39 +564,34 @@ class Fun:
                 
                 await self.bot.messaging.bot.send_message(message.channel, embed=embed)
                 
-    @commands.command(description="pixelates an image",
-                      brief="pixelates an image",
-                      pass_context=True,
-                      aliases=["pix"])
-    @commands.cooldown(3, 5, commands.BucketType.channel)
-    async def pixelate(self, ctx, pixel_size : int=5, *, url : str=""):
-        if (pixel_size < 1):
-            await self.bot.messaging.reply(ctx.message, "Pixel size must be at least 1")
-            return
-        
+    # pixelates image
+    # input: message; discord.Message, command message
+    #        pixel_size; inthow much to pixelate the image
+    #        url; str; url of the image to download
+    async def do_pixel(self, message, pixel_size, url):
         if (not url):
-            path = await self.find_and_download_image(ctx.message)
+            path = await self.find_and_download_image(message)
         else:
             path = await self.download_image(url)
         
         if (isinstance(path, self.bot.enums.ImageCodes)):
-            await self.image_error_message(ctx.message, path, url)
+            await self.image_error_message(message, path, url)
             return  
         elif (not path):
-            await self.image_error_message(ctx.message, self.bot.enums.ImageCodes.BAD_URL, url)
+            await self.image_error_message(message, self.bot.enums.ImageCodes.BAD_URL, url)
             return
         
-        img = Image.open(path) # filename # error
+        img = Image.open(path) # filename
         
         if (img.size >= (3000, 3000)):
             self.bot.utils.remove_file_safe(path)
-            await self.image_error_message(ctx.message, self.bot.enums.ImageCodes.MAX_DIMENSIONS, url)
+            await self.image_error_message(message, self.bot.enums.ImageCodes.MAX_DIMENSIONS, url)
             return
         
         # no animated gifs
         if (img.info and "loop" in img.info or "duration" in img.info):
             self.bot.utils.remove_file_safe(path)
-            await self.bot.messaging.reply(ctx.message, "Can't pixelate animated gifs")
+            await self.bot.messaging.reply(message, "Can't pixelate animated gifs")
             return
         
         old_size = img.size
@@ -599,10 +602,26 @@ class Fun:
             img = img.resize(old_size, Image.NEAREST)
         else:
             self.bot.utils.remove_file_safe(path)
-            await self.bot.messaging.reply(ctx.message, "Pixel size too large")
+            await self.bot.messaging.reply(message, "Pixel size too large")
             return
         
-        await self.save_and_upload(ctx.message, path, img, url)
+        await self.save_and_upload(message, path, img, url)
+                
+    @commands.command(description="pixelates an image",
+                      brief="pixelates an image",
+                      pass_context=True,
+                      aliases=["pix"])
+    @commands.cooldown(2, 5, commands.BucketType.channel)
+    async def pixelate(self, ctx, pixel_size : int=5, *, url : str=""):
+        if (pixel_size < 1):
+            await self.bot.messaging.reply(ctx.message, "Pixel size must be at least 1")
+            return
+        
+        msg = await self.bot.messaging.reply(ctx.message, "Pixelating image...")
+        
+        await self.do_pixel(ctx.message, pixel_size, url)
+        
+        await self.bot.utils.delete_message(msg)
        
 def setup(bot):
     bot.add_cog(Fun(bot))
