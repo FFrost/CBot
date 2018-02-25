@@ -592,9 +592,15 @@ class Fun:
             return
         
         old_size = img.size
+        new_size = (old_size[0] // pixel_size, old_size[1] // pixel_size)
         
-        img = img.resize((img.size[0] // pixel_size, img.size[1] // pixel_size), Image.NEAREST)
-        img = img.resize(old_size, Image.NEAREST)
+        if (new_size > (0, 0)):
+            img = img.resize(new_size, Image.NEAREST)
+            img = img.resize(old_size, Image.NEAREST)
+        else:
+            self.bot.utils.remove_file_safe(path)
+            await self.bot.messaging.reply(ctx.message, "Pixel size too large")
+            return
         
         await self.save_and_upload(ctx.message, path, img, url)
        
