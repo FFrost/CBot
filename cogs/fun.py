@@ -54,13 +54,13 @@ class Fun:
             
             path = await self.download_image(url)
             
-            if (isinstance(path, str)):
+            if (isinstance(path, self.bot.enums.ImageCodes)):
+                await self.image_error_message(message, path, url)
+            else:
                 code = await self.do_magic(message.channel, path)
                 
                 if (code != self.bot.enums.ImageCodes.SUCCESS):
                     await self.image_error_message(message, code, url)
-            else:
-                await self.image_error_message(message, path, url)
             
             await self.bot.utils.delete_message(msg)
             
@@ -83,11 +83,11 @@ class Fun:
         
         path = await self.download_image(url)
             
-        if (isinstance(path, str)): 
-            return path
-        else:
+        if (isinstance(path, self.bot.enums.ImageCodes)):
             await self.image_error_message(message, path, url)
             return
+        else:
+            return path
         
     async def save_and_upload(self, message, path, image, url):
         file_path, ext = os.path.splitext(path)
@@ -550,7 +550,7 @@ class Fun:
                     
                 embed = self.bot.utils.create_image_embed(message.author,
                                                           title="Best guess for this image:",
-                                                         description=path,
+                                                          description=path,
                                                           thumbnail=query,
                                                           color=discord.Color.green())
                 
@@ -565,17 +565,25 @@ class Fun:
         if (pixel_size < 1):
             await self.bot.messaging.reply(ctx.message, "Pixel size must be at least 1")
             return
-            
+        
         if (not url):
             path = await self.find_and_download_image(ctx.message)
         else:
             path = await self.download_image(url)
-            
-        if (not path):
+        
+        if (isinstance(path, self.bot.enums.ImageCodes)):
+            await self.image_error_message(ctx.message, path, url)
+            return  
+        elif (not path):
             await self.image_error_message(ctx.message, self.bot.enums.ImageCodes.BAD_URL, url)
             return
         
-        img = Image.open(path) # filename
+        img = Image.open(path) # filename # error
+        
+        if (img.size >= (3000, 3000)):
+            self.bot.utils.remove_file_safe(path)
+            await self.image_error_message(ctx.message, self.bot.enums.ImageCodes.MAX_DIMENSIONS, url)
+            return
         
         # no animated gifs
         if (img.info and "loop" in img.info or "duration" in img.info):
