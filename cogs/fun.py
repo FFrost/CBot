@@ -98,11 +98,11 @@ class Fun:
     #        image; PIL.Image; edited image file currently open
     #        url; str; the url of the original image that was downloaded
     async def save_and_upload(self, message, path, image, url):
-        file_path, ext = os.path.splitext(path)
+        file_path = os.path.splitext(path)[0]
         edited_file_path = file_path + "_edited.png"
         
         # now save the magickd image
-        image.save(edited_file_path, format="PNG") # ERROR
+        image.save(edited_file_path, format="PNG")
         
         # upload liquidized image
         if (self.bot.utils.get_permissions(message.channel).attach_files):
@@ -589,7 +589,7 @@ class Fun:
             return
         
         # no animated gifs
-        if (img.info and "loop" in img.info or "duration" in img.info):
+        if (img.info and ("loop" in img.info or "duration" in img.info)):
             self.bot.utils.remove_file_safe(path)
             await self.bot.messaging.reply(message, "Can't pixelate animated gifs")
             return

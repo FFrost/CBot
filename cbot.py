@@ -147,6 +147,9 @@ class CBot(commands.Bot):
             
         if (isinstance(error, commands.CommandNotFound)):
             return
+        elif (isinstance(error, checks.NoVoiceChannel)):
+            await self.messaging.reply(ctx.message, "You must be in a voice channel to use this command")
+            return
         elif (isinstance(error, commands.CheckFailure)):
             await self.messaging.reply(ctx.message, "You don't have permissions for this command")
             return
