@@ -1,5 +1,6 @@
 # ignore config file
 *.yml
+!example.yml
 
 # ignore compiled python files
 *.pyc
