@@ -50,10 +50,10 @@ class Meta:
     @cmd.command(description="restarts the bot",
                  brief="restarts the bot",
                  pass_context=True)
-    async def restart(self):
+    async def restart(self, ctx):
         path_to_cbot = self.bot.REAL_FILE
         
-        await self.bot.say("Starting new instance...")
+        await self.bot.messaging.reply(ctx.message, "Restarting...")
         
         args = ["python3", path_to_cbot] + sys.argv[1:]
         

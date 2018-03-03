@@ -144,6 +144,20 @@ Avatar URL: {avatar}
         async for message in self.bot.logs_from(message.channel, before=message):
             if (message.content):
                 return message.content
+            
+    # finds last youtube video embed in channel
+    # input: message; discord.Message; message from which channel will be used as point to search before
+    # output: string or None; url of youtube embed or None if no youtube video embeds were found
+    async def find_last_youtube_embed(self, message):
+        async for message in self.bot.logs_from(message.channel, before=message, limit=50):
+            if (message.embeds):            
+                for embed in message.embeds:
+                    keys = embed.keys()
+                    
+                    if ("video" in keys or ("type" in keys and embed["type"] == "video")):  
+                        if ("provider" in keys and "name" in embed["provider"].keys() and embed["provider"]["name"] == "YouTube"):
+                            if ("url" in keys and self.youtube_url_validation(embed["url"])):
+                                return embed["url"]
     
     # format member name as user#discriminator
     # input: user; discord.User; the user to format
@@ -185,7 +199,10 @@ Avatar URL: {avatar}
     # creates a discord.Embed with an embedded YouTube video
     # input: info; dict; youtube-dl dict of extracted info from the video
     # output: embed; discord.Embed; generated video embed
-    def create_youtube_embed(self, info):     
+    def create_youtube_embed(self, info):
+        if ("entries" in info.keys()):
+            info = info["entries"][0]
+        
         data = {
                 "url": info["webpage_url"],
                 "title": info["title"],

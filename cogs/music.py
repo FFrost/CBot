@@ -16,6 +16,9 @@ class VoiceEntry:
         self.author = message.author
         self.channel = message.channel
         self.player = player
+        
+    def get_info(self):
+        return self.player.yt.extract_info(self.player.url, download=False)
 
     def __str__(self):
         duration = time.strftime("%H:%M:%S", time.gmtime(self.player.duration))
@@ -53,7 +56,14 @@ class VoiceState:
         while True:
             self.play_next_song.clear()
             self.current = await self.queue.get()
-            await self.bot.send_message(self.current.channel, "Playing " + str(self.current))
+            
+            yt_embed = None
+            
+            if (self.bot.utils.youtube_url_validation(self.player.url) is None):
+                yt_embed = self.bot.utils.create_youtube_embed(self.current.get_info())
+            
+            await self.bot.send_message(self.current.channel, "Playing " + str(self.current), embed=yt_embed)
+             
             self.current.player.start()
             await self.play_next_song.wait()
             
@@ -128,7 +138,7 @@ class Music:
                       pass_context=True,
                       aliases=["youtube"])
     @commands.cooldown(1, 5, commands.BucketType.channel)
-    async def yt(self, ctx, *, query):
+    async def yt(self, ctx, *, query : str):
         await self.bot.send_typing(ctx.message.channel)
         
         try:
@@ -154,7 +164,14 @@ class Music:
                       no_pm=True)
     @commands.check(checks.is_in_voice_channel)
     @commands.cooldown(1, 5, commands.BucketType.server)
-    async def play(self, ctx, *, query): # TODO: if no query, find last video embed and play that     
+    async def play(self, ctx, *, query : str=""): # TODO: if no query, find last video embed and play that
+        if (not query):
+            query = await self.bot.utils.find_last_youtube_embed(ctx.message)
+            
+            if (not query):
+                await self.bot.messaging.reply(ctx.message, "No YouTube video found")
+                return
+        
         voice_channel = ctx.message.author.voice_channel
         
         voice_state = self.voice_states.get(ctx.message.server.id)
@@ -178,6 +195,7 @@ class Music:
         opts = {
             "default_search": "auto",
             "quiet": True,
+            "noplaylist": True,
             }
         
         try:
@@ -188,7 +206,7 @@ class Music:
             entry = VoiceEntry(ctx.message, player)
             
             if (not voice_state.queue.empty() or voice_state.is_playing()):
-                await self.bot.say("Queued " + str(entry))
+                await self.bot.messaging.reply(ctx.message, "Queued " + str(entry))
             
             await voice_state.queue.put(entry)
         
