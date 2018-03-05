@@ -63,7 +63,7 @@ class VoiceState:
                 yt_embed = self.bot.utils.create_youtube_embed(self.current.get_info())
             
             await self.bot.send_message(self.current.channel, "Playing " + str(self.current), embed=yt_embed)
-             
+
             self.current.player.start()
             await self.play_next_song.wait()
             
@@ -164,7 +164,7 @@ class Music:
                       no_pm=True)
     @commands.check(checks.is_in_voice_channel)
     @commands.cooldown(1, 5, commands.BucketType.server)
-    async def play(self, ctx, *, query : str=""): # TODO: if no query, find last video embed and play that
+    async def play(self, ctx, *, query : str=""):
         if (not query):
             query = await self.bot.utils.find_last_youtube_embed(ctx.message)
             

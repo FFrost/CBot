@@ -1,10 +1,3 @@
-"""
-TODO:
-    - reimplement voice player (with simultaneous cross-server play)
-    - add the ability for server owners to add reactions to messages with specified keywords
-    - add options for developer notification/admin settings/etc
-"""
-
 import discord
 from discord.ext import commands
 
@@ -208,7 +201,7 @@ class CBot(commands.Bot):
             await self.messaging.msg_admin_channel("{time} {name} [{uid}] joined".format(time=self.utils.get_cur_time(),
                                                                                          name=self.utils.format_member_name(member),
                                                                                          uid=member.id),
-                                                   member.server)
+                                                                                         member.server)
             
         except Exception as e:
             await self.messaging.error_alert(e)
@@ -221,7 +214,7 @@ class CBot(commands.Bot):
             await self.messaging.msg_admin_channel("{time} {name} [{uid}] left".format(time=self.utils.get_cur_time(),
                                                                                        name=self.utils.format_member_name(member),
                                                                                        uid=member.id),
-                                                   member.server)
+                                                                                       member.server)
         
         except Exception as e:
             await self.messaging.error_alert(e)

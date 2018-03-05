@@ -225,12 +225,12 @@ Avatar URL: {avatar}
                     "height": 720,
                     "width": 1280
                     },
-                "description": info["description"][:140] + ("..." if len(info["description"]) > 140 else "")
+                "description": "\n".join(info["description"][:140].split("\n")[:3]).strip() + ("..." if len(info["description"]) > 140 else "")
                }
         
         embed = discord.Embed().from_data(data)
         
-        embed.colour = discord.Colour.dark_blue()
+        embed.colour = discord.Colour.red()
         
         embed.add_field(name=":movie_camera:", value="{:,} views".format(info["view_count"]))
         embed.add_field(name=":watch:", value=time.strftime("%H:%M:%S", time.gmtime(info["duration"])))
@@ -238,6 +238,28 @@ Avatar URL: {avatar}
         embed.add_field(name=":thumbsdown:", value="{:,} dislikes".format(info["dislike_count"], inline=True))
         embed.add_field(name=":calendar_spiral:", value=datetime.datetime.strptime(info["upload_date"], "%Y%m%d").strftime("%b %-d, %Y"))
 
+        return embed
+    
+    def create_game_info_embed(self, user, info):
+        embed = discord.Embed()
+        
+        embed.title = info["title"]
+        embed.description = info["body"]
+        embed.url = info["wiki"]
+        
+        embed.set_author(name=user.name, icon_url=user.avatar_url)
+        
+        embed.color = discord.Colour.green()
+        
+        embed.set_thumbnail(url=info["image"])
+        
+        for entry in info["content"]:
+            index = entry.find(":")
+            header = entry[:index].strip()
+            value = entry[index + 1:].strip()
+            
+            embed.add_field(name=header, value=value)
+        
         return embed
     
     # check if a url matches a youtube url format
