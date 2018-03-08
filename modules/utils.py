@@ -199,7 +199,7 @@ Avatar URL: {avatar}
     # creates a discord.Embed with an embedded YouTube video
     # input: info; dict; youtube-dl dict of extracted info from the video
     # output: embed; discord.Embed; generated video embed
-    def create_youtube_embed(self, info):
+    def create_youtube_embed(self, info, user=None):
         if ("entries" in info.keys()):
             info = info["entries"][0]
         
@@ -232,6 +232,9 @@ Avatar URL: {avatar}
         
         embed.colour = discord.Colour.red()
         
+        if (user):
+            embed.set_author(name=user.name, icon_url=user.avatar_url)
+        
         embed.add_field(name=":movie_camera:", value="{:,} views".format(info["view_count"]))
         embed.add_field(name=":watch:", value=time.strftime("%H:%M:%S", time.gmtime(info["duration"])))
         embed.add_field(name=":thumbsup:", value="{:,} likes".format(info["like_count"], inline=True))
@@ -240,14 +243,15 @@ Avatar URL: {avatar}
 
         return embed
     
-    def create_game_info_embed(self, user, info):
+    def create_game_info_embed(self, info, user=None):
         embed = discord.Embed()
         
         embed.title = info["title"]
         embed.description = info["body"]
         embed.url = info["wiki"]
         
-        embed.set_author(name=user.name, icon_url=user.avatar_url)
+        if (user):
+            embed.set_author(name=user.name, icon_url=user.avatar_url)
         
         embed.color = discord.Colour.green()
         
@@ -332,3 +336,19 @@ Avatar URL: {avatar}
                     num_deleted += 1
             
         return num_deleted
+    
+    # format youtube_dl error to inform user of what occured
+    def extract_yt_error(self, e):
+        e = str(e)    
+        err_to_look_for = "YouTube said:"
+        
+        index = e.find(err_to_look_for)
+        
+        if (index < 0):
+            return None
+        
+        index += len(err_to_look_for) + 1 # space
+        
+        ret = e[index:]
+        
+        return ret

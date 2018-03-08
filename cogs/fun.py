@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
 
-import os, re, time, ipaddress, json, tempfile
+import os, re, time, ipaddress, json, tempfile, random
 import asyncio, aiohttp
 from random import randint, uniform
 from lxml import html
@@ -26,6 +26,18 @@ class Fun:
         self.SEARCH_CACHE = OrderedDict()
         
         self.bot.loop.create_task(self.remove_inactive_image_searches())
+        
+        self.magic8ball_choices = ["It is certain", "It is decidedly so",
+                                   "Without a doubt", "Yes definitely",
+                                   "You may rely on it", "As I see it, yes",
+                                   "Most likely", "Outlook good", "Yep",
+                                   "Signs point to yes", "Reply hazy try again",
+                                   "Ask again later", "Better not tell you now",
+                                   "Cannot predict now", "Concentrate and ask again",
+                                   "Don't count on it", "My reply is no",
+                                   "My sources say no", "Outlook not so good",
+                                   "Very doubtful"
+                                   ]
  
     # find images in message or attachments and pass to liquify function
     @commands.command(description="liquidizes an image",
@@ -622,6 +634,15 @@ class Fun:
         await self.do_pixel(ctx.message, pixel_size, url)
         
         await self.bot.utils.delete_message(msg)
+        
+    @commands.command(description="ask the magic 8 ball something",
+                      brief="ask the magic 8 ball something",
+                      pass_context=True,
+                      aliases=["8b"])
+    @commands.cooldown(2, 5, commands.BucketType.user)
+    async def magic8ball(self, ctx):
+        choice = random.choice(self.magic8ball_choices)
+        await self.bot.messaging.reply(ctx.message, choice)
        
 def setup(bot):
     bot.add_cog(Fun(bot))

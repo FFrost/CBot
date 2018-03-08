@@ -60,7 +60,7 @@ class VoiceState:
             yt_embed = None
             
             if (self.bot.utils.youtube_url_validation(self.player.url) is None):
-                yt_embed = self.bot.utils.create_youtube_embed(self.current.get_info())
+                yt_embed = self.bot.utils.create_youtube_embed(self.current.get_info(), self.current.author)
             
             await self.bot.send_message(self.current.channel, "Playing " + str(self.current), embed=yt_embed)
 
@@ -152,7 +152,7 @@ class Music:
             await self.bot.messaging.reply(ctx.message, "No videos found for `{}`".format(query))
         else:
             if (info):
-                embed = self.bot.utils.create_youtube_embed(info)
+                embed = self.bot.utils.create_youtube_embed(info, ctx.message.author)
                 
                 await self.bot.send_message(ctx.message.channel, embed=embed)
             else:
@@ -163,7 +163,7 @@ class Music:
                       pass_context=True,
                       no_pm=True)
     @commands.check(checks.is_in_voice_channel)
-    @commands.cooldown(1, 5, commands.BucketType.server)
+    @commands.cooldown(1, 4, commands.BucketType.server)
     async def play(self, ctx, *, query : str=""):
         if (not query):
             query = await self.bot.utils.find_last_youtube_embed(ctx.message)
@@ -199,7 +199,9 @@ class Music:
             }
         
         try:
-            player = await voice_state.voice_client.create_ytdl_player(query, ytdl_options=opts, after=voice_state.toggle_next)
+            player = await voice_state.voice_client.create_ytdl_player(query, ytdl_options=opts, after=voice_state.toggle_next, use_avconv=True)
+        except youtube_dl.utils.DownloadError as e:
+            await self.bot.messaging.reply(ctx.message, "A YouTube error occured: {}".format(self.bot.utils.extract_yt_error(e)))
         except Exception as e:
             await self.bot.messaging.reply(ctx.message, "An error occured: {}".format(e))
         else:

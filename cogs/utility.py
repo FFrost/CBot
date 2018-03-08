@@ -85,7 +85,7 @@ class Utility:
         if (not ctx.message.channel.is_private):
             await self.bot.utils.delete_message(ctx.message)
         
-        try:  # if a user runs another purge command within 5 seconds, the temp message won't exist
+        try: # if a user runs another purge command within 5 seconds, the temp message won't exist
             await self.bot.utils.delete_message(temp)
         
         except Exception:
@@ -104,7 +104,7 @@ class Utility:
                 language = LANGCODES[language]
             else:
                 # default to english if no valid language provided
-                string = language + " " + string  # command separates the first word from the rest of the string
+                string = language + " " + string # command separates the first word from the rest of the string
                 language = "en"
         
         if (not string):
@@ -122,7 +122,8 @@ class Utility:
         
     @commands.command(description="searches for info on a game",
                       brief="searches for info on a game",
-                      pass_context=True)
+                      pass_context=True,
+                      enabled=False) # rate limited
     async def game(self, ctx, *, query : str):
         headers = {"User-Agent": "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/43.0.2357.134 Safari/537.36"}
         url = "https://www.google.com/search?q={}".format(quote(query))  # escape query for url
@@ -202,13 +203,13 @@ class Utility:
         
         game_img = tree.xpath("//a[@jsaction='fire.ivg_o']/@href")[0]
         
-        start_tag = "/imgres?imgurl="
-        end_tag = "&imgrefurl="
-        start_index = game_img.find(start_tag)
-        end_index = game_img.find(end_tag)
-        data["image"] = game_img[start_index + len(start_tag) : end_index]
+        start_tag       = "/imgres?imgurl="
+        end_tag         = "&imgrefurl="
+        start_index     = game_img.find(start_tag)
+        end_index       = game_img.find(end_tag)
+        data["image"]   = game_img[start_index + len(start_tag) : end_index]
         
-        embed = self.bot.utils.create_game_info_embed(ctx.message.author, data)
+        embed = self.bot.utils.create_game_info_embed(data, ctx.message.author)
         await self.bot.send_message(ctx.message.channel, embed=embed)
             
 def setup(bot):
