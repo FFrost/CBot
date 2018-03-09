@@ -59,6 +59,15 @@ Avatar URL: {avatar}
                                                                         channel=message.channel,
                                                                         name=message.author,
                                                                         message=content)
+        
+    # prints message
+    # input: message; discord.Message; message to print
+    async def output_log(self, message): 
+        try:
+            print(self.format_log_message(message))
+        
+        except Exception as e:
+            await self.bot.messaging.error_alert(e, extra="on_command")
     
     # find a user by full or partial name or id
     # input: name; string; keyword to search usernames for

@@ -149,21 +149,22 @@ class CBot(commands.Bot):
             
         await self.messaging.reply(ctx, error)
     
+    # only output command messages
+    async def on_command(self, command, ctx):
+        await self.utils.output_log(ctx.message)
+            
+    # TODO: track completed commands for !stats
+    async def on_command_completion(self, command, ctx):
+        pass
+    
     async def on_message(self, message):
         try:
             if (not message.content or not message.author):
                 return
             
-            # print messages
-            # don't mess up the flow of the execution if it errors
-            try:
-                print(self.utils.format_log_message(message))
-            
-            except Exception as e:
-                await self.messaging.error_alert(e, extra="logging")
-            
             # don't respond to ourself
             if (message.author == self.user):
+                await self.utils.output_log(message)
                 return
             
             # insult anyone who @s us
