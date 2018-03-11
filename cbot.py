@@ -169,7 +169,11 @@ class CBot(commands.Bot):
             
             # insult anyone who @s us
             if (self.user in message.mentions and not message.mention_everyone and not message.content.startswith("!")):
-                await self.messaging.reply(message, "fuck you, you {}.".format(await self.misc.get_insult()))
+                await self.utils.output_log(message)
+                
+                insult = await self.misc.get_insult()
+                an = "an" if (insult[0].lower() in "aeiou") else "a"
+                await self.messaging.reply(message, "you're {an} {insult}.".format(an=an, insult=insult))
             
             # respond to "^ this", "this", "^", etc.
             if (message.content.startswith("^") or message.content.lower() == "this"):

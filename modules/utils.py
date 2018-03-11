@@ -244,10 +244,11 @@ Avatar URL: {avatar}
         if (user):
             embed.set_author(name=user.name, icon_url=user.avatar_url)
         
-        embed.add_field(name=":movie_camera:", value="{:,} views".format(info["view_count"]))
-        embed.add_field(name=":watch:", value=time.strftime("%H:%M:%S", time.gmtime(info["duration"])))
         embed.add_field(name=":thumbsup:", value="{:,} likes".format(info["like_count"], inline=True))
         embed.add_field(name=":thumbsdown:", value="{:,} dislikes".format(info["dislike_count"], inline=True))
+        embed.add_field(name=":desktop:", value=info["uploader"])
+        embed.add_field(name=":watch:", value=time.strftime("%H:%M:%S", time.gmtime(info["duration"])))
+        embed.add_field(name=":movie_camera:", value="{:,} views".format(info["view_count"]))
         embed.add_field(name=":calendar_spiral:", value=datetime.datetime.strptime(info["upload_date"], "%Y%m%d").strftime("%b %-d, %Y"))
 
         return embed
@@ -354,7 +355,7 @@ Avatar URL: {avatar}
         index = e.find(err_to_look_for)
         
         if (index < 0):
-            return None
+            return e
         
         index += len(err_to_look_for) + 1 # space
         

@@ -171,6 +171,9 @@ class Music:
             if (not query):
                 await self.bot.messaging.reply(ctx.message, "No YouTube video found")
                 return
+        elif (query.startswith("/")):
+            await self.bot.messaging.reply(ctx.message, "Invalid query: `{}`".format(query))
+            return
         
         voice_channel = ctx.message.author.voice_channel
         
@@ -222,6 +225,16 @@ class Music:
                       no_pm=True)
     async def stop(self, ctx):
         voice_state = self.voice_states.get(ctx.message.server.id)
+        
+        if (voice_state is None):
+            try:
+                voice_client_in_server = self.bot.voice_client_in(ctx.message.server)
+                
+                if (voice_client_in_server):
+                    voice_client_in_server.disconnect()
+                    del self.voice_states[ctx.message.server.id]
+            except Exception:
+                pass
         
         if (voice_state.is_playing()):
             player = voice_state.player

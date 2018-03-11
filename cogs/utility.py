@@ -18,7 +18,7 @@ class Utility:
         self.translator = Translator()
         
     @commands.command(description="info about a Discord user", brief="info about a Discord user", pass_context=True)
-    @commands.cooldown(1, 3, commands.BucketType.user)
+    @commands.cooldown(2, 5, commands.BucketType.user)
     async def info(self, ctx, *, name : str=""):
         if (ctx.message.mentions):
             info_msg = self.bot.utils.get_user_info(ctx.message.mentions[0])
@@ -36,7 +36,7 @@ class Utility:
         await self.bot.messaging.reply(ctx, info_msg)
         
     @commands.command(description="get a user's avatar", brief="get a user's avatar", pass_context=True)
-    @commands.cooldown(1, 3, commands.BucketType.user)
+    @commands.cooldown(2, 5, commands.BucketType.user)
     async def avatar(self, ctx, *, name : str=""):
         if (ctx.message.mentions):
             users = ctx.message.mentions
