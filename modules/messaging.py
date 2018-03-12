@@ -29,7 +29,7 @@ class Messaging:
             destination = dest.channel
             user = dest.author
         elif (isinstance(dest, str)):
-            user = await self.bot.utils.find(dest)
+            user = await self.bot.bot_utils.find(dest)
             
             if (user):
                 destination = user
@@ -49,7 +49,7 @@ class Messaging:
         if (not self.bot.dev_id):
             return
         
-        user = await self.bot.utils.find(self.bot.dev_id)
+        user = await self.bot.bot_utils.find(self.bot.dev_id)
             
         if (user is None):
             return
@@ -60,7 +60,7 @@ class Messaging:
     # input: uid; string; id of user to message
     #        msg; string; message content to send
     async def private_message(self, uid, msg):
-        user = await self.bot.utils.find(uid)
+        user = await self.bot.bot_utils.find(uid)
             
         if (user is None):
             return
@@ -75,7 +75,7 @@ class Messaging:
             if (not server):
                 return
             
-            channel = self.bot.utils.find_channel("admin", server)
+            channel = self.bot.bot_utils.find_channel("admin", server)
             
             if (not channel):
                 return
@@ -86,7 +86,7 @@ class Messaging:
             await self.bot.send_message(channel, msg)
         
         except Exception as e:
-            await self.bot.utils.error_alert(e)
+            await self.error_alert(e)
             
     # alerts a user if an error occurs, will always alert developer
     # input: e; error object; the error to output
@@ -123,7 +123,7 @@ class Messaging:
     #        emoji; string or list; emoji(s) to react with
     #        partial; bool=True; should react if partial keywords are found
     async def react(self, message, keyword, emojis, partial=True):
-        if (not self.bot.utils.get_permissions(message.channel).add_reactions):
+        if (not self.bot.bot_utils.get_permissions(message.channel).add_reactions):
             return
     
         try:
@@ -183,7 +183,7 @@ class Messaging:
     async def add_img_reactions(self, message):
         try:
             for name, emoji in self.EMOJI_CHARS.items():
-                if (name == "stop_button" and not self.bot.utils.get_permissions(message.channel).manage_messages): # skip delete if we can't delete messages
+                if (name == "stop_button" and not self.bot.bot_utils.get_permissions(message.channel).manage_messages): # skip delete if we can't delete messages
                     continue
                 
                 await self.bot.add_reaction(message, emoji)

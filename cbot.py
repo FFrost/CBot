@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
 
-from modules import utils, enums, messaging, misc, checks
+from modules import bot_utils, utils, enums, messaging, misc, checks
 
 import logging, os, traceback, glob, yaml, sys
 from random import randint
@@ -48,8 +48,7 @@ class CBot(commands.Bot):
                 
         print("Finished loading cogs")
             
-        self.utils = utils.Utils(self)
-        self.enums = enums.Enums()
+        self.bot_utils = bot_utils.BotUtils(self)
         self.messaging = messaging.Messaging(self)
         self.misc = misc.Misc(self)
         
@@ -126,7 +125,7 @@ class CBot(commands.Bot):
     async def on_error(self, event, *args, **kwargs):  
         trace = traceback.format_exc()
         
-        self.utils.log_error_to_file(trace)
+        self.bot_utils.log_error_to_file(trace)
         await self.messaging.error_alert(e=trace)
     
     async def on_command_error(self, error, ctx): 
@@ -151,7 +150,7 @@ class CBot(commands.Bot):
     
     # only output command messages
     async def on_command(self, command, ctx):
-        await self.utils.output_log(ctx.message)
+        await self.bot_utils.output_log(ctx.message)
             
     # TODO: track completed commands for !stats
     async def on_command_completion(self, command, ctx):
@@ -164,12 +163,12 @@ class CBot(commands.Bot):
             
             # don't respond to ourself
             if (message.author == self.user):
-                await self.utils.output_log(message)
+                await self.bot_utils.output_log(message)
                 return
             
             # insult anyone who @s us
             if (self.user in message.mentions and not message.mention_everyone and not message.content.startswith("!")):
-                await self.utils.output_log(message)
+                await self.bot_utils.output_log(message)
                 
                 insult = await self.misc.get_insult()
                 an = "an" if (insult[0].lower() in "aeiou") else "a"

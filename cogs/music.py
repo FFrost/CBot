@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
 
-from modules import checks
+from modules import checks, utils
 
 import asyncio, aiohttp
 import time
@@ -21,8 +21,34 @@ class VoiceEntry:
         return self.player.yt.extract_info(self.player.url, download=False)
 
     def __str__(self):
+        info = self.get_info()
+        
         duration = time.strftime("%H:%M:%S", time.gmtime(self.player.duration))
-        return "**{title}** - [{duration}]".format(title=self.player.title, duration=duration)
+
+        if (info):
+            if ("entries" in info.keys()):
+                info = info["entries"][0]
+                
+            if (info["extractor"] == "twitch:stream"):
+                title = info["description"]
+                return "**{title}**".format(title=title)
+
+        title = utils.cap_string_and_ellipsis(self.player.title, length=64)
+        
+        if (not title):
+            if (info is not None):
+                if (info["extractor"] == "twitch:vod"):
+                    title = info["title"]
+                elif ("title" in info):
+                    title = title["info"]
+                elif ("description" in info):
+                    description = info["description"]
+                    title = utils.cap_string_and_ellipsis(description, length=64)
+                    
+        if (not title):
+            title = "untitled"
+
+        return "**{title}** - [{duration}]".format(title=title, duration=duration)
 
 class VoiceState:
     def __init__(self, bot):
@@ -62,9 +88,9 @@ class VoiceState:
             current_info = self.current.get_info()
             
             if (current_info["extractor"] == "youtube:search"):
-                embed = self.bot.utils.create_youtube_embed(current_info, self.current.author)
+                embed = utils.create_youtube_embed(current_info, self.current.author)
             elif (current_info["extractor"] == "soundcloud"):
-                embed = self.bot.utils.create_soundcloud_embed(current_info, self.current.author)
+                embed = utils.create_soundcloud_embed(current_info, self.current.author)
             
             await self.bot.send_message(self.current.channel, "Playing " + str(self.current), embed=embed)
 
@@ -156,21 +182,24 @@ class Music:
             await self.bot.messaging.reply(ctx.message, "No videos found for `{}`".format(query))
         else:
             if (info):
-                embed = self.bot.utils.create_youtube_embed(info, ctx.message.author)
+                embed = utils.create_youtube_embed(info, ctx.message.author)
                 
                 await self.bot.send_message(ctx.message.channel, embed=embed)
             else:
                 await self.bot.messaging.reply(ctx.message, "No info found for `{}` {}".format(query, result))
                 
-    @commands.command(description="plays a YouTube video over voice",
-                      brief="plays a YouTube video over voice",
+    @commands.command(description="plays a video over voice, supported sites: " + \
+                      "https://rg3.github.io/youtube-dl/supportedsites.html",
+                      brief="plays a video over voice",
                       pass_context=True,
                       no_pm=True)
     @commands.check(checks.is_in_voice_channel)
     @commands.cooldown(1, 4, commands.BucketType.server)
     async def play(self, ctx, *, query : str=""):
+        await self.bot.send_typing(ctx.message.channel)
+        
         if (not query):
-            query = await self.bot.utils.find_last_youtube_embed(ctx.message)
+            query = await self.bot.bot_utils.find_last_youtube_embed(ctx.message)
             
             if (not query):
                 await self.bot.messaging.reply(ctx.message, "No YouTube video found")
@@ -208,7 +237,7 @@ class Music:
         try:
             player = await voice_state.voice_client.create_ytdl_player(query, ytdl_options=opts, after=voice_state.toggle_next, use_avconv=True)
         except youtube_dl.utils.DownloadError as e:
-            await self.bot.messaging.reply(ctx.message, "A YouTube error occured: {}".format(self.bot.utils.extract_yt_error(e)))
+            await self.bot.messaging.reply(ctx.message, "A YouTube error occured: {}".format(utils.extract_yt_error(e)))
         except Exception as e:
             await self.bot.messaging.reply(ctx.message, "An error occured: {}".format(e))
         else:
@@ -239,17 +268,17 @@ class Music:
                     del self.voice_states[ctx.message.server.id]
             except Exception:
                 pass
-        
-        if (voice_state.is_playing()):
-            player = voice_state.player
-            player.stop()
+        else:
+            if (voice_state.is_playing()):
+                player = voice_state.player
+                player.stop()
             
-        try:
-            voice_state.audio_player.cancel()
-            del self.voice_states[ctx.message.server.id]
-            await voice_state.voice_client.disconnect()
-        except Exception as e:
-            print(e)
+            try:
+                voice_state.audio_player.cancel()
+                del self.voice_states[ctx.message.server.id]
+                await voice_state.voice_client.disconnect()
+            except Exception as e:
+                print(e)
             
     @commands.command(description="skips the currently playing song and plays the next song in queue",
                       brief="skips the currently playing song and plays the next song in queue",

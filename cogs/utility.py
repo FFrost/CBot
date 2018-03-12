@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
 
-from modules import checks
+from modules import checks, utils
 
 import asyncio, aiohttp
 import requests
@@ -12,7 +12,6 @@ from googletrans import Translator, LANGUAGES, LANGCODES
 
 
 class Utility:
-
     def __init__(self, bot):
         self.bot = bot
         self.translator = Translator()
@@ -21,17 +20,17 @@ class Utility:
     @commands.cooldown(2, 5, commands.BucketType.user)
     async def info(self, ctx, *, name : str=""):
         if (ctx.message.mentions):
-            info_msg = self.bot.utils.get_user_info(ctx.message.mentions[0])
+            info_msg = utils.get_user_info(ctx.message.mentions[0])
         elif (name):
-            user = await self.bot.utils.find(name)
+            user = await self.bot.bot_utils.find(name)
                     
             if (not user):
                 await self.bot.messaging.reply(ctx, "Failed to find user `{}`".format(name))
                 return
                     
-            info_msg = self.bot.utils.get_user_info(user)
+            info_msg = utils.get_user_info(user)
         else:
-            info_msg = self.bot.utils.get_user_info(ctx.message.author)
+            info_msg = utils.get_user_info(ctx.message.author)
     
         await self.bot.messaging.reply(ctx, info_msg)
         
@@ -41,7 +40,7 @@ class Utility:
         if (ctx.message.mentions):
             users = ctx.message.mentions
         elif (name):
-            user = await self.bot.utils.find(name)
+            user = await self.bot.bot_utils.find(name)
             
             if (not user):
                 await self.bot.messaging.reply(ctx, "Failed to find user `{}`".format(name))
@@ -52,7 +51,7 @@ class Utility:
             users = [ctx.message.author]
         
         for user in users:
-            embed = self.bot.utils.create_image_embed(user, image=user.avatar_url)
+            embed = utils.create_image_embed(user, image=user.avatar_url)
             await self.bot.send_message(ctx.message.channel, embed=embed)
         
     @commands.command(description="deletes the last X messages",
@@ -77,16 +76,16 @@ class Utility:
                 else:
                     users = [u]
         
-        num_deleted = await self.bot.utils.purge(ctx, num_to_delete, users)
+        num_deleted = await self.bot.bot_utils.purge(ctx, num_to_delete, users)
         
         temp = await self.bot.say("Deleted last {} message(s)".format(num_deleted))
         await asyncio.sleep(5)
         
         if (not ctx.message.channel.is_private):
-            await self.bot.utils.delete_message(ctx.message)
+            await self.bot.bot_utils.delete_message(ctx.message)
         
         try: # if a user runs another purge command within 5 seconds, the temp message won't exist
-            await self.bot.utils.delete_message(temp)
+            await self.bot.bot_utils.delete_message(temp)
         
         except Exception:
             pass
@@ -108,7 +107,7 @@ class Utility:
                 language = "en"
         
         if (not string):
-            string = await self.bot.utils.find_last_text(ctx.message)
+            string = await self.bot.bot_utils.find_last_text(ctx.message)
             
             if (not string):
                 await self.bot.messaging.reply(ctx.message, "Failed to find text to translate")
@@ -209,7 +208,7 @@ class Utility:
         end_index       = game_img.find(end_tag)
         data["image"]   = game_img[start_index + len(start_tag) : end_index]
         
-        embed = self.bot.utils.create_game_info_embed(data, ctx.message.author)
+        embed = utils.create_game_info_embed(data, ctx.message.author)
         await self.bot.send_message(ctx.message.channel, embed=embed)
             
 def setup(bot):
