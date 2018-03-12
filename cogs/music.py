@@ -57,12 +57,16 @@ class VoiceState:
             self.play_next_song.clear()
             self.current = await self.queue.get()
             
-            yt_embed = None
+            embed = None
+                  
+            current_info = self.current.get_info()
             
-            if (self.bot.utils.youtube_url_validation(self.player.url) is None):
-                yt_embed = self.bot.utils.create_youtube_embed(self.current.get_info(), self.current.author)
+            if (current_info["extractor"] == "youtube:search"):
+                embed = self.bot.utils.create_youtube_embed(current_info, self.current.author)
+            elif (current_info["extractor"] == "soundcloud"):
+                embed = self.bot.utils.create_soundcloud_embed(current_info, self.current.author)
             
-            await self.bot.send_message(self.current.channel, "Playing " + str(self.current), embed=yt_embed)
+            await self.bot.send_message(self.current.channel, "Playing " + str(self.current), embed=embed)
 
             self.current.player.start()
             await self.play_next_song.wait()

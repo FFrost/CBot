@@ -207,6 +207,7 @@ Avatar URL: {avatar}
     # TODO: discord changes this to type 'rich' and drops the 'video' data entirely after being sent
     # creates a discord.Embed with an embedded YouTube video
     # input: info; dict; youtube-dl dict of extracted info from the video
+    #        user; discord.User; the user who requested the video
     # output: embed; discord.Embed; generated video embed
     def create_youtube_embed(self, info, user=None):
         if ("entries" in info.keys()):
@@ -253,6 +254,38 @@ Avatar URL: {avatar}
 
         return embed
     
+    # creates a discord embed from a youtube-dl extractor dict
+    # input: info; dict; youtube-dl dict of extracted info from the song
+    #        user; discord.User; the user who requested the song
+    # output: embed; discord.Embed; formatted song info embed
+    def create_soundcloud_embed(self, info, user=None):
+        if ("entries" in info.keys()):
+            info = info["entries"][0]
+
+        data = {
+                "url": info["webpage_url"],
+                "title": info["title"],
+                "thumbnail": {
+                    "url": info["thumbnail"]
+                    },
+                "description": "\n".join(info["description"][:140].split("\n")[:3]).strip() + ("..." if len(info["description"]) > 140 else "")
+               }
+        
+        embed = discord.Embed().from_data(data)
+        
+        if (user):
+            embed.set_author(name=user.name, icon_url=user.avatar_url)
+        
+        embed.add_field(name=":desktop:", value=info["uploader"])
+        embed.add_field(name=":watch:", value=time.strftime("%H:%M:%S", time.gmtime(info["duration"])))
+        embed.add_field(name=":calendar_spiral:", value=datetime.datetime.strptime(info["upload_date"], "%Y%m%d").strftime("%b %-d, %Y"))
+        
+        return embed
+    
+    # creates an embed with information about a game
+    # input: info; dict; custom dict created from Utility.game that contains info from a google search
+    #        user; discord.User; user who requested the search
+    # output: discord.Embed; the formatted embed
     def create_game_info_embed(self, info, user=None):
         embed = discord.Embed()
         
