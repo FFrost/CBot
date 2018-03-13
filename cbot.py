@@ -202,8 +202,8 @@ class CBot(commands.Bot):
             if (member == self.user):
                 return
             
-            await self.messaging.msg_admin_channel("{time} {name} [{uid}] joined".format(time=self.utils.get_cur_time(),
-                                                                                         name=self.utils.format_member_name(member),
+            await self.messaging.msg_admin_channel("{time} {name} [{uid}] joined".format(time=utils.get_cur_time(),
+                                                                                         name=utils.format_member_name(member),
                                                                                          uid=member.id),
                                                                                          member.server)
             
@@ -215,8 +215,8 @@ class CBot(commands.Bot):
             if (member == self.user):
                 return
             
-            await self.messaging.msg_admin_channel("{time} {name} [{uid}] left".format(time=self.utils.get_cur_time(),
-                                                                                       name=self.utils.format_member_name(member),
+            await self.messaging.msg_admin_channel("{time} {name} [{uid}] left".format(time=utils.get_cur_time(),
+                                                                                       name=utils.format_member_name(member),
                                                                                        uid=member.id),
                                                                                        member.server)
         
@@ -225,7 +225,7 @@ class CBot(commands.Bot):
     
     async def on_server_join(self, server):
         try:
-            await self.messaging.private_message(self.dev_id, "{time} CBot joined server {name}#{id}".format(time=self.utils.get_cur_time(),
+            await self.messaging.private_message(self.dev_id, "{time} CBot joined server {name}#{id}".format(time=utils.get_cur_time(),
                                                                                                              name=server.name,
                                                                                                              id=server.id))
         
@@ -234,7 +234,7 @@ class CBot(commands.Bot):
     
     async def on_server_remove(self, server):
         try:
-            await self.messaging.private_message(self.dev_id, "{time} CBot was removed from server {name}#{id}".format(time=self.utils.get_cur_time(),
+            await self.messaging.private_message(self.dev_id, "{time} CBot was removed from server {name}#{id}".format(time=utils.get_cur_time(),
                                                                                                                        name=server.name,
                                                                                                                        id=server.id))
         
