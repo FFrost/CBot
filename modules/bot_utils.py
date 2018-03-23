@@ -31,7 +31,7 @@ class BotUtils:
         
     # prints message
     # input: message; discord.Message; message to print
-    async def output_log(self, message): 
+    async def output_log(self, message):
         try:
             print(utils.format_log_message(message))
         

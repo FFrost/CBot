@@ -1,7 +1,10 @@
 import discord
 from discord.ext import commands
 
-import inspect, re
+from modules import enums
+
+import asyncio
+import inspect, re, math
 from collections import OrderedDict
 
 class Messaging:
@@ -19,6 +22,12 @@ class Messaging:
     #        msg; string; message to send
     # output: discord.Message; the reply message object sent to the user
     async def reply(self, dest, msg, channel=None):
+        try:
+            msg = str(msg)
+        
+        except Exception:
+            pass
+        
         if (isinstance(dest, discord.User)):
             if (not channel):
                 destination = user = dest
@@ -40,8 +49,35 @@ class Messaging:
             user = dest.message.author
         else:
             return None
+        
+        max_message_length = enums.DISCORD_MAX_MESSAGE_LENGTH - enums.DISCORD_MAX_MENTION_LENGTH - 1 # 1 for the space between mention and message
+        
+        if (len(msg) > max_message_length):
+            code_blocks = ""
             
-        return await self.bot.send_message(destination, "{} {}".format(user.mention, msg))
+            if (msg.startswith("```")):
+                max_message_length -= 6 # start and end each split with ```
+                code_blocks = "```"
+            elif (msg.startswith("`")):
+                max_message_length -= 2 # start and end each split with `
+                code_blocks = "`"
+            
+            num_messages = math.ceil(len(msg) / max_message_length)
+            
+            for i in range(num_messages):
+                split_msg = msg[i * max_message_length : (i + 1) * max_message_length]
+                
+                if (not split_msg.startswith("`") and code_blocks is not None):
+                    split_msg = code_blocks + split_msg
+                if (not split_msg.endswith("`") and code_blocks is not None):
+                    split_msg += code_blocks
+                
+                await self.bot.send_message(destination, "{} {}".format(user.mention, split_msg))
+                await asyncio.sleep(1)
+                
+            return None # TODO: return a list of sent messages?
+        else:
+            return await self.bot.send_message(destination, "{} {}".format(user.mention, msg))
     
     # private message the developer
     # input: msg; string; message to send

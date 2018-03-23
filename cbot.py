@@ -27,6 +27,7 @@ class CBot(commands.Bot):
         self.REAL_FILE = os.path.realpath(__file__)
         self.REAL_PATH = os.path.dirname(self.REAL_FILE)
         self.TOKEN_PATH = self.REAL_PATH + "/cbot.yml"
+        
         self.get_token()
         
         checks.owner_id = self.dev_id
@@ -122,7 +123,7 @@ class CBot(commands.Bot):
             else:
                 print("\t{name} owned by {owner}#{ownerid}".format(name=s.name, owner=s.owner.name, ownerid=s.owner.discriminator))
     
-    async def on_error(self, event, *args, **kwargs):  
+    async def on_error(self, event, *args, **kwargs):
         trace = traceback.format_exc()
         
         self.bot_utils.log_error_to_file(trace)
