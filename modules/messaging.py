@@ -56,10 +56,10 @@ class Messaging:
             code_blocks = ""
             
             if (msg.startswith("```")):
-                max_message_length -= 6 # start and end each split with ```
+                max_message_length -= 6 # start and end each split with "```"
                 code_blocks = "```"
             elif (msg.startswith("`")):
-                max_message_length -= 2 # start and end each split with `
+                max_message_length -= 2 # start and end each split with "`"
                 code_blocks = "`"
             
             num_messages = math.ceil(len(msg) / max_message_length)

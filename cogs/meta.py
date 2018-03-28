@@ -3,7 +3,8 @@ from discord.ext import commands
 
 from modules import checks
 
-import inspect, os, sys, subprocess, time
+import inspect, os, sys, subprocess, time, psutil
+from hurry.filesize import size
 
 class Meta:
     def __init__(self, bot):
@@ -95,6 +96,21 @@ class Meta:
                 msg += "{name} owned by {owner}#{ownerid}\n".format(name=s.name, owner=s.owner.name, ownerid=s.owner.discriminator)
                 
         msg += "```"
+
+        await self.bot.messaging.reply(ctx.message, msg)
+        
+    @cmd.command(description="resource usage on the server",
+                 brief="resource usage on the server",
+                 pass_context=True)
+    async def usage(self, ctx):
+        cpu = psutil.cpu_percent()
+        memory = psutil.virtual_memory()
+        
+        msg = "CPU: {cpu}%\nMemory: {percent}% ({used}/{total})".format(
+            cpu=cpu,
+            percent=memory.percent,
+            used=size(memory.used),
+            total=size(memory.total))
 
         await self.bot.messaging.reply(ctx.message, msg)
 

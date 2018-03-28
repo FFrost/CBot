@@ -371,7 +371,7 @@ class Fun:
                       brief="first image results from Google Images",
                       pass_context=True,
                       aliases=["image"])
-    @commands.cooldown(1, 5, commands.BucketType.channel)
+    @commands.cooldown(2, 5, commands.BucketType.channel)
     async def img(self, ctx, *, query : str):
         channel = ctx.message.channel
         await self.bot.send_typing(channel)
@@ -452,7 +452,13 @@ class Fun:
                 
         embed = utils.create_image_embed(user, title="Search results", footer="Page {}/{}".format(index + 1, max_index), image=img_url)
         
-        msg = await self.bot.edit_message(message, embed=embed)
+        try:
+            msg = await self.bot.edit_message(message, embed=embed)
+        
+        except discord.errors.HTTPException as e:
+            # log the error and try to continue anyway
+            self.bot.bot_utils.log_error_to_file(e)
+            await self.bot.messaging.reply(command_msg, "An error occured while updating the image search: {}".format(e))
          
         await self.bot.messaging.add_img_reactions(msg)
         
@@ -510,7 +516,12 @@ class Fun:
             
             for message_id, cache in search_cache_copy.items():
                 if (time.time() > cache["time"] + enums.IMAGESEARCH_TIME_TO_WAIT):
-                    msg = await self.bot.get_message(cache["channel"], message_id)
+                    try:
+                        msg = await self.bot.get_message(cache["channel"], message_id)
+                        
+                    except discord.errors.NotFound:
+                        continue
+                    
                     await self.remove_img_from_cache(msg)
             
             search_cache_copy.clear()
