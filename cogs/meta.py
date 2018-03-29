@@ -113,6 +113,94 @@ class Meta:
             total=size(memory.total))
 
         await self.bot.messaging.reply(ctx.message, msg)
+        
+    @cmd.command(description="prints status of cogs",
+                 brief="prints status of cogs",
+                 pass_context=True)
+    async def cogs(self, ctx): 
+        loaded_cogs = []
+        unloaded_cogs = []
+        
+        for cog, info in self.bot.loaded_cogs.items():
+            if (not info["loaded"]):
+                unloaded_cogs.append(cog)
+            else:
+                loaded_cogs.append(cog)
+                
+        msg = "Loaded cogs:\n```\n"
+        
+        for loaded_cog in loaded_cogs:
+            msg += loaded_cog + "\n"
+        
+        msg += "```\nUnloaded cogs:\n```\n"
+        
+        for unloaded_cog in unloaded_cogs:
+            msg += unloaded_cog + "\n"
+            
+        msg += "```"
+            
+        await self.bot.messaging.reply(ctx.message, msg)
+
+    @cmd.command(description="load a cog",
+                 brief="load a cog",
+                 pass_context=True)
+    async def load(self, ctx, cog : str):
+        if (not cog in self.bot.loaded_cogs):
+            await self.bot.messaging.reply(ctx.message, "Cog `{}` not found".format(cog))
+            return
+        
+        try:
+            self.bot.load_extension(self.bot.loaded_cogs[cog]["ext"])
+            self.bot.loaded_cogs[cog] = {"ext": self.bot.loaded_cogs[cog]["ext"],
+                                         "loaded": True}
+            
+            await self.bot.messaging.reply(ctx.message, "Loaded `{}`".format(cog))
+            
+        except Exception as e:
+            await self.bot.messaging.reply(ctx.message, "Failed to load cog `{}`: ```{}```".format(cog, e))
+            return
+    
+    @cmd.command(description="unload a cog",
+                 brief="unload a cog",
+                 pass_context=True)
+    async def unload(self, ctx, cog : str):
+        if (not cog in self.bot.loaded_cogs):
+            await self.bot.messaging.reply(ctx.message, "Cog `{}` not found".format(cog))
+            return
+        
+        try:
+            self.bot.unload_extension(self.bot.loaded_cogs[cog]["ext"])
+            self.bot.loaded_cogs[cog] = {"ext": self.bot.loaded_cogs[cog]["ext"],
+                                         "loaded": False}
+            
+            await self.bot.messaging.reply(ctx.message, "Unloaded `{}`".format(cog))
+            
+        except Exception as e:
+            await self.bot.messaging.reply(ctx.message, "Failed to unload cog `{}`: ```{}```".format(cog, e))
+            return
+    
+    @cmd.command(description="reload a cog",
+                 brief="reload a cog",
+                 pass_context=True)
+    async def reload(self, ctx, cog : str):
+        if (not cog in self.bot.loaded_cogs):
+            await self.bot.messaging.reply(ctx.message, "Cog `{}` not found".format(cog))
+            return
+        
+        try:
+            self.bot.unload_extension(self.bot.loaded_cogs[cog]["ext"])
+            self.bot.loaded_cogs[cog] = {"ext": self.bot.loaded_cogs[cog]["ext"],
+                                         "loaded": False}
+            
+            self.bot.load_extension(self.bot.loaded_cogs[cog]["ext"])
+            self.bot.loaded_cogs[cog] = {"ext": self.bot.loaded_cogs[cog]["ext"],
+                                         "loaded": True}
+            
+            await self.bot.messaging.reply(ctx.message, "Reloaded `{}`".format(cog))
+            
+        except Exception as e:
+            await self.bot.messaging.reply(ctx.message, "Failed to reload cog `{}`: ```{}```".format(cog, e))
+            return
 
 def setup(bot):
     bot.add_cog(Meta(bot))

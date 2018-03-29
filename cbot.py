@@ -34,18 +34,24 @@ class CBot(commands.Bot):
         
         print("Loading cogs...")
         
-        cogs = glob.glob(self.REAL_PATH + "/cogs/*.py")
+        self.loaded_cogs = {}
+        
+        self.cog_path = self.REAL_PATH + "/cogs/"
+        cogs = glob.glob(self.cog_path + "*.py")
               
         # load all cogs from the directory
         for i, path in enumerate(cogs):
-            ext = "cogs." + os.path.basename(path).replace(".py", "")
+            cog_name = os.path.basename(path).replace(".py", "")
+            ext = "cogs." + cog_name
             
             try:
                 self.load_extension(ext)
                 print("Loaded cog {}/{}: {}".format(i + 1, len(cogs), ext))
+                self.loaded_cogs[cog_name] = {"ext": ext, "loaded": True}
                 
             except Exception as e:
                 print("Failed to load cog \"{}\" ({})".format(ext, e))
+                self.loaded_cogs[cog_name] = {"ext": ext, "loaded": False}
                 
         print("Finished loading cogs")
             
