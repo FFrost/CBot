@@ -66,6 +66,8 @@ class Fun:
             
             msg = await self.bot.messaging.reply(message, "Liquidizing image...")
             
+            await self.bot.send_typing(message.channel)
+            
             path = await self.download_image(url)
             
             if (isinstance(path, enums.ImageCodes)):
@@ -158,9 +160,10 @@ class Fun:
     
     # download an image from a url and save it as a temp file
     # input: url; string; image to download
+    #        simulate; bool=False; should the image be downloaded or only checked to see if it's valid
     # output: if successful: string; path to temp file;
     #         if unsuccessful: ImageCodes; error code
-    async def download_image(self, url):
+    async def download_image(self, url, simulate=False):
         # check for private ip
         try:
             ip = ipaddress.ip_address(url)
@@ -174,60 +177,68 @@ class Fun:
         if (not url.startswith("http")):
             url = "http://" + url
         
-        conn = aiohttp.TCPConnector(verify_ssl=False) # for https
-        async with aiohttp.ClientSession(connector=conn) as session:
-            async with session.get(url) as r:
-                if (r.status == 200):
-                    if ("Content-Type" in r.headers):
-                        content_type = r.headers["Content-Type"]
-                    else:
-                        return enums.ImageCodes.BAD_URL
-                    
-                    if ("Content-Length" in r.headers):
-                        content_length = r.headers["Content-Length"]
-                    else:
-                        return enums.ImageCodes.BAD_URL
-                    
-                    # check if empty file
-                    if (content_length):
-                        content_length = int(content_length)
-                        
-                        if (content_length < 1):
+        try:
+            conn = aiohttp.TCPConnector(verify_ssl=False) # for https
+            async with aiohttp.ClientSession(connector=conn) as session:
+                async with session.get(url, timeout=15) as r:
+                    if (r.status == 200):
+                        if ("Content-Type" in r.headers):
+                            content_type = r.headers["Content-Type"]
+                        else:
                             return enums.ImageCodes.BAD_URL
-                        elif (content_length > enums.DISCORD_MAX_FILESIZE):
-                            return enums.ImageCodes.MAX_FILESIZE
+                        
+                        if ("Content-Length" in r.headers):
+                            content_length = r.headers["Content-Length"]
+                        else:
+                            return enums.ImageCodes.BAD_URL
+                        
+                        # check if empty file
+                        if (content_length):
+                            content_length = int(content_length)
+                            
+                            if (content_length < 1):
+                                return enums.ImageCodes.BAD_URL
+                            elif (content_length > enums.DISCORD_MAX_FILESIZE):
+                                return enums.ImageCodes.MAX_FILESIZE
+                        else:
+                            return enums.ImageCodes.BAD_URL
+                        
+                        # check for file type
+                        if (not content_type):
+                            return enums.ImageCodes.BAD_URL
+                        
+                        content_type = content_type.split("/")
+                        
+                        mime = content_type[0]
+                        ext = content_type[1]
+                        
+                        if (mime.lower() != "image"):
+                            return enums.ImageCodes.INVALID_FORMAT
+                        
+                        # return if the simulation reached this far
+                        if (simulate):
+                            return enums.ImageCodes.SUCCESS
+        
+                        # make a new 'unique' tmp file with the correct extension
+                        tmp_file = tempfile.NamedTemporaryFile(delete=False, suffix="." + ext)
+                        tmp_file_path = tmp_file.name
+        
+                        # write bytes to tmp file
+                        with tmp_file as f:
+                            while True:
+                                chunk = await r.content.read(1024)
+                                
+                                if (not chunk):
+                                    break
+                                
+                                f.write(chunk)
+                                
+                        return tmp_file_path
                     else:
                         return enums.ImageCodes.BAD_URL
                     
-                    # check for file type
-                    if (not content_type):
-                        return enums.ImageCodes.BAD_URL
-                    
-                    content_type = content_type.split("/")
-                    
-                    mime = content_type[0]
-                    ext = content_type[1]
-                    
-                    if (mime.lower() != "image"):
-                        return enums.ImageCodes.INVALID_FORMAT
-    
-                    # make a new 'unique' tmp file with the correct extension
-                    tmp_file = tempfile.NamedTemporaryFile(delete=False, suffix="." + ext)
-                    tmp_file_path = tmp_file.name
-    
-                    # write bytes to tmp file
-                    with tmp_file as f:
-                        while True:
-                            chunk = await r.content.read(1024)
-                            
-                            if (not chunk):
-                                break
-                            
-                            f.write(chunk)
-                            
-                    return tmp_file_path
-                else:
-                    return enums.ImageCodes.BAD_URL
+        except aiohttp.errors.ClientOSError as e:
+            return enums.ImageCodes.BAD_URL
                 
         return enums.ImageCodes.MISC_ERROR
     
@@ -394,36 +405,57 @@ class Fun:
         tree = html.fromstring(text)
                 
         # count the number of divs that contain images
-        path = tree.xpath("//div[@data-async-rclass='search']/div")
-        max_index = len(path)
-                
-        img_url = self.get_img_url_from_tree(tree, 0)
-                
-        embed = utils.create_image_embed(ctx.message.author, title="Search results", footer="Page 1/{}".format(max_index), image=img_url)
+        path = tree.xpath("//div[@jsname='ik8THc']/text()")
+        images = []
+        
+        for p in path:
+            extracted_image = self.extract_image_url(p)
+            
+            if (extracted_image):
+                images.append(extracted_image)
+        
+        length = len(images)
+        
+        if (length < 1):
+            await self.bot.messaging.reply(ctx, "No results found for `{}`".format(query))
+            return
+
+        first_image = await self.validate_image(images[0])
+        
+        embed = utils.create_image_embed(ctx.message.author, title="Search results", footer="Page 1/{}".format(length), image=first_image)
         
         img_msg = await self.bot.send_message(channel, embed=embed)
     
         await self.bot.messaging.add_img_reactions(img_msg)
                 
         # add the tree to the cache
-        self.SEARCH_CACHE[img_msg.id] = {"tree": tree, "index": 0, "max": max_index, "time": time.time(), "command_msg": ctx.message, "channel": channel}
-                
-    # searches a tree for a div matching google images's image element and grabs the image url from it
-    # input: tree; lxml.etree._Element; a tree element of the google images page to parse
-    #        index; int=0; the index of the image to display, 0 being the first image on the page
-    # output: img_url; string; url of the image at the specified index
-    def get_img_url_from_tree(self, tree, index=0):
-        path = tree.xpath("//div[@data-async-rclass='search']/div[@data-ri='{}']/div/text()".format(index)) # data-ri=image_num (0 = first image, 1 = second, etc)
+        self.SEARCH_CACHE[img_msg.id] = {"images": images, "index": 0, "time": time.time(), "command_msg": ctx.message, "channel": channel}
+
+    # gets an image url from a dict
+    # input: image_dict; str; dictionary in string form containing info from google image search
+    # output: str or None; url of the image if valid or None if invalid
+    def extract_image_url(self, image_dict):
+        try:
+            image_dict = json.loads(image_dict)
             
-        if (isinstance(path, list)):
-            path = path[0].strip()
-        elif (isinstance(path, str)):
-            path = path.strip()
-                    
-        path = json.loads(path) # convert to dict
-        img_url = path["ou"]
+        except Exception:
+            return None
         
-        return img_url
+        if (not "ou" in image_dict):
+            return None
+        
+        return image_dict["ou"]
+    
+    # checks if an image is one discord can embed
+    # input: image_url; str; url of image
+    # output: bool; true if the image is a valid, embeddable image, false if not
+    async def validate_image(self, image_url):
+        result = await self.download_image(image_url, simulate=True)
+        
+        if (result == enums.ImageCodes.SUCCESS):
+            return image_url
+        
+        return None
                 
     # edits a message with the new embed
     # input: user; discord.Member; the user who originally requested the image search
@@ -436,34 +468,35 @@ class Fun:
             await self.bot.messaging.reply(user, "Failed to load image search results", channel=message.channel)
             return
         
-        tree = cached_msg["tree"]
+        images = cached_msg["images"]
         index = cached_msg["index"] + i
-        max_index = cached_msg["max"]
+        length = len(images)
         command_msg = cached_msg["command_msg"]
         channel = cached_msg["channel"]
         
         if (index < 0):
-            index = max_index - 1
+            index = length - 1
         
-        if (index > max_index - 1):
+        if (index > length - 1):
             index = 0
         
-        img_url = self.get_img_url_from_tree(tree, index)
+        img_url = await self.validate_image(images[index])
                 
-        embed = utils.create_image_embed(user, title="Search results", footer="Page {}/{}".format(index + 1, max_index), image=img_url)
+        embed = utils.create_image_embed(user, title="Search results", footer="Page {}/{}".format(index + 1, length), image=img_url)
         
         try:
             msg = await self.bot.edit_message(message, embed=embed)
         
         except discord.errors.HTTPException as e:
-            # log the error and try to continue anyway
             self.bot.bot_utils.log_error_to_file(e)
             await self.bot.messaging.reply(command_msg, "An error occured while updating the image search: {}".format(e))
-         
-        await self.bot.messaging.add_img_reactions(msg)
+            await self.remove_img_from_cache(message)
+            
+        else:
+            await self.bot.messaging.add_img_reactions(msg)
         
-        # update cache
-        self.SEARCH_CACHE[msg.id] = {"tree": tree, "index": index, "max": max_index, "time": time.time(), "command_msg": command_msg, "channel": channel}
+            # update cache
+            self.SEARCH_CACHE[msg.id] = {"images": images, "index": index, "time": time.time(), "command_msg": command_msg, "channel": channel}
         
     # remove an image from the cache and prevent it from being scrolled
     # input: message; discord.Message; message to clear

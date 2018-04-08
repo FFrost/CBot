@@ -148,9 +148,9 @@ def create_youtube_embed(info, user=None):
     
     embed.add_field(name=":thumbsup:", value="{:,} likes".format(info["like_count"], inline=True))
     embed.add_field(name=":thumbsdown:", value="{:,} dislikes".format(info["dislike_count"], inline=True))
-    embed.add_field(name=":desktop:", value=info["uploader"])
-    embed.add_field(name=":watch:", value=time.strftime("%H:%M:%S", time.gmtime(info["duration"])))
     embed.add_field(name=":movie_camera:", value="{:,} views".format(info["view_count"]))
+    embed.add_field(name=":watch:", value=time.strftime("%H:%M:%S", time.gmtime(info["duration"])))
+    embed.add_field(name=":desktop:", value=info["uploader"])
     embed.add_field(name=":calendar_spiral:", value=datetime.datetime.strptime(info["upload_date"], "%Y%m%d").strftime("%b %-d, %Y"))
 
     return embed

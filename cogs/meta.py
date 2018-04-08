@@ -2,8 +2,7 @@ import discord
 from discord.ext import commands
 
 from modules import checks
-
-import inspect, os, sys, subprocess, time, psutil
+import inspect, os, sys, subprocess, psutil
 from hurry.filesize import size
 
 class Meta:
@@ -11,33 +10,37 @@ class Meta:
         self.bot = bot
 
     # stolen from https://github.com/Rapptz/RoboDanny/blob/c8fef9f07145cef6c05416dc2421bbe1d05e3d33/cogs/meta.py#L164
-    @commands.command(description="bot source code", brief="bot source code", pass_context=True, aliases=["src"])
+    @commands.command(description="bot source code",
+                      brief="bot source code",
+                      pass_context=True,
+                      aliases=["src"])
     @commands.cooldown(2, 5, commands.BucketType.channel)
     async def source(self, ctx, *, command : str=""):
         if (not command):
             await self.bot.messaging.reply(ctx.message, self.bot.source_url)
-        else:            
-            obj = self.bot.get_command(command.replace(".", " "))
+            return
+        
+        obj = self.bot.get_command(command.replace(".", " "))
+        
+        if (not obj):
+            await self.bot.messaging.reply(ctx.message, "Failed to find command {}".format(command))
+            return
+        
+        src = obj.callback.__code__
+        lines, firstlineno = inspect.getsourcelines(src)
+        
+        if (obj.callback.__module__.startswith("discord")):
+            await self.bot.messaging.reply(ctx.message, "Can't get source code of built-in commands")
+            return
+        
+        location = os.path.relpath(src.co_filename).replace("\\", "/").replace("cbot/", "")
             
-            if (not obj):
-                await self.bot.messaging.reply(ctx.message, "Failed to find command {}".format(command))
-                return
-            
-            src = obj.callback.__code__
-            lines, firstlineno = inspect.getsourcelines(src)
-            
-            if (obj.callback.__module__.startswith("discord")):
-                await self.bot.messaging.reply(ctx.message, "Can't get source code of built-in commands")
-                return
-            
-            location = os.path.relpath(src.co_filename).replace("\\", "/").replace("cbot/", "")
-                
-            url = "{source_url}/blob/master/{location}#L{firstlineno}-L{end}".format(source_url=self.bot.source_url,
-                                                             location=location,
-                                                             firstlineno=firstlineno,
-                                                             end=(firstlineno + len(lines) - 1))
-            
-            await self.bot.messaging.reply(ctx.message, url)
+        url = "{source_url}/blob/master/{location}#L{firstlineno}-L{end}".format(source_url=self.bot.source_url,
+                                                         location=location,
+                                                         firstlineno=firstlineno,
+                                                         end=(firstlineno + len(lines) - 1))
+        
+        await self.bot.messaging.reply(ctx.message, url)
             
     @commands.group(description="run commands on the bot (owner only)",
                     brief="run commands on the bot (owner only)",
@@ -99,18 +102,17 @@ class Meta:
 
         await self.bot.messaging.reply(ctx.message, msg)
         
-    @cmd.command(description="resource usage on the server",
-                 brief="resource usage on the server",
+    @cmd.command(description="resource usage on the bot's server",
+                 brief="resource usage on the bot's server",
                  pass_context=True)
     async def usage(self, ctx):
         cpu = psutil.cpu_percent()
         memory = psutil.virtual_memory()
         
-        msg = "CPU: {cpu}%\nMemory: {percent}% ({used}/{total})".format(
-            cpu=cpu,
-            percent=memory.percent,
-            used=size(memory.used),
-            total=size(memory.total))
+        msg = "CPU: {cpu}%\nMemory: {percent}% ({used}/{total})".format(cpu=cpu,
+                                                                        percent=memory.percent,
+                                                                        used=size(memory.used),
+                                                                        total=size(memory.total))
 
         await self.bot.messaging.reply(ctx.message, msg)
         
@@ -118,27 +120,23 @@ class Meta:
                  brief="prints status of cogs",
                  pass_context=True)
     async def cogs(self, ctx): 
-        loaded_cogs = []
-        unloaded_cogs = []
+        loaded_cogs = ""
+        unloaded_cogs = ""
         
         for cog, info in self.bot.loaded_cogs.items():
             if (not info["loaded"]):
-                unloaded_cogs.append(cog)
+                unloaded_cogs += cog + "\n"
             else:
-                loaded_cogs.append(cog)
+                loaded_cogs += cog + "\n"
                 
-        msg = "Loaded cogs:\n```\n"
-        
-        for loaded_cog in loaded_cogs:
-            msg += loaded_cog + "\n"
-        
-        msg += "```\nUnloaded cogs:\n```\n"
-        
-        for unloaded_cog in unloaded_cogs:
-            msg += unloaded_cog + "\n"
-            
-        msg += "```"
-            
+        msg = """Loaded cogs:\n```
+{loaded_cogs}```
+
+Unloaded cogs:
+```
+{unloaded_cogs}```""".format(loaded_cogs=loaded_cogs,
+              unloaded_cogs=unloaded_cogs)
+  
         await self.bot.messaging.reply(ctx.message, msg)
 
     @cmd.command(description="load a cog",
@@ -151,14 +149,13 @@ class Meta:
         
         try:
             self.bot.load_extension(self.bot.loaded_cogs[cog]["ext"])
+        except Exception as e:
+            await self.bot.messaging.reply(ctx.message, "Failed to load cog `{}`: ```{}```".format(cog, e))
+        else:
             self.bot.loaded_cogs[cog] = {"ext": self.bot.loaded_cogs[cog]["ext"],
                                          "loaded": True}
             
             await self.bot.messaging.reply(ctx.message, "Loaded `{}`".format(cog))
-            
-        except Exception as e:
-            await self.bot.messaging.reply(ctx.message, "Failed to load cog `{}`: ```{}```".format(cog, e))
-            return
     
     @cmd.command(description="unload a cog",
                  brief="unload a cog",
@@ -170,14 +167,14 @@ class Meta:
         
         try:
             self.bot.unload_extension(self.bot.loaded_cogs[cog]["ext"])
+            
+        except Exception as e:
+            await self.bot.messaging.reply(ctx.message, "Failed to unload cog `{}`: ```{}```".format(cog, e))
+        else:
             self.bot.loaded_cogs[cog] = {"ext": self.bot.loaded_cogs[cog]["ext"],
                                          "loaded": False}
             
             await self.bot.messaging.reply(ctx.message, "Unloaded `{}`".format(cog))
-            
-        except Exception as e:
-            await self.bot.messaging.reply(ctx.message, "Failed to unload cog `{}`: ```{}```".format(cog, e))
-            return
     
     @cmd.command(description="reload a cog",
                  brief="reload a cog",
@@ -196,11 +193,11 @@ class Meta:
             self.bot.loaded_cogs[cog] = {"ext": self.bot.loaded_cogs[cog]["ext"],
                                          "loaded": True}
             
-            await self.bot.messaging.reply(ctx.message, "Reloaded `{}`".format(cog))
-            
         except Exception as e:
             await self.bot.messaging.reply(ctx.message, "Failed to reload cog `{}`: ```{}```".format(cog, e))
-            return
+            
+        else:
+            await self.bot.messaging.reply(ctx.message, "Reloaded `{}`".format(cog))
 
 def setup(bot):
     bot.add_cog(Meta(bot))

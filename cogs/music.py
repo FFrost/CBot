@@ -285,6 +285,7 @@ class Music:
                       pass_context=True,
                       no_pm=True)
     @commands.check(checks.is_in_voice_channel)
+    @commands.cooldown(1, 4, commands.BucketType.server)
     async def skip(self, ctx):
         voice_state = self.voice_states.get(ctx.message.server.id)
         voice_state.skip()

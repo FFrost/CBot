@@ -32,6 +32,14 @@ class CBot(commands.Bot):
         
         checks.owner_id = self.dev_id
         
+        print("Loading modules...")
+        
+        self.bot_utils = bot_utils.BotUtils(self)
+        self.messaging = messaging.Messaging(self)
+        self.misc = misc.Misc(self)
+        
+        print("Loaded modules")
+        
         print("Loading cogs...")
         
         self.loaded_cogs = {}
@@ -46,18 +54,14 @@ class CBot(commands.Bot):
             
             try:
                 self.load_extension(ext)
-                print("Loaded cog {}/{}: {}".format(i + 1, len(cogs), ext))
+            except Exception as e:
+                print("\tFailed to load cog \"{}\" ({})".format(ext, e))
+                self.loaded_cogs[cog_name] = {"ext": ext, "loaded": False}
+            else:
+                print("\tLoaded cog {}/{}: {}".format(i + 1, len(cogs), ext))
                 self.loaded_cogs[cog_name] = {"ext": ext, "loaded": True}
                 
-            except Exception as e:
-                print("Failed to load cog \"{}\" ({})".format(ext, e))
-                self.loaded_cogs[cog_name] = {"ext": ext, "loaded": False}
-                
         print("Finished loading cogs")
-            
-        self.bot_utils = bot_utils.BotUtils(self)
-        self.messaging = messaging.Messaging(self)
-        self.misc = misc.Misc(self)
         
         print("CBot initialized")
         

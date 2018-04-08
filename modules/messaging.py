@@ -28,6 +28,7 @@ class Messaging:
         except Exception:
             pass
         
+        # find the destination of the reply
         if (isinstance(dest, discord.User)):
             if (not channel):
                 destination = user = dest
@@ -50,6 +51,7 @@ class Messaging:
         else:
             return None
         
+        # split the message into multiple replies if necessary
         max_message_length = enums.DISCORD_MAX_MESSAGE_LENGTH - enums.DISCORD_MAX_MENTION_LENGTH - 1 # 1 for the space between mention and message
         
         if (len(msg) > max_message_length):
