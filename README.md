@@ -26,8 +26,10 @@ Work-in-progress Discord bot. Mainly a learning experience. Currently only Linux
 	* When you first run CBot, it'll print it's Discord ID and discriminator to the command line: `Logged in as CBot#0000 [101010101010101010]`
 	* Or you can simply use the info command and @ CBot to get the bot's info: `!info @CBot` and note the ID: `ID: 101010101010101010`
 2. Replace `YOUR_ID_HERE` with the ID you just found: `https://discordapp.com/oauth2/authorize?client_id=YOUR_ID_HERE&scope=bot` and navigate to the page
+	* If you want to invite the bot with the permissions already applied, use this link instead: `https://discordapp.com/oauth2/authorize?client_id=YOUR_ID_HERE&scope=bot&permissions=3271744`, however you will need to have [2-Factor Authentication](https://support.discordapp.com/hc/en-us/articles/219576828-Setting-up-Two-Factor-Authentication) enabled on your Discord account, as the `Manage Messages` permission requires it. 
+	* If you don't want to enable 2FA, change the permissions to this: `permissions=3263552` and apply the `Manage Messages` permissions after the bot has joined your server.
 3. Choose what server you want CBot to join (this will require you to have `Manage Server` permissions on the server, so if a server doesn't show on the list, you probably don't have the proper permissions)
-4. Done! CBot doesn't require any special permissions for the most part, but without these some commands won't be fully functional. For a full list of permissions CBot requires, see `permissions.md`
+4. Done! CBot doesn't require any special permissions for the most part, but without them some commands won't be fully functional. For a full list of permissions CBot requires, see `permissions.md`
 
 ## Troubleshooting
 

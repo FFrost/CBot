@@ -448,7 +448,7 @@ class Fun:
     
     # checks if an image is one discord can embed
     # input: image_url; str; url of image
-    # output: bool; true if the image is a valid, embeddable image, false if not
+    # output: str or None; url of the image or None if invalid
     async def validate_image(self, image_url):
         result = await self.download_image(image_url, simulate=True)
         
