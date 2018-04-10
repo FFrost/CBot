@@ -239,6 +239,10 @@ class Fun:
                     
         except aiohttp.errors.ClientOSError as e:
             return enums.ImageCodes.BAD_URL
+        
+        except Exception as e:
+            self.bot.bot_utils.log_error_to_file(e)
+            return enums.ImageCodes.MISC_ERROR
                 
         return enums.ImageCodes.MISC_ERROR
     
@@ -462,10 +466,14 @@ class Fun:
     #        message; discord.Message; the message to edit
     #        i; int=1; the index modifier, which direction to display images in, forwards or backwards from current index, can be 1 or -1
     async def update_img_search(self, user, message, i=1):
-        if (message.id in self.SEARCH_CACHE):
-            cached_msg = self.SEARCH_CACHE[message.id]
-        else:
-            await self.bot.messaging.reply(user, "Failed to load image search results", channel=message.channel)
+        if (message.id not in self.SEARCH_CACHE):
+            return
+        
+        cached_msg = self.SEARCH_CACHE[message.id]
+        
+        last_time = cached_msg["time"]
+        
+        if (time.time() < last_time + enums.IMAGESEARCH_COOLDOWN_BETWEEN_UPDATES):
             return
         
         images = cached_msg["images"]
@@ -486,10 +494,13 @@ class Fun:
         
         try:
             msg = await self.bot.edit_message(message, embed=embed)
+            
+        except discord.errors.DiscordException:
+            return
         
-        except discord.errors.HTTPException as e:
+        except Exception as e:
             self.bot.bot_utils.log_error_to_file(e)
-            await self.bot.messaging.reply(command_msg, "An error occured while updating the image search: {}".format(e))
+            await self.bot.messaging.reply(command_msg, "An error occured while updating the image search: `{}`".format(e))
             await self.remove_img_from_cache(message)
             
         else:
@@ -501,7 +512,10 @@ class Fun:
     # remove an image from the cache and prevent it from being scrolled
     # input: message; discord.Message; message to clear
     async def remove_img_from_cache(self, message):
-        del self.SEARCH_CACHE[message.id]
+        try:
+            del self.SEARCH_CACHE[message.id]
+        except KeyError:
+            pass
         
         try:
             await self.bot.clear_reactions(message)
@@ -511,9 +525,13 @@ class Fun:
     # deletes an embed and removes it from the cache
     # input: message; discord.Message; the message to delete
     async def remove_img_search(self, message):
-        await self.bot.bot_utils.delete_message(self.SEARCH_CACHE[message.id]["command_msg"])
+        try:
+            await self.bot.bot_utils.delete_message(self.SEARCH_CACHE[message.id]["command_msg"])
+            del self.SEARCH_CACHE[message.id]
         
-        del self.SEARCH_CACHE[message.id]
+        except KeyError:
+            pass
+        
         await self.bot.bot_utils.delete_message(message)
         
     # handles reactions and calls appropriate functions
@@ -534,8 +552,12 @@ class Fun:
                     
                     if (message.reactions and reaction in message.reactions):
                         if (self.bot.bot_utils.get_permissions(message.channel).manage_emojis):
-                            await self.bot.remove_reaction(message, emoji, user) # remove the reaction so the user can react again
-                                    
+                            try:
+                                await self.bot.remove_reaction(message, emoji, user) # remove the reaction so the user can react again
+                            
+                            except Exception:
+                                pass
+                    
                     if (emoji == self.bot.messaging.EMOJI_CHARS["stop_button"]):
                         await self.remove_img_search(message) # delete message
                     elif (emoji == self.bot.messaging.EMOJI_CHARS["arrow_forward"]):
