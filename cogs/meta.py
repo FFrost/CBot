@@ -92,15 +92,41 @@ class Meta:
     async def where(self, ctx):
         msg = "\n```"
         
-        for s in self.bot.servers:
+        for i, s in enumerate(self.bot.servers):
+            num = i + 1
+            
             if (s.unavailable): # can't retrieve info about server
-                msg += "{id} - server is unavailable!\n".format(id=s.id)
+                msg += "{num}. {id} - server is unavailable!\n".format(num=num, id=s.id)
             else:
-                msg += "{name} owned by {owner}#{ownerid}\n".format(name=s.name, owner=s.owner.name, ownerid=s.owner.discriminator)
+                msg += "{num}. {name} owned by {owner}#{ownerid}\n".format(num=num,
+                                                                         name=s.name,
+                                                                         owner=s.owner.name,
+                                                                         ownerid=s.owner.discriminator)
                 
         msg += "```"
 
         await self.bot.messaging.reply(ctx.message, msg)
+        
+    @cmd.command(description="have the bot leave a server",
+                 brief="have the bot leave a server",
+                 pass_context=True)
+    async def leave(self, ctx, *, search : str):
+        server = self.bot.bot_utils.find_server(search)
+        
+        if (not server):
+            await self.bot.messaging.reply(ctx.message, "No server found for `{}`".format(search))
+            return
+        
+        leave_msg = await self.bot.messaging.reply(ctx.message, "Are you sure you want me to leave `{name} [{id}]`? (yes/no)".format(name=server.name,
+                                                                                                                       id=server.id))
+        msg = await self.bot.wait_for_message(author=ctx.message.author, check=checks.is_yes_or_no, timeout=15)
+        
+        if (not msg or msg.content.lower() != "yes"):
+            await self.bot.bot_utils.delete_message(leave_msg)
+            return
+        
+        await self.bot.leave_server(server)
+        await self.bot.messaging.reply(ctx.message, "Left `{name}` [{id}]".format(name=server.name, id=server.id))
         
     @cmd.command(description="resource usage on the bot's server",
                  brief="resource usage on the bot's server",

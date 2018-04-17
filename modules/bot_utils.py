@@ -160,3 +160,26 @@ class BotUtils:
                     num_deleted += 1
             
         return num_deleted
+    
+    # find a server from the ones we are currently in
+    # input: search; str; string to search for, either part/all of server name or index in list of servers
+    # output: discord.Server or None; the server if found or None
+    def find_server(self, search):
+        servers = list(self.bot.servers)
+        server = None
+        
+        try:
+            index = int(search)
+            
+        except ValueError: # if it's not an index, search by name
+            server = discord.utils.find(lambda s: search.lower() in s.name.lower(), servers)
+        
+        else:
+            index -= 1
+            
+            if (index >= 0 and index < len(servers)):
+                server = servers[index]
+            else: # search in the server name
+                server = discord.utils.find(lambda s: search.lower() in s.name.lower(), servers)
+
+        return server

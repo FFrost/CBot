@@ -210,6 +210,52 @@ class Utility:
         
         embed = utils.create_game_info_embed(data, ctx.message.author)
         await self.bot.send_message(ctx.message.channel, embed=embed)
+        
+    @commands.command(description="get info about a server",
+                 brief="get info about a server",
+                 pass_context=True,
+                 aliases=["sinfo"])
+    #@commands.cooldown(1, 5, commands.BucketType.user)
+    async def serverinfo(self, ctx, *, search : str=""):
+        msg = """```\n{name} [{id}]
+Owned by {owner}
+Created at {date}
+{num_members} users
+```"""
+
+        if (ctx.message.channel.is_private and not search):
+            channel = ctx.message.channel
+            msg = msg.format(name=channel.name,
+                       id=channel.id,
+                       owner=channel.owner,
+                       date=channel.created_at,
+                       num_members=len(channel.recipients))
+            
+            await self.bot.messaging.reply(ctx.message, msg)
+            return
+        
+        server = ctx.message.server
+        
+        if (checks.is_owner(ctx)): # only allow the bot owner to access the other servers the bot is in
+            if (search):
+                server = self.bot.bot_utils.find_server(search)
+        
+        if (not server):
+            await self.bot.messaging.reply(ctx.message, "No server found for `{}`".format(search))
+            return
+        
+        if (server.unavailable):
+            await self.bot.messaging.reply(ctx.message, "Server `{}` ({}) is currently unavailable".format(server.id, search))
+            return None
+        
+        msg = msg.format(
+           name=server.name,
+           id=server.id,
+           owner=("{name}#{disc}".format(name=server.owner.name, disc=server.owner.discriminator)),
+           date=server.created_at,
+           num_members=server.member_count)
+        
+        await self.bot.messaging.reply(ctx.message, msg)
             
 def setup(bot):
     bot.add_cog(Utility(bot))

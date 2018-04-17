@@ -28,3 +28,9 @@ def is_in_voice_channel(ctx):
         raise NoVoiceChannel()
     
     return True
+
+def yes_no_check(message):
+    return (message.content.lower() == "yes")
+
+def is_yes_or_no(message):
+    return (message.content.lower() in ["yes", "no"])
