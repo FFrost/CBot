@@ -9,6 +9,8 @@ Work-in-progress Discord bot. Mainly a learning experience. Currently only Linux
 * Python 3.5+
 * [discord.py](https://github.com/Rapptz/discord.py)
 * All the modules defined in requirements.txt: `pip install -r requirements.txt`
+* [FFmpeg](https://www.ffmpeg.org)
+* [ImageMagick](https://www.imagemagick.org)
 
 ## Running the bot
 
