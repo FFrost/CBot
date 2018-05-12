@@ -15,7 +15,7 @@ handler.setFormatter(logging.Formatter("%(asctime)s:%(levelname)s:%(name)s: %(me
 class CBot(commands.Bot):
     def __init__(self):
         super().__init__(command_prefix="!",
-                         description="CBot 2.0",
+                         description="CBot 2.0 by Frost#0261",
                          pm_help=True)
         
         self.source_url = "https://github.com/FFrost/CBot"
@@ -27,8 +27,14 @@ class CBot(commands.Bot):
         self.REAL_FILE = os.path.realpath(__file__)
         self.REAL_PATH = os.path.dirname(self.REAL_FILE)
         self.TOKEN_PATH = self.REAL_PATH + "/cbot.yml"
-        
+
         self.get_token()
+
+        self.CONFIG = {}
+        self.CONFIG_PATH = self.REAL_PATH + "/config.yml"
+        
+        self.load_config()
+        self.get_config()
         
         checks.owner_id = self.dev_id
         
@@ -65,7 +71,7 @@ class CBot(commands.Bot):
         
         print("CBot initialized")
         
-    # save bot token and optional developer id to config file
+    # save bot token and optional developer id to file
     def save_token(self):
         token = input("Enter the bot's token: ")
         
@@ -92,9 +98,9 @@ class CBot(commands.Bot):
         with open(self.TOKEN_PATH, "w") as f:
             yaml.dump(data, f, default_flow_style=False)
             
-        print("Saved token to config")
+        print("Saved token to file")
         
-    # load token and dev id from config file or prompt user if they don't exist
+    # load token and dev id from file or prompt user if they don't exist
     def get_token(self):
         if (not os.path.exists(self.TOKEN_PATH)):
             self.save_token()
@@ -106,11 +112,57 @@ class CBot(commands.Bot):
                     self.token = config["token"]
                     self.dev_id = config["dev_id"]
                     
-                    print("Loaded token from config")
+                    print("Loaded token from file")
             
             except Exception:
                 print("Failed to read token from file, please reenter it")
                 self.save_token()
+
+    # creates a config file if it doesn't exist,
+    # updates it if needed,
+    # and loads it
+    def load_config(self):
+        data = {
+                "trn_api_key": "", # tracker network api key (for fortnite stats command)
+               }
+
+        if (not os.path.exists(self.CONFIG_PATH)):
+            print("Saving config file to {}".format(self.CONFIG_PATH))
+        else:
+            # saved config exists, read it
+            with open(self.CONFIG_PATH, "r") as f:
+                disk_config = yaml.load(f)
+
+            # check if the saved config is up to date (do the keys match?)
+            # if they do, no need to update it
+            if (set(data.keys()) == set(disk_config.keys())):
+                self.CONFIG = self.get_config()
+                return
+
+            # it's outdated
+            print("Updating config....")
+
+            # update the new config with the old values if they exist
+            for key, value in disk_config.items():
+                if (key in data):
+                    data[key] = value
+        
+        with open(self.CONFIG_PATH, "w") as f:
+            yaml.dump(data, f, default_flow_style=False)
+
+        self.CONFIG = data
+
+        print("Saved config")
+
+    # gets the config from disk
+    def get_config(self):
+        if (not os.path.exists(self.CONFIG_PATH)):
+            self.save_config()
+
+        with open(self.CONFIG_PATH, "r") as f:  
+            self.CONFIG = yaml.load(f)
+
+        print("Loaded config from file")
     
     async def on_ready(self):
         print("Logged in as {name}#{disc} [{uid}]".format(name=self.user.name, disc=self.user.discriminator, uid=self.user.id))

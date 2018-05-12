@@ -3,6 +3,7 @@ from discord.ext import commands
 
 from modules import checks, utils
 
+import json
 import asyncio, aiohttp
 import requests
 from lxml import html
@@ -256,6 +257,63 @@ Created at {date}
            num_members=server.member_count)
         
         await self.bot.messaging.reply(ctx.message, msg)
-            
+
+    @commands.command(description="finds fortnite stats for a user",
+                      brief="finds fortnite stats for a user",
+                      pass_context=True,
+                      aliases=["fstats"])
+    @commands.cooldown(1, 1, commands.BucketType.server)
+    async def fortnite(self, ctx, name : str, stats : str="lifetime"):
+        await self.bot.send_typing(ctx.message.channel)
+
+        if (not "trn_api_key" in self.bot.CONFIG):
+            await self.bot.messaging.reply(ctx.message, "No Tracker API key found")
+            return
+
+        if (stats and stats not in ["lifetime", "solo", "duo", "squad"]):
+            await self.bot.messaging.reply(ctx.message, "Invalid stat selection, options are: **lifetime**, **solo**, **duo**, **squad**")
+            return
+
+        headers = {
+            "TRN-Api-Key": self.bot.CONFIG["trn_api_key"]
+        }
+
+        url = "https://api.fortnitetracker.com/v1/profile/{platform}/{name}".format(platform="pc", name=name) # TODO: platform selection
+        
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url, headers=headers) as r:              
+                if (r.status != 200):
+                    await self.bot.messaging.reply(ctx, "Failed to get Fortnite stats for `{name}` failed with status code `{code} ({string})` (maybe try again)".format(
+                        name=name,
+                        code=r.status,
+                        string=responses[r.status]))
+                    return
+
+                data = await r.json()
+
+                if (not data):
+                    await self.bot.messaging.reply(ctx.message, "Failed to find Fortnite stats for `{}` (maybe try again)".format(name))
+                    return
+
+                try:
+                    data = dict(data)
+
+                except Exception:
+                    await self.bot.messaging.reply(ctx.message, "Failed to find Fortnite stats for `{}` (maybe try again)".format(name))
+                    return
+
+                if ("error" in data):
+                    await self.bot.messaging.reply(ctx.message, "API error for `{}`: {}".format(name, data["error"]))
+                    return
+
+                print(data)
+
+                embed = utils.create_fortnite_stats_embed(ctx.message.author,
+                                                          data,
+                                                          stats,
+                                                          title=name)
+
+                await self.bot.send_message(ctx.message.channel, embed=embed)
+
 def setup(bot):
     bot.add_cog(Utility(bot))

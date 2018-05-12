@@ -65,7 +65,7 @@ class Meta:
             args += [self.bot.bot_restart_arg]
         
         await self.bot.logout()
-        subprocess.call(args)
+        subprocess.call(args) # TODO: replace this with a process manager
     
     @cmd.command(description="stops the bot",
                  brief="stops the bot",
@@ -135,17 +135,25 @@ class Meta:
         cpu = psutil.cpu_percent()
         memory = psutil.virtual_memory()
         
-        msg = "CPU: {cpu}%\nMemory: {percent}% ({used}/{total})".format(cpu=cpu,
-                                                                        percent=memory.percent,
-                                                                        used=size(memory.used),
-                                                                        total=size(memory.total))
+        cbot_process = psutil.Process(os.getpid())
+        cbot_mem = cbot_process.memory_info().rss
+        cbot_percent = (cbot_mem / memory.total) * 100
+
+        msg = """CPU: {cpu}%
+Memory: {percent}% ({used}/{total})
+CBot memory usage: {cbot_percent:.1f}% ({cbot_used})""".format(cpu=cpu,
+                                                        percent=memory.percent,
+                                                        used=size(memory.used),
+                                                        total=size(memory.total),
+                                                        cbot_percent=cbot_percent,
+                                                        cbot_used=size(cbot_mem))
 
         await self.bot.messaging.reply(ctx.message, msg)
         
     @cmd.command(description="prints status of cogs",
                  brief="prints status of cogs",
                  pass_context=True)
-    async def cogs(self, ctx): 
+    async def cogs(self, ctx):
         loaded_cogs = ""
         unloaded_cogs = ""
         
@@ -175,8 +183,10 @@ Unloaded cogs:
         
         try:
             self.bot.load_extension(self.bot.loaded_cogs[cog]["ext"])
+            
         except Exception as e:
             await self.bot.messaging.reply(ctx.message, "Failed to load cog `{}`: ```{}```".format(cog, e))
+            
         else:
             self.bot.loaded_cogs[cog] = {"ext": self.bot.loaded_cogs[cog]["ext"],
                                          "loaded": True}
@@ -196,6 +206,7 @@ Unloaded cogs:
             
         except Exception as e:
             await self.bot.messaging.reply(ctx.message, "Failed to unload cog `{}`: ```{}```".format(cog, e))
+            
         else:
             self.bot.loaded_cogs[cog] = {"ext": self.bot.loaded_cogs[cog]["ext"],
                                          "loaded": False}
@@ -224,6 +235,44 @@ Unloaded cogs:
             
         else:
             await self.bot.messaging.reply(ctx.message, "Reloaded `{}`".format(cog))
+
+    @cmd.command(description="reloads the bot's config",
+                 brief="reloads the bot's config",
+                 pass_context=True,
+                 aliases=["rlcfg"])
+    async def reload_cfg(self, ctx):
+        await self.bot.send_typing(ctx.message.channel)
+
+        try:
+            self.bot.get_config()
+
+        except Exception as e:
+            await self.bot.messaging.reply(ctx.message, "Failed to reload config: `{}`".format(e))
+        
+        else:
+            await self.bot.messaging.reply(ctx.message, "Reloaded config")
+
+    @cmd.command(description="reports the bot's current config (MAY CONTAIN SENSITIVE INFO)",
+                  brief="reports the bot's current config (MAY CONTAIN SENSITIVE INFO)",
+                  pass_context=True)
+    async def cfg(self, ctx):
+        if (not ctx.message.channel.is_private):
+            await self.bot.messaging.reply(ctx.message, "This command can only be used in a private message")
+            return
+
+        msg = "```\n"
+
+        for key, value in self.bot.CONFIG.items():
+            value_str = value
+
+            if (isinstance(value, str)):
+                value_str = "\"" + value + "\""
+
+            msg += "{key}: {value}\n".format(key=key, value=value_str)
+
+        msg += "\n```"
+
+        await self.bot.messaging.reply(ctx.message, msg)
 
 def setup(bot):
     bot.add_cog(Meta(bot))

@@ -261,3 +261,63 @@ def extract_yt_error(e):
 # sample output: "hello i am an exampl..."
 def cap_string_and_ellipsis(s, length=140, num_lines=3):
     return "\n".join(s[:length].split("\n")[:num_lines]).strip() + ("..." if len(s) > length else "")
+
+def list_of_pairs_to_dict(obj):
+    ret = {}
+
+    for pair in obj:
+        data = dict(pair)
+        ret[data["key"]] = data["value"]
+
+    return ret
+
+def create_fortnite_stats_embed(user, stats_data, stats, title=""):
+    embed = discord.Embed()
+    
+    embed.title = title
+    
+    embed.set_footer(text=(stats[0].upper() + stats[1:]) + " stats")
+    
+    embed.set_author(name=user.name, icon_url=user.avatar_url)
+    
+    embed.color = discord.Color.dark_green()
+
+    if (stats == "lifetime"):
+        data = list_of_pairs_to_dict(stats_data["lifeTimeStats"])
+
+        embed.add_field(name=":trophy: Wins", value="{:,}".format(int(data["Wins"])), inline=True)
+        embed.add_field(name=":medal: Win %", value=data["Win%"], inline=True)
+        embed.add_field(name=":gun: Kills", value="{:,}".format(int(data["Kills"])), inline=True)
+        embed.add_field(name=":skull_crossbones: K/D", value=data["K/d"], inline=True)
+        embed.add_field(name=":video_game: Matches Played", value=data["Matches Played"], inline=True)
+        
+        try:
+            rank = stats_data["stats"]["p9"]["trnRating"]["rank"]
+
+        except Exception:
+            pass
+
+        else:
+            embed.add_field(name="Ranking", value="{:,}".format(int(rank)), inline=True)
+    else:
+        stats_options = {"solo": "p2",
+                         "duo": "p10",
+                         "squad": "p9"
+                         }
+
+        data = stats_data["stats"][stats_options[stats]]
+
+        embed.add_field(name=":trophy: Wins", value="{:,}".format(int(data["top1"]["value"])), inline=True)
+        embed.add_field(name=":medal: Win %", value=(data["winRatio"]["value"] + "%"), inline=True)
+        embed.add_field(name=":gun: Kills", value="{:,}".format(int(data["kills"]["value"])), inline=True)
+        embed.add_field(name=":skull_crossbones: K/D", value=data["kd"]["value"], inline=True)
+        embed.add_field(name=":video_game: Matches Played", value="{:,}".format(int(data["matches"]["value"])), inline=True)
+
+        if (stats == "solo"):
+            embed.add_field(name=":third_place: Top 10", value="{:,}".format(int(data["top10"]["value"])), inline=True)
+        elif (stats == "duo"):
+            embed.add_field(name=":third_place: Top 5", value="{:,}".format(int(data["top5"]["value"])), inline=True)
+        elif (stats == "squad"):
+            embed.add_field(name=":third_place: Top 3", value="{:,}".format(int(data["top3"]["value"])), inline=True)
+    
+    return embed

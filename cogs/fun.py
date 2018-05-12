@@ -40,7 +40,7 @@ class Fun:
                                    "My sources say no", "Outlook not so good",
                                    "Very doubtful"
                                    ]
- 
+
     # find images in message or attachments and pass to liquify function
     @commands.command(description="liquidizes an image",
                       brief="liquidizes an image",
@@ -140,21 +140,17 @@ class Fun:
     # input: message; discord.Message; message to reply to
     #        code; ImageCodes; the error code
     #        url; string; the url that was attempted to be liquidized
-    async def image_error_message(self, message, code, url):
-        err_msg = ": `{}`".format(url)
-        if (not url):
-            err_msg = ""
-        
+    async def image_error_message(self, message, code, url=""):
         if (code == enums.ImageCodes.MISC_ERROR):
-            await self.bot.messaging.reply(message, "Image error".format(err_msg))
+            await self.bot.messaging.reply(message, "Image error")
         elif (code == enums.ImageCodes.MAX_FILESIZE):
-            await self.bot.messaging.reply(message, "Image filesize was too large (max filesize: 10mb)".format(err_msg))
+            await self.bot.messaging.reply(message, "Image filesize was too large (max filesize: 10mb)")
         elif (code == enums.ImageCodes.INVALID_FORMAT):
-            await self.bot.messaging.reply(message, "Invalid image format".format(err_msg))
+            await self.bot.messaging.reply(message, "Invalid image format")
         elif (code == enums.ImageCodes.MAX_DIMENSIONS):
-            await self.bot.messaging.reply(message, "Image dimensions were too large (max dimensions: 3000x3000)".format(err_msg))
+            await self.bot.messaging.reply(message, "Image dimensions were too large (max dimensions: 3000x3000)")
         elif (code == enums.ImageCodes.BAD_URL):
-            await self.bot.messaging.reply(message, "Failed to download image".format(err_msg))
+            await self.bot.messaging.reply(message, "Failed to download image")
         elif (code == enums.ImageCodes.NO_PERMISSIONS):
             await self.bot.messaging.reply(message, "Missing attach file permissions, can't upload image file")
     
@@ -711,6 +707,57 @@ class Fun:
     async def magic8ball(self, ctx):
         choice = random.choice(self.magic8ball_choices)
         await self.bot.messaging.reply(ctx.message, choice)
+
+    @commands.command(description="speeds up a gif",
+                      brief="speeds up a gif",
+                      pass_context=True,
+                      aliases=["gpseed"])
+    @commands.cooldown(2, 5, commands.BucketType.channel)
+    async def gspeed(self, ctx, image : str=""):
+        if (not image):
+            path = await self.find_and_download_image(ctx.message)
+        else:
+            path = await self.download_image(image)
+
+        if (not path):
+            return
+
+        await self.bot.send_typing(ctx.message.channel)
+
+        # process it
+        img = Image.open(path)
+
+        if (img.size >= (3000, 3000)):
+            utils.remove_file_safe(path)
+            await self.image_error_message(ctx.message, enums.ImageCodes.MAX_DIMENSIONS)
+            return
+
+        # only animated gifs
+        if (img.info and ("loop" not in img.info or "duration" not in img.info)):
+            utils.remove_file_safe(path)
+            await self.bot.messaging.reply(ctx.message, "Image must be an animated gif")
+            return
+
+        duration = int(img.info["duration"])
+        img.info["duration"] = max(int(duration / 2), 1) # TODO: remember to change this on july 1st (https://github.com/python-pillow/Pillow/issues/3073#issuecomment-380620206)
+
+        file_path = os.path.splitext(path)[0]
+        edited_file_path = file_path + "_edited.gif"
+
+        img.save(edited_file_path, format="gif", save_all=True, optimize=False)
+
+        # upload liquidized image
+        if (self.bot.bot_utils.get_permissions(ctx.message.channel).attach_files):
+            await self.bot.send_file(ctx.message.channel, edited_file_path)
+        else:
+            await self.image_error_message(ctx.message, enums.ImageCodes.NO_PERMISSIONS)
+        
+        # just in case
+        await asyncio.sleep(1)
+        
+        # delete leftover file(s)
+        utils.remove_file_safe(path)
+        utils.remove_file_safe(edited_file_path)
        
 def setup(bot):
     bot.add_cog(Fun(bot))

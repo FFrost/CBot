@@ -188,6 +188,16 @@ class Music:
             else:
                 await self.bot.messaging.reply(ctx.message, "No info found for `{}` {}".format(query, result))
                 
+    # TODO: bot joins/leaves voice channels on command
+    @commands.command(description="",
+                      brief="",
+                      pass_context=True,
+                      no_pm=True,
+                      enabled=False)
+    @commands.check(checks.is_in_voice_channel)
+    async def join(self, ctx):
+        pass
+                
     @commands.command(description="plays a video over voice, supported sites: " + \
                       "https://rg3.github.io/youtube-dl/supportedsites.html",
                       brief="plays a video over voice",
@@ -264,10 +274,12 @@ class Music:
                 voice_client_in_server = self.bot.voice_client_in(ctx.message.server)
                 
                 if (voice_client_in_server):
-                    voice_client_in_server.disconnect()
-                    del self.voice_states[ctx.message.server.id]
-            except Exception:
-                pass
+                    await voice_client_in_server.disconnect()
+                    
+                    if (ctx.message.server.id in self.voice_states):
+                        del self.voice_states[ctx.message.server.id]
+            except Exception as e:
+                print(e)
         else:
             if (voice_state.is_playing()):
                 player = voice_state.player
@@ -275,7 +287,10 @@ class Music:
             
             try:
                 voice_state.audio_player.cancel()
-                del self.voice_states[ctx.message.server.id]
+                
+                if (ctx.message.server.id in self.voice_states):
+                    del self.voice_states[ctx.message.server.id]
+                    
                 await voice_state.voice_client.disconnect()
             except Exception as e:
                 print(e)
