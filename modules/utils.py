@@ -104,7 +104,6 @@ def create_image_embed(user, title="", description="", footer="", image="", thum
     
     return embed
 
-# TODO: discord changes this to type 'rich' and drops the 'video' data entirely after being sent
 # creates a discord.Embed with an embedded YouTube video
 # input: info; dict; youtube-dl dict of extracted info from the video
 #        user; discord.User; the user who requested the video
@@ -131,7 +130,7 @@ def create_youtube_embed(info, user=None):
                 "name": "YouTube"
                 },
             "video": {
-                "url": info["webpage_url"].replace("watch?v=", "embed/"),
+                "url": info["webpage_url"],
                 "height": 720,
                 "width": 1280
                 },

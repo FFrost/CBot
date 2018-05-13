@@ -306,8 +306,6 @@ Created at {date}
                     await self.bot.messaging.reply(ctx.message, "API error for `{}`: {}".format(name, data["error"]))
                     return
 
-                print(data)
-
                 embed = utils.create_fortnite_stats_embed(ctx.message.author,
                                                           data,
                                                           stats,
