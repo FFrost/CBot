@@ -116,7 +116,7 @@ def create_youtube_embed(info, user=None):
     data = {
             "url": info["webpage_url"],
             "title": info["title"],
-            "type": "video",
+            "type": "rich",
             "thumbnail": {
                 "url": info["thumbnail"],
                 "height": 360,
@@ -135,7 +135,6 @@ def create_youtube_embed(info, user=None):
                 "height": 720,
                 "width": 1280
                 },
-            #"description": "\n".join(info["description"][:140].split("\n")[:3]).strip() + ("..." if len(info["description"]) > 140 else "")
             "description": cap_string_and_ellipsis(info["description"])
            }
     
@@ -276,7 +275,7 @@ def create_fortnite_stats_embed(user, stats_data, stats, title=""):
     
     embed.title = title
     
-    embed.set_footer(text=(stats[0].upper() + stats[1:]) + " stats")
+    embed.set_footer(text=(stats[0].upper() + stats[1:]) + " stats | Powered by fortnitetracker.com")
     
     embed.set_author(name=user.name, icon_url=user.avatar_url)
     
