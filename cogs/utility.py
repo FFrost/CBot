@@ -216,7 +216,7 @@ class Utility:
                  brief="get info about a server",
                  pass_context=True,
                  aliases=["sinfo"])
-    #@commands.cooldown(1, 5, commands.BucketType.user)
+    @commands.cooldown(1, 5, commands.BucketType.user)
     async def serverinfo(self, ctx, *, search : str=""):
         msg = """```\n{name} [{id}]
 Owned by {owner}
@@ -227,10 +227,10 @@ Created at {date}
         if (ctx.message.channel.is_private and not search):
             channel = ctx.message.channel
             msg = msg.format(name=channel.name,
-                       id=channel.id,
-                       owner=channel.owner,
-                       date=channel.created_at,
-                       num_members=len(channel.recipients))
+                             id=channel.id,
+                             owner=channel.owner,
+                             date=channel.created_at,
+                             num_members=len(channel.recipients))
             
             await self.bot.messaging.reply(ctx.message, msg)
             return
@@ -249,12 +249,11 @@ Created at {date}
             await self.bot.messaging.reply(ctx.message, "Server `{}` ({}) is currently unavailable".format(server.id, search))
             return None
         
-        msg = msg.format(
-           name=server.name,
-           id=server.id,
-           owner=("{name}#{disc}".format(name=server.owner.name, disc=server.owner.discriminator)),
-           date=server.created_at,
-           num_members=server.member_count)
+        msg = msg.format(name=server.name,
+                         id=server.id,
+                         owner=("{name}#{disc}".format(name=server.owner.name, disc=server.owner.discriminator)),
+                         date=server.created_at,
+                         num_members=server.member_count)
         
         await self.bot.messaging.reply(ctx.message, msg)
 
@@ -263,22 +262,26 @@ Created at {date}
                       pass_context=True,
                       aliases=["fstats"])
     @commands.cooldown(1, 1, commands.BucketType.server)
-    async def fortnite(self, ctx, name : str, stats : str="lifetime"):
+    async def fortnite(self, ctx, name : str, stats : str="lifetime", platform : str="pc"):
         await self.bot.send_typing(ctx.message.channel)
 
         if (not "trn_api_key" in self.bot.CONFIG):
             await self.bot.messaging.reply(ctx.message, "No Tracker API key found")
             return
 
-        if (stats and stats not in ["lifetime", "solo", "duo", "squad"]):
-            await self.bot.messaging.reply(ctx.message, "Invalid stat selection, options are: **lifetime**, **solo**, **duo**, **squad**")
+        if (stats not in ["lifetime", "solo", "duo", "squad"]):
+            await self.bot.messaging.reply(ctx.message, "Invalid stat selection `{}`, options are: **lifetime**, **solo**, **duo**, **squad**".format(stats))
+            return
+
+        if (platform not in ["pc", "xbl", "psn"]):
+            await self.bot.messaging.reply(ctx.message, "Invalid platform `{}`, options are: **pc**, **xbl**, **psn**".format(platform))
             return
 
         headers = {
             "TRN-Api-Key": self.bot.CONFIG["trn_api_key"]
         }
 
-        url = "https://api.fortnitetracker.com/v1/profile/{platform}/{name}".format(platform="pc", name=name) # TODO: platform selection
+        url = "https://api.fortnitetracker.com/v1/profile/{platform}/{name}".format(platform=platform, name=name)
         
         async with aiohttp.ClientSession() as session:
             async with session.get(url, headers=headers) as r:              
