@@ -224,7 +224,7 @@ async def get_account_age(id64):
                 now = datetime.now()
                 age = datetime.strptime(date, "%d %B, %Y")
                 
-                return (now.year - age.year)
+                return (now.year - age.year) - (1 if now.month < age.month else 0)
     
     except Exception:
         return None
