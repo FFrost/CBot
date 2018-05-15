@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
 
-from modules import bot_utils, utils, enums, messaging, misc, checks
+from modules import bot_utils, utils, enums, messaging, misc, checks, steam
 
 import logging, os, traceback, glob, yaml, sys
 from random import randint
@@ -19,6 +19,11 @@ class CBot(commands.Bot):
                          pm_help=True)
         
         self.source_url = "https://github.com/FFrost/CBot"
+
+        self.DEFAULT_CONFIG = {
+                "trn_api_key": "", # tracker network api key (for fortnite stats command, https://fortnitetracker.com/site-api)
+                "steam_api_key": "" # api key for steam (https://steamcommunity.com/dev/apikey)
+               }
         
         self.bot_restart_arg = "-restarted"
         
@@ -35,6 +40,8 @@ class CBot(commands.Bot):
         
         self.load_config()
         self.get_config()
+
+        steam.steam_api_key = self.CONFIG["steam_api_key"]
         
         checks.owner_id = self.dev_id
         
@@ -122,9 +129,7 @@ class CBot(commands.Bot):
     # updates it if needed,
     # and loads it
     def load_config(self):
-        data = {
-                "trn_api_key": "", # tracker network api key (for fortnite stats command)
-               }
+        data = self.DEFAULT_CONFIG
 
         if (not os.path.exists(self.CONFIG_PATH)):
             print("Saving config file to {}".format(self.CONFIG_PATH))
@@ -251,6 +256,13 @@ class CBot(commands.Bot):
             if (message.content.lower().startswith("same")):
                 await self.send_message(message.channel, "same")
                 return
+
+            if (self.CONFIG["steam_api_key"] and utils.is_steam_url(message.content.lower())):
+                embed = await utils.create_steam_embed(message.author, message.content.lower())
+
+                if (embed):
+                    await self.send_message(message.channel, embed=embed)
+                    return
                 
             # TODO: reactions will go here
             
