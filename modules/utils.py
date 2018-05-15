@@ -393,7 +393,11 @@ async def create_steam_embed(user, url):
                     most_played_game_time = int(game["playtime_forever"])
 
             most_played_game_time = round(most_played_game_time / 60) # minutes to hours
-            game_name = await steam.get_game_name(most_played_game)
+
+            if (most_played_game == 730): # csgo shows as ValveTestApp260 for some reason
+                game_name = "Counter-Strike: Global Offensive"
+            else:
+                game_name = await steam.get_game_name(most_played_game)
         
         except Exception:
             game_name = None
