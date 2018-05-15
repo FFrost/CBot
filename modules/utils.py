@@ -449,4 +449,7 @@ async def create_steam_embed(user, url):
     if (num_bans > 0):
         embed.add_field(name="Bans", value="{:,}".format(num_bans))
 
+    if (not await steam.is_profile_public(id64)):
+        embed.set_footer(text="Private profile")
+
     return embed

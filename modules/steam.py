@@ -54,15 +54,30 @@ async def is_profile_public(id64):
         async with aiohttp.ClientSession() as session:
             async with session.get("http://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key=%s&steamids=%s" % (steam_api_key, id64)) as r:
                 if (r.status != 200):
-                    return None
-                    
-                if ("This profile is private." in await r.text()):
                     return False
+                    
+                data = await r.json()
+
+                if ("response" not in data):
+                    return False
+
+                if ("players" not in data["response"]):
+                    return False
+
+                if (len(data["response"]["players"]) == 0):
+                    return False
+
+                summary = data["response"]["players"][0]
+
+                if ("communityvisibilitystate" not in summary):
+                    return False
+
+                return (summary["communityvisibilitystate"] == 3)
     
     except Exception:
-        return True
+        return False
 
-    return True
+    return False
 
 async def get_profile_page(id64):
     if (not await is_profile_public(id64)):
