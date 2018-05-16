@@ -327,7 +327,7 @@ steam_url_regex = re.compile(r"((https?:\/\/)(www.)?)?(steamcommunity.com\/(?P<t
 def is_steam_url(string):
     return (steam_url_regex.match(string) is not None)
 
-async def create_steam_embed(user, url):
+async def extract_id64(url):
     search = steam_url_regex.search(url)
     url_id = search.group("id")
     url_type = search.group("type")
@@ -348,7 +348,11 @@ async def create_steam_embed(user, url):
         # resolve vanity url
         id64 = await steam.resolve_vanity_url(url_id)
 
-    # profile doesn't exist
+    return id64
+
+async def create_steam_embed(user, url):
+    id64 = await extract_id64(url)
+
     if (not id64):
         return None
 

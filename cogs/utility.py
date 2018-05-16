@@ -124,7 +124,7 @@ class Utility:
                       brief="searches for info on a game",
                       pass_context=True,
                       enabled=False) # rate limited
-    async def game(self, ctx, *, query : str):
+    async def gameinfo(self, ctx, *, query : str):
         headers = {"User-Agent": "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/43.0.2357.134 Safari/537.36"}
         url = "https://www.google.com/search?q={}".format(quote(query))  # escape query for url
         

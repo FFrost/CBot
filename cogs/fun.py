@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
 
-from modules import enums, utils, checks
+from modules import enums, utils, checks, steam
 
 import os, re, time, ipaddress, json, tempfile, random
 import asyncio, aiohttp
@@ -769,6 +769,40 @@ class Fun:
         for _i in range(amount):
             msg = await self.bot.send_message(ctx.message.channel, "{.mention}".format(user))
             await self.bot.bot_utils.delete_message(msg)
+
+    @commands.group(description="ask the bot",
+                      brief="ask the bot something",
+                      pass_context=True)
+    #@commands.cooldown(1, 10, commands.BucketType.user)
+    async def what(self, ctx):
+        if (not ctx.invoked_subcommand):
+            await self.bot.messaging.reply("Invalid command")
+
+    @what.command(description="game recommendations from your steam profile",
+                  brief="game recommendations from your steam profile",
+                  pass_context=True)
+    async def game(self, ctx, url : str):
+        if (not utils.is_steam_url(url)):
+            await self.bot.messaging.reply(ctx.message, "Invalid Steam url")
+            return
+
+        id64 = await utils.extract_id64(url)
+
+        if (not id64):
+            await self.bot.messaging.reply(ctx.message, "Invalid Steam url")
+            return
+
+        games = await steam.get_games(id64)
+
+        if (not games):
+            await self.bot.messaging.reply(ctx.message, "Failed to find game")
+            return
+
+        random_game = str(random.choice(games["games"])["appid"])
+        random_game_name = await steam.get_game_name(random_game)
+        game_url = "http://store.steampowered.com/app/" + str(random_game)
+
+        await self.bot.messaging.reply(ctx.message, "You should play **{}**\n{}".format(random_game_name, game_url))
        
 def setup(bot):
     bot.add_cog(Fun(bot))

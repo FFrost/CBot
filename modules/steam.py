@@ -167,18 +167,45 @@ async def get_game_name(appid):
         async with aiohttp.ClientSession() as session:
             async with session.get("http://api.steampowered.com/ISteamUserStats/GetSchemaForGame/v2/?key=%s&appid=%s" % (steam_api_key, appid)) as r:
                 if (r.status != 200):
-                    return "unknown"
+                    return await get_game_name_from_store(appid)
                 
                 data = await r.json()
         
                 if data is not None:
                     if ("game" not in data):
-                        return "unknown"
+                        return await get_game_name_from_store(appid)
                     
                     if ("gameName" not in data["game"]):
-                        return "unknown"
+                        return await get_game_name_from_store(appid)
 
+                    if (data["game"]["gameName"] == ""):
+                        return await get_game_name_from_store(appid)
+                    
                     return data["game"]["gameName"]
+
+    except Exception:
+        return await get_game_name_from_store(appid)
+
+async def get_game_name_from_store(appid):
+    game_url = "http://store.steampowered.com/app/" + str(appid)
+
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(game_url) as r:
+                if (r.status != 200):
+                    return "unknown"
+
+                tree = html.fromstring(await r.text())
+
+                path = tree.xpath("//title/text()")
+                
+                if (not path):
+                    return "unknown"
+                
+                if (isinstance(path, list)):
+                    path = path[0]
+
+                return path.strip().replace(" on Steam", "")
 
     except Exception:
         return "unknown"
