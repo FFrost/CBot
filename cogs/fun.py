@@ -759,8 +759,8 @@ class Fun:
         utils.remove_file_safe(path)
         utils.remove_file_safe(edited_file_path)
 
-    @commands.command(description="annoys someone (OWNER ONLY)",
-                    brief="annoys someone (OWNER ONLY)",
+    @commands.command(description="annoys someone (owner only)",
+                    brief="annoys someone (owner only)",
                     pass_context=True)
     @commands.check(checks.is_owner)
     async def annoy(self, ctx, user : discord.User, amount : int=10):
@@ -770,10 +770,10 @@ class Fun:
             msg = await self.bot.send_message(ctx.message.channel, "{.mention}".format(user))
             await self.bot.bot_utils.delete_message(msg)
 
-    @commands.group(description="ask the bot",
+    @commands.group(description="ask the bot something",
                       brief="ask the bot something",
                       pass_context=True)
-    #@commands.cooldown(1, 10, commands.BucketType.user)
+    @commands.cooldown(1, 10, commands.BucketType.user)
     async def what(self, ctx):
         if (not ctx.invoked_subcommand):
             await self.bot.messaging.reply("Invalid command")
