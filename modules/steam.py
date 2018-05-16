@@ -181,6 +181,9 @@ async def get_game_name(appid):
                     if (data["game"]["gameName"] == ""):
                         return await get_game_name_from_store(appid)
                     
+                    if (data["game"]["gameName"].startswith("ValveTestApp")):
+                        return await get_game_name_from_store(appid)
+                    
                     return data["game"]["gameName"]
 
     except Exception:
