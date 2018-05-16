@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
 
-from modules import enums, utils
+from modules import enums, utils, checks
 
 import os, re, time, ipaddress, json, tempfile, random
 import asyncio, aiohttp
@@ -758,6 +758,17 @@ class Fun:
         # delete leftover file(s)
         utils.remove_file_safe(path)
         utils.remove_file_safe(edited_file_path)
+
+    @commands.command(description="annoys someone (OWNER ONLY)",
+                    brief="annoys someone (OWNER ONLY)",
+                    pass_context=True)
+    @commands.check(checks.is_owner)
+    async def annoy(self, ctx, user : discord.User, amount : int=10):
+        await self.bot.bot_utils.delete_message(ctx.message)
+
+        for _i in range(amount):
+            msg = await self.bot.send_message(ctx.message.channel, "{.mention}".format(user))
+            await self.bot.bot_utils.delete_message(msg)
        
 def setup(bot):
     bot.add_cog(Fun(bot))
