@@ -249,8 +249,13 @@ def extract_yt_error(e):
     index += len(err_to_look_for) + 1 # space
     
     ret = e[index:]
-    
-    return ret
+
+    index = e.find(";")
+
+    if (index < 0):
+        return ret
+
+    return ret[:index]
 
 # limits the length of a string and appends "..." if the string is longer than the length
 # if the string is
@@ -418,6 +423,8 @@ async def create_steam_embed(user, url):
     # get account age
     account_age = await steam.get_account_age(id64)
 
+    level = await steam.get_level(id64, page=profile_page)
+
     # create the embed
     embed = discord.Embed()
 
@@ -452,6 +459,9 @@ async def create_steam_embed(user, url):
 
     if (num_bans > 0):
         embed.add_field(name="Bans", value="{:,}".format(num_bans))
+
+    if (level):
+        embed.add_field(name="Level", value="{:,}".format(int(level)))
 
     if (not await steam.is_profile_public(id64)):
         embed.set_footer(text="Private profile")

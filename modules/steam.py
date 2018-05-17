@@ -273,3 +273,26 @@ async def get_account_age(id64):
     
     except Exception:
         return None
+
+async def get_level(id64, page=None):
+    try:
+        if (not page):
+            page = await get_profile_page(id64)
+
+        if (not page):
+            return None
+        
+        tree = html.fromstring(page)
+
+        path = tree.xpath("//span[@class='friendPlayerLevelNum']/text()")
+
+        if (not path):
+            return None
+
+        if (isinstance(path, list)):
+            path = path[0]
+
+        return path.strip()
+
+    except Exception:
+        return None

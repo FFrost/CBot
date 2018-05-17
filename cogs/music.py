@@ -242,6 +242,7 @@ class Music:
             "default_search": "auto",
             "quiet": True,
             "noplaylist": True,
+            "no_color": True
             }
         
         try:
