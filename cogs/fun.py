@@ -770,6 +770,29 @@ class Fun:
             msg = await self.bot.send_message(ctx.message.channel, "{.mention}".format(user))
             await self.bot.bot_utils.delete_message(msg)
 
+    @commands.command(description="scrambles someone out of a voice channel (owner only)",
+                      brief="scrambles someone out of a voice channel (owner only)",
+                      pass_context=True)
+    @commands.check(checks.is_owner)
+    async def scramble(self, ctx, user : discord.User, amount : int=5):
+        await self.bot.bot_utils.delete_message(ctx.message)
+
+        old_channel = user.voice_channel
+
+        if (not old_channel):
+            return
+
+        channels = list(filter(lambda chan: chan.type == discord.ChannelType.voice, ctx.message.server.channels))
+
+        for _i in range(amount):
+            try:
+                await self.bot.move_member(user, random.choice(channels))
+            
+            except Exception:
+                pass
+
+        await self.bot.move_member(user, old_channel)
+
     @commands.group(description="ask the bot something",
                       brief="ask the bot something",
                       pass_context=True)
