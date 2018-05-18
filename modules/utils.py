@@ -282,7 +282,9 @@ def create_fortnite_stats_embed(user, stats_data, stats, title=""):
     
     embed.title = title
     
-    embed.set_footer(text=(stats[0].upper() + stats[1:]) + " stats | Powered by fortnitetracker.com")
+    embed.set_footer(text="{platform} | {stats} stats | Powered by fortnitetracker.com".format(
+                                                                                        platform=stats_data["platformNameLong"],
+                                                                                        stats=stats[0].upper() + stats[1:]))
     
     embed.set_author(name=user.name, icon_url=user.avatar_url)
     
