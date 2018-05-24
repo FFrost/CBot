@@ -22,7 +22,9 @@ class CBot(commands.Bot):
 
         self.DEFAULT_CONFIG = {
                 "trn_api_key": "", # tracker network api key (for fortnite stats command, https://fortnitetracker.com/site-api)
-                "steam_api_key": "" # api key for steam (https://steamcommunity.com/dev/apikey)
+                "steam_api_key": "", # api key for steam (https://steamcommunity.com/dev/apikey)
+                "IMAGESEARCH_TIME_TO_WAIT": 60, # time in seconds to wait before removing inactive image searches
+                "IMAGESEARCH_COOLDOWN_BETWEEN_UPDATES": 1 # cooldown in seconds in between editing the image search embed when scrolling between pages
                }
         
         self.bot_restart_arg = "-restarted"

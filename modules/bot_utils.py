@@ -26,7 +26,10 @@ class BotUtils:
         
     # logs an error to file
     # input: error; string; the error to write
-    def log_error_to_file(self, error):
+    def log_error_to_file(self, error, prefix=""):
+        if (prefix):
+            error = "[{}] {}".format(prefix, error)
+
         self.write_to_file("cbot_errors.txt", "a", error, add_time=True)
         
     # prints message

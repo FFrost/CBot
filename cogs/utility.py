@@ -297,29 +297,30 @@ Created at {date}
 
         for platform in platforms:
             data = await self.get_fortnite_stats(name, platform)
-            asyncio.sleep(1) # cooldown in between each request
+            await asyncio.sleep(1) # cooldown in between each request
 
             if (not data):
-                await self.bot.messaging.reply(ctx.message, "Failed to find Fortnite stats for `{}` ({}) (maybe try again)".format(name, platform))
                 continue
 
             if (isinstance(data, int)):
-                await self.bot.messaging.reply(ctx, "Failed to get Fortnite stats for `{name}` ({platform}) failed with status code `{code} ({string})` (maybe try again)".format(
+                self.bot.bot_utils.log_error_to_file("Failed to get Fortnite stats for \"{name}\" ({platform}) failed with status code {code} ({string})".format(
                         name=name,
                         platform=platform,
                         code=data,
-                        string=responses[data]))
+                        string=responses[data]), prefix="Fortnite")
+                continue
 
             try:
                 data = dict(data)
 
-            except Exception:
-                await self.bot.messaging.reply(ctx.message, "Failed to find Fortnite stats for `{}` ({}) (maybe try again)".format(name, platform))
+            except Exception as e:
+                self.bot.bot_utils.log_error_to_file("Failed to find Fortnite stats for \"{}\" ({}) because of exception: {}".format(name, platform, e),
+                        prefix="Fortnite")
                 continue
 
             if ("error" in data):
                 if (data["error"] != "Player Not Found"):
-                    await self.bot.messaging.reply(ctx.message, "API error for `{}` ({}): {}".format(name, platform, data["error"]))
+                    self.bot.bot_utils.log_error_to_file("API error for \"{}\" ({}): {}".format(name, platform, data["error"]), prefix="Fortnite")
                 
                 continue
 

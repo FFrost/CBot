@@ -469,7 +469,7 @@ class Fun:
         
         last_time = cached_msg["time"]
         
-        if (time.time() < last_time + enums.IMAGESEARCH_COOLDOWN_BETWEEN_UPDATES):
+        if (time.time() < last_time + self.bot.CONFIG["IMAGESEARCH_COOLDOWN_BETWEEN_UPDATES"]):
             return
         
         images = cached_msg["images"]
@@ -563,21 +563,26 @@ class Fun:
                         
     async def remove_inactive_image_searches(self):
         while (not self.bot.is_closed):
-            search_cache_copy = self.SEARCH_CACHE.copy()
-            
-            for message_id, cache in search_cache_copy.items():
-                if (time.time() > cache["time"] + enums.IMAGESEARCH_TIME_TO_WAIT):
-                    try:
-                        msg = await self.bot.get_message(cache["channel"], message_id)
+            try:
+                search_cache_copy = self.SEARCH_CACHE.copy()
+                
+                for message_id, cache in search_cache_copy.items():
+                    if (time.time() > cache["time"] + self.bot.CONFIG["IMAGESEARCH_TIME_TO_WAIT"]):
+                        try:
+                            msg = await self.bot.get_message(cache["channel"], message_id)
+                            
+                        except discord.errors.NotFound:
+                            continue
                         
-                    except discord.errors.NotFound:
-                        continue
-                    
-                    await self.remove_img_from_cache(msg)
+                        await self.remove_img_from_cache(msg)
+                
+                search_cache_copy.clear()
+
+            except Exception as e:
+                self.bot.bot_utils.log_error_to_file(e)
+                pass
             
-            search_cache_copy.clear()
-            
-            await asyncio.sleep(enums.IMAGESEARCH_TIME_TO_WAIT // 2)
+            await asyncio.sleep(self.bot.CONFIG["IMAGESEARCH_TIME_TO_WAIT"] // 2)
                         
     async def on_reaction_add(self, reaction, user):
         # call image search hook
