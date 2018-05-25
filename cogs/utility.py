@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
 
-from modules import checks, utils
+from modules import checks, utils, siege
 
 import json
 import asyncio, aiohttp
@@ -275,8 +275,8 @@ Created at {date}
         except Exception:
             return None
 
-    @commands.command(description="finds fortnite stats for a user",
-                      brief="finds fortnite stats for a user",
+    @commands.command(description="finds Fortnite stats for a user",
+                      brief="finds Fortnite stats for a user",
                       pass_context=True,
                       aliases=["fstats"])
     @commands.cooldown(1, 1, commands.BucketType.server)
@@ -288,7 +288,7 @@ Created at {date}
             return
 
         if (stats not in ["lifetime", "solo", "duo", "squad"]):
-            await self.bot.messaging.reply(ctx.message, "Invalid stat selection `{}`, options are: **lifetime**, **solo**, **duo**, **squad**".format(stats))
+            await self.bot.messaging.reply(ctx.message, "Invalid stat selection `{}`, options are: `lifetime`, `solo`, `duo`, `squad`".format(stats))
             return
 
         platforms = ["pc", "xbl", "psn"]
@@ -334,6 +334,52 @@ Created at {date}
 
         if (not success):
             await self.bot.messaging.reply(ctx.message, "Failed to find Fortnite stats for `{}`".format(name))
+
+    @commands.command(description="finds Rainbow Six Siege stats for a user",
+                      brief="finds Rainbow Six Siege stats for a user",
+                      pass_context=True,
+                      aliases=["r6s", "r6stats"])
+    @commands.cooldown(1, 5, commands.BucketType.server)
+    async def siege(self, ctx, username : str, stats_selection : str="all", platform : str="uplay"):
+        stats_options = ["overall", "ranked", "casual", "all"]
+        if (stats_selection not in stats_options):
+            await self.bot.messaging.reply(ctx.message, "Invalid stat selection, options are: `overall`, `ranked`, `casual`, `all`")
+            return
+
+        if (platform not in siege.platforms.keys()):
+            await self.bot.messaging.reply(ctx.message, "Invalid platform selection, options are: `uplay`, `xone` (Xbox One), `ps4`")
+            return
+
+        msg = await self.bot.messaging.reply(ctx.message, "Searching for stats (might take a while)...")
+        await self.bot.send_typing(ctx.message.channel)
+
+        stats = await siege.get_player(username, platform=platform)
+
+        if (not stats):
+            await self.bot.bot_utils.delete_message(msg)
+            await self.bot.messaging.reply(ctx.message, "Failed to find `{}` stats for `{}` on `{}`".format(stats_selection, username, platform))
+            return
+
+        if (stats_selection == "all"):
+            stats_option = stats_options[:-1]
+        else:
+            stats_option = [stats_selection]
+
+        success = False
+
+        for option in stats_option:
+            embed = await siege.create_siege_embed(ctx.message.author, stats, stats_selection=option)
+
+            if (not embed):
+                continue
+
+            success = True
+            await self.bot.send_message(ctx.message.channel, embed=embed)
+
+        if (not success):
+            await self.bot.messaging.reply(ctx.message, "Failed to find `{}` stats for `{}` on `{}`".format(stats_selection, username, platform))
+
+        await self.bot.bot_utils.delete_message(msg)
 
 def setup(bot):
     bot.add_cog(Utility(bot))

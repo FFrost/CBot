@@ -1,4 +1,9 @@
+import discord
+
+from . import utils
+
 import asyncio, aiohttp
+import re
 from lxml import html
 from datetime import datetime
 
@@ -296,3 +301,143 @@ async def get_level(id64, page=None):
 
     except Exception:
         return None
+
+steam_url_regex = re.compile(r"((https?:\/\/)(www.)?)?(steamcommunity.com\/(?P<type>id|profiles)\/(?P<id>[A-Za-z0-9]{2,32}))")
+def is_steam_url(string):
+    return (steam_url_regex.match(string) is not None)
+
+async def extract_id64(url):
+    search = steam_url_regex.search(url)
+    url_id = search.group("id")
+    url_type = search.group("type")
+
+    if (not url_id):
+        return None
+
+    if (url_type == "profiles"):
+        try:
+            int(url_id) # steamid64 will be a number
+
+        except Exception:
+            return None
+
+        else:
+            id64 = url_id
+    else:
+        # resolve vanity url
+        id64 = await resolve_vanity_url(url_id)
+
+    return id64
+
+async def create_steam_embed(user, url):
+    id64 = await extract_id64(url)
+
+    if (not id64):
+        return None
+
+    # get 32-bit steamid
+    id32 = steamid64_to_32(id64)
+
+    # get profile summary
+    profile_summary = await get_profile_summary(id64) # profile name gives us "avatarfull" (url to avatar) and "personaname" (username)
+
+    # get profile username
+    if ("personaname" in profile_summary):
+        username = profile_summary["personaname"]
+    else:
+        username = "unknown"
+
+    # load profile page
+    profile_page = await get_profile_page(id64)
+
+    # get profile description
+    description = await get_profile_description(id64, page=profile_page) # gives us description
+
+    # get number of friends
+    num_friends = await get_friends(id64, page=profile_page)
+
+    # get number of games
+    games = await get_games(id64)
+
+    game_name = None
+    most_played_game_time = 0
+    num_games = None
+
+    if (games):
+        # number of games owned
+        if ("game_count" in games):
+            num_games = games["game_count"]
+
+        # find most played  game
+        try:
+            for game in games["games"]:
+                if (int(game["playtime_forever"]) > most_played_game_time):
+                    most_played_game = game["appid"]
+                    most_played_game_time = int(game["playtime_forever"])
+
+            most_played_game_time = round(most_played_game_time / 60) # minutes to hours
+
+            if (most_played_game == 730): # csgo shows as ValveTestApp260 for some reason
+                game_name = "Counter-Strike: Global Offensive"
+            else:
+                game_name = await get_game_name(most_played_game)
+        
+        except Exception:
+            game_name = None
+            most_played_game_time = 0
+
+    # find number of bans
+    num_bans = await get_num_bans(id64)
+
+    if (not num_bans):
+        num_bans = 0
+    else:
+        num_bans = int(num_bans)
+
+    # get account age
+    account_age = await get_account_age(id64)
+
+    level = await get_level(id64, page=profile_page)
+
+    # create the embed
+    embed = discord.Embed()
+
+    embed.title = username
+        
+    embed.set_author(name=user.name, icon_url=user.avatar_url)
+    
+    embed.color = discord.Color.blue()
+
+    if (description):
+        embed.description = utils.cap_string_and_ellipsis(description, 240)
+
+    if ("avatarfull" in profile_summary):
+        embed.set_image(url=profile_summary["avatarfull"])
+
+    embed.add_field(name="SteamID64", value=id64)
+    embed.add_field(name="SteamID32", value=id32)
+
+    if (num_friends):
+        embed.add_field(name="Friends", value=num_friends)
+
+    if (num_games):
+        embed.add_field(name="Games Owned", value="{:,}".format(int(num_games)))
+
+    if (game_name):
+        embed.add_field(name="Most Played Game", value=game_name)
+        embed.add_field(name="Hours", value="{:,}".format(most_played_game_time))
+    
+    if (account_age):
+        plural = "year" + ("" if account_age == 1 else "s")
+        embed.add_field(name="Account Age", value="{:,} {}".format(account_age, plural))
+
+    if (num_bans > 0):
+        embed.add_field(name="Bans", value="{:,}".format(num_bans))
+
+    if (level):
+        embed.add_field(name="Level", value="{:,}".format(int(level)))
+
+    if (not await is_profile_public(id64)):
+        embed.set_footer(text="Private profile")
+
+    return embed

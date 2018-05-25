@@ -259,8 +259,8 @@ class CBot(commands.Bot):
                 await self.send_message(message.channel, "same")
                 return
 
-            if (self.CONFIG["steam_api_key"] and utils.is_steam_url(message.content.lower())):
-                embed = await utils.create_steam_embed(message.author, message.content.lower())
+            if (self.CONFIG["steam_api_key"] and steam.is_steam_url(message.content.lower())):
+                embed = await steam.create_steam_embed(message.author, message.content.lower())
 
                 if (embed):
                     await self.send_message(message.channel, embed=embed)
