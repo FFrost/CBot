@@ -14,21 +14,7 @@ async def get_player(username, platform="uplay"):
     try:
         async with aiohttp.ClientSession() as session:
             async with session.get(base_url + "players/{}?platform={}".format(username, platform)) as r:
-                if (r.status != 200):
-                    return None
-                
-                response = await r.json()
-                
-                if (response is None):
-                    return None
-                
-                try:
-                    return response["player"]
-
-                except KeyError:
-                    return None
-
-                return None
+                return await r.json()
         
     except Exception:
         return None
@@ -56,13 +42,14 @@ async def create_siege_embed(user, data, stats_selection="overall"):
     stats_data = stats[stats_selection]
 
     if (stats_selection == "overall"):
-        embed.add_field(name="Accuracy", value="{:.2%}".format(stats_data["bullets_hit"] / stats_data["bullets_fired"]))
-        embed.add_field(name="Headshot %", value="{:.2%}".format(stats_data["headshots"] / stats_data["bullets_hit"]))
+        embed.add_field(name="Accuracy", value="{:.2%}".format((stats_data["bullets_hit"] / stats_data["bullets_fired"]) if stats_data["bullets_fired"] else 0))
+        embed.add_field(name="Headshot %", value="{:.2%}".format((stats_data["headshots"] / stats_data["bullets_hit"]) if stats_data["bullets_hit"] else 0))
         embed.add_field(name="Penetration Kills", value="{:,}".format(stats_data["penetration_kills"]))
         embed.add_field(name="Suicides", value="{:,}".format(stats_data["suicides"]))
         embed.add_field(name="Revives", value="{:,}".format(stats_data["revives"]))
         embed.add_field(name="Assists", value="{:,}".format(stats_data["assists"]))
         embed.add_field(name="Melee Kills", value="{:,}".format(stats_data["melee_kills"]))
+        embed.add_field(name="Level", value="{:,}".format(stats["progression"]["level"]))
     else:
         embed.add_field(name="Win/Loss Ratio", value="{:.2f}".format(stats_data["wlr"]))
         embed.add_field(name="Wins", value="{:,}".format(stats_data["wins"]))
@@ -70,6 +57,7 @@ async def create_siege_embed(user, data, stats_selection="overall"):
         embed.add_field(name="K/D Ratio", value="{:.2f}".format(stats_data["kd"]))
         embed.add_field(name="Kills", value="{:,}".format(stats_data["kills"]))
         embed.add_field(name="Deaths", value="{:,}".format(stats_data["deaths"]))
+        embed.add_field(name="Matches Played", value="{:,}".format(stats_data["wins"] + stats_data["losses"]))
         embed.add_field(name="Playtime", value="{:,} hours".format(round(stats_data["playtime"] / 60 / 60)))
 
     return embed

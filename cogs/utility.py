@@ -355,10 +355,32 @@ Created at {date}
 
         stats = await siege.get_player(username, platform=platform)
 
+        await self.bot.bot_utils.delete_message(msg)
+
         if (not stats):
-            await self.bot.bot_utils.delete_message(msg)
             await self.bot.messaging.reply(ctx.message, "Failed to find `{}` stats for `{}` on `{}`".format(stats_selection, username, platform))
             return
+
+        if (not "player" in stats):
+            if ("errors" in stats):
+                for error in stats["errors"]:
+                    detail = "Unknown error."
+                    description = "Unknown."
+
+                    if ("detail" in error):
+                        detail = error["detail"]
+
+                    if ("meta" in error and "description" in error["meta"]):
+                        description = error["meta"]["description"]
+
+                    await self.bot.messaging.reply(ctx.message, "An error occured searching for `{}` on `{}`: {} {}".format(username,
+                        platform,
+                        detail,
+                        description))
+
+            return
+
+        stats = stats["player"]
 
         if (stats_selection == "all"):
             stats_option = stats_options[:-1]
@@ -378,8 +400,6 @@ Created at {date}
 
         if (not success):
             await self.bot.messaging.reply(ctx.message, "Failed to find `{}` stats for `{}` on `{}`".format(stats_selection, username, platform))
-
-        await self.bot.bot_utils.delete_message(msg)
 
 def setup(bot):
     bot.add_cog(Utility(bot))
