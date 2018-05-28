@@ -287,8 +287,10 @@ Created at {date}
             await self.bot.messaging.reply(ctx.message, "No Tracker API key found")
             return
 
-        if (stats not in ["lifetime", "solo", "duo", "squad"]):
-            await self.bot.messaging.reply(ctx.message, "Invalid stat selection `{}`, options are: `lifetime`, `solo`, `duo`, `squad`".format(stats))
+        stats_options = ["lifetime", "solo", "duo", "squad"]
+        if (stats not in stats_options):
+            await self.bot.messaging.reply(ctx.message, "Invalid stat selection `{}`, options are: {}".format(stats,
+                ", ".join("`{}`".format(s) for s in stats_options)))
             return
 
         platforms = ["pc", "xbl", "psn"]
@@ -297,7 +299,7 @@ Created at {date}
 
         for platform in platforms:
             data = await self.get_fortnite_stats(name, platform)
-            await asyncio.sleep(1) # cooldown in between each request
+            await asyncio.sleep(1) # cooldown in between each request, according to the api's guidelines
 
             if (not data):
                 continue
@@ -307,7 +309,7 @@ Created at {date}
                         name=name,
                         platform=platform,
                         code=data,
-                        string=responses[data]), prefix="Fortnite")
+                        string=responses[data] if (data in responses) else "unknown"), prefix="Fortnite")
                 continue
 
             try:
@@ -329,11 +331,15 @@ Created at {date}
                                                         stats,
                                                         title=name)
 
+            if (not embed):
+                await self.bot.messaging.reply(ctx.message, "Failed to find `{}` Fortnite stats for `{}`".format(stats, name))
+                return
+
             await self.bot.send_message(ctx.message.channel, embed=embed)
             success = True
 
         if (not success):
-            await self.bot.messaging.reply(ctx.message, "Failed to find Fortnite stats for `{}`".format(name))
+            await self.bot.messaging.reply(ctx.message, "Failed to find `{}` Fortnite stats for `{}`".format(stats, name))
 
     @commands.command(description="finds Rainbow Six Siege stats for a user",
                       brief="finds Rainbow Six Siege stats for a user",
@@ -343,11 +349,13 @@ Created at {date}
     async def siege(self, ctx, username : str, stats_selection : str="all", platform : str="uplay"):
         stats_options = ["overall", "ranked", "casual", "all"]
         if (stats_selection not in stats_options):
-            await self.bot.messaging.reply(ctx.message, "Invalid stat selection, options are: `overall`, `ranked`, `casual`, `all`")
+            await self.bot.messaging.reply(ctx.message, "Invalid stat selection `{}`, options are: {}".format(stats_selection,
+                ", ".join("`{}`".format(s) for s in stats_options)))
             return
 
         if (platform not in siege.platforms.keys()):
-            await self.bot.messaging.reply(ctx.message, "Invalid platform selection, options are: `uplay`, `xone` (Xbox One), `ps4`")
+            await self.bot.messaging.reply(ctx.message, "Invalid platform selection `{}`, options are: {}".format(platform,
+                ", ".join("`{}`".format(s) for s in siege.platforms.keys())))
             return
 
         msg = await self.bot.messaging.reply(ctx.message, "Searching for stats (might take a while)...")

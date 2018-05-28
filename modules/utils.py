@@ -313,6 +313,9 @@ def create_fortnite_stats_embed(user, stats_data, stats, title=""):
                          "squad": "p9"
                          }
 
+        if ("stats" not in stats_data or stats_options[stats] not in stats_data["stats"]):
+            return None
+
         data = stats_data["stats"][stats_options[stats]]
 
         embed.add_field(name=":trophy: Wins", value="{:,}".format(int(data["top1"]["value"])))
