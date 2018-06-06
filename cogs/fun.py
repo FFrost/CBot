@@ -571,8 +571,8 @@ class Fun:
                         try:
                             msg = await self.bot.get_message(cache["channel"], message_id)
                             
-                        except discord.errors.NotFound:
-                            continue
+                        except Exception as e:
+                            self.bot.bot_utils.log_error_to_file(e)
                         
                         await self.remove_img_from_cache(msg)
                 
@@ -823,7 +823,7 @@ class Fun:
         games = await steam.get_games(id64)
 
         if (not games):
-            await self.bot.messaging.reply(ctx.message, "Failed to find game")
+            await self.bot.messaging.reply(ctx.message, "Failed to find games")
             return
 
         random_game = str(random.choice(games["games"])["appid"])

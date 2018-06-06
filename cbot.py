@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
 
-from modules import bot_utils, utils, enums, messaging, misc, checks, steam
+from modules import bot_utils, utils, enums, messaging, misc, checks, steam, amazon
 
 import logging, os, traceback, glob, yaml, sys
 from random import randint
@@ -261,6 +261,13 @@ class CBot(commands.Bot):
 
             if (self.CONFIG["steam_api_key"] and steam.is_steam_url(message.content.lower())):
                 embed = await steam.create_steam_embed(message.author, message.content.lower())
+
+                if (embed):
+                    await self.send_message(message.channel, embed=embed)
+                    return
+
+            if (amazon.is_amazon_url(message.content)):
+                embed = await amazon.create_amazon_embed(message.author, message.content)
 
                 if (embed):
                     await self.send_message(message.channel, embed=embed)
