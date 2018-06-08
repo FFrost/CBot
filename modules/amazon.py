@@ -94,10 +94,8 @@ async def create_amazon_embed(user, url):
 
     price = get_element(tree, "//span[@id='priceblock_ourprice']/text()")
 
-    if (price is None):
-        price = "$???"
-
-    embed.add_field(name=":dollar: Price", value=price)
+    if (price is not None):
+        embed.add_field(name=":dollar: Price", value=price)
 
     rating = get_element(tree, "//span[@id='acrPopover']/@title")
 

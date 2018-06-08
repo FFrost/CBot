@@ -1,6 +1,7 @@
 import discord
 from discord.ext import commands
 
+from default_config import DEFAULT_CONFIG
 from modules import bot_utils, utils, enums, messaging, misc, checks, steam, amazon
 
 import logging, os, traceback, glob, yaml, sys
@@ -19,13 +20,6 @@ class CBot(commands.Bot):
                          pm_help=True)
         
         self.source_url = "https://github.com/FFrost/CBot"
-
-        self.DEFAULT_CONFIG = {
-                "trn_api_key": "", # tracker network api key (for fortnite stats command, https://fortnitetracker.com/site-api)
-                "steam_api_key": "", # api key for steam (https://steamcommunity.com/dev/apikey)
-                "IMAGESEARCH_TIME_TO_WAIT": 60, # time in seconds to wait before removing inactive image searches
-                "IMAGESEARCH_COOLDOWN_BETWEEN_UPDATES": 1 # cooldown in seconds in between editing the image search embed when scrolling between pages
-               }
         
         self.bot_restart_arg = "-restarted"
         
@@ -131,7 +125,7 @@ class CBot(commands.Bot):
     # updates it if needed,
     # and loads it
     def load_config(self):
-        data = self.DEFAULT_CONFIG
+        data = DEFAULT_CONFIG
 
         if (not os.path.exists(self.CONFIG_PATH)):
             print("Saving config file to {}".format(self.CONFIG_PATH))
