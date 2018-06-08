@@ -40,5 +40,3 @@ For general questions, feel free to contact me on Discord: Frost#0261
 
 * If you're getting this error when trying to run the bot: `discord.errors.LoginFailure: Improper token has been passed.`, delete `cbot.yml`, run the bot again and reenter your bot token
 	* If you're still getting this error even after deleting `cbot.yml`, ensure your config file looks like the sample config (`example.yml`)
-
-* If the bot has issues with permissions, run the `!command permissions` command and ensure that the bot has all the permissions it needs.
