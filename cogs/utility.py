@@ -58,9 +58,15 @@ class Utility:
     @commands.command(description="deletes the last X messages",
                       brief="deletes the last X messages",
                       pass_context=True)
-    @commands.cooldown(1, 5, commands.BucketType.channel)
+    @commands.cooldown(1, 10, commands.BucketType.channel)
     @commands.check(checks.can_manage_messages)
     async def purge(self, ctx, num_to_delete : int=1, user : str=""):
+        num_to_delete = abs(num_to_delete)
+
+        if (num_to_delete > self.bot.CONFIG["MAX_PURGE"]):
+            await self.bot.messaging.reply(ctx.message, "Number of messages to delete too high, max: {}".format(self.bot.CONFIG["MAX_PURGE"]))
+            return
+
         users = None
         
         if (ctx.message.mentions):

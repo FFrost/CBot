@@ -150,6 +150,7 @@ class BotUtils:
     #        users; list or None; list of users to delete messages from or None to delete regardless of author
     # output: int; number of messages successfully deleted
     async def purge(self, ctx, num_to_delete, users):
+        num_to_delete = abs(num_to_delete)
         num_deleted = 0
     
         async for message in self.bot.logs_from(ctx.message.channel, before=ctx.message, limit=500):

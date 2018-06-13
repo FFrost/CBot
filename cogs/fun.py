@@ -176,7 +176,7 @@ class Fun:
         try:
             conn = aiohttp.TCPConnector(verify_ssl=False) # for https
             async with aiohttp.ClientSession(connector=conn) as session:
-                async with session.get(url, timeout=15) as r:
+                async with session.get(url, timeout=10) as r:
                     if (r.status == 200):
                         if ("Content-Type" in r.headers):
                             content_type = r.headers["Content-Type"]
@@ -405,7 +405,7 @@ class Fun:
         tree = html.fromstring(text)
                 
         # count the number of divs that contain images
-        path = tree.xpath("//div[@jsname='ik8THc']/text()")
+        path = tree.xpath("//div[@class='rg_meta notranslate']/text()")
         images = []
         
         for p in path:
@@ -580,7 +580,6 @@ class Fun:
 
             except Exception as e:
                 self.bot.bot_utils.log_error_to_file(e)
-                pass
             
             await asyncio.sleep(self.bot.CONFIG["IMAGESEARCH_TIME_TO_WAIT"] // 2)
                         
