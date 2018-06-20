@@ -262,13 +262,12 @@ Unloaded cogs:
 
         msg = "```\n"
 
-        for key, value in self.bot.CONFIG.items():
-            value_str = value
-
+        for key in sorted(self.bot.CONFIG.keys()):
+            value = self.bot.CONFIG[key]
             if (isinstance(value, str)):
-                value_str = "\"" + value + "\""
+                value = "\"" + value + "\""
 
-            msg += "{key}: {value}\n".format(key=key, value=value_str)
+            msg += "{key}: {value}\n".format(key=key, value=value)
 
         msg += "\n```"
 

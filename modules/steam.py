@@ -412,7 +412,7 @@ async def create_steam_embed(user, url):
         embed.description = utils.cap_string_and_ellipsis(description, 240)
 
     if ("avatarfull" in profile_summary):
-        embed.set_image(url=profile_summary["avatarfull"])
+        embed.set_thumbnail(url=profile_summary["avatarfull"])
 
     embed.add_field(name="SteamID64", value=id64)
     embed.add_field(name="SteamID32", value=id32)
@@ -424,7 +424,7 @@ async def create_steam_embed(user, url):
         embed.add_field(name="Games Owned", value="{:,}".format(int(num_games)))
 
     if (game_name):
-        embed.add_field(name="Most Played Game", value=game_name)
+        embed.add_field(name="Most Played Game", value=utils.cap_string_and_ellipsis(game_name, 32, 1))
         embed.add_field(name="Hours", value="{:,}".format(most_played_game_time))
     
     if (account_age):

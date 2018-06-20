@@ -35,7 +35,6 @@ class CBot(commands.Bot):
         self.CONFIG_PATH = self.REAL_PATH + "/config.yml"
         
         self.load_config()
-        self.get_config()
 
         steam.steam_api_key = self.CONFIG["steam_api_key"]
         
@@ -138,6 +137,7 @@ class CBot(commands.Bot):
             # if they do, no need to update it
             if (set(data.keys()) == set(disk_config.keys())):
                 self.CONFIG = self.get_config()
+                print("Loaded config from file")
                 return
 
             # it's outdated
@@ -160,10 +160,13 @@ class CBot(commands.Bot):
         if (not os.path.exists(self.CONFIG_PATH)):
             self.save_config()
 
-        with open(self.CONFIG_PATH, "r") as f:  
-            self.CONFIG = yaml.load(f)
+        try:
+            with open(self.CONFIG_PATH, "r") as f:  
+                return yaml.load(f)
 
-        print("Loaded config from file")
+        except Exception as e:
+            print("Failed to load config from disk: {}".format(e))
+            return None
     
     async def on_ready(self):
         print("Logged in as {name}#{disc} [{uid}]".format(name=self.user.name, disc=self.user.discriminator, uid=self.user.id))
