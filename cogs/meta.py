@@ -244,7 +244,7 @@ Unloaded cogs:
         await self.bot.send_typing(ctx.message.channel)
 
         try:
-            self.bot.get_config()
+            self.bot.CONFIG = self.bot.get_config()
 
         except Exception as e:
             await self.bot.messaging.reply(ctx.message, "Failed to reload config: `{}`".format(e))

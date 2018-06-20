@@ -130,13 +130,17 @@ class CBot(commands.Bot):
             print("Saving config file to {}".format(self.CONFIG_PATH))
         else:
             # saved config exists, read it
-            with open(self.CONFIG_PATH, "r") as f:
-                disk_config = yaml.load(f)
+            disk_config = self.get_config()
+
+            if (not disk_config):
+                print("Failed to load disk config, falling back to default config")
+                self.CONFIG = DEFAULT_CONFIG
+                return
 
             # check if the saved config is up to date (do the keys match?)
             # if they do, no need to update it
             if (set(data.keys()) == set(disk_config.keys())):
-                self.CONFIG = self.get_config()
+                self.CONFIG = disk_config
                 print("Loaded config from file")
                 return
 
@@ -157,15 +161,16 @@ class CBot(commands.Bot):
 
     # gets the config from disk
     def get_config(self):
-        if (not os.path.exists(self.CONFIG_PATH)):
-            self.save_config()
-
         try:
             with open(self.CONFIG_PATH, "r") as f:  
                 return yaml.load(f)
 
+        except yaml.scanner.ScannerError as e:
+            print("Config file could not be loaded (scanner error), make sure config.yml is formatted properly: {}".format(e))
+            return None
+
         except Exception as e:
-            print("Failed to load config from disk: {}".format(e))
+            print("Config file could not be loaded (general error): {}".format(e))
             return None
     
     async def on_ready(self):
