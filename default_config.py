@@ -12,5 +12,8 @@ DEFAULT_CONFIG = {
     "IMAGESEARCH_COOLDOWN_BETWEEN_UPDATES": 1,
 
     # max number of messages to purge at once
-    "MAX_PURGE": 20
+    "MAX_PURGE": 20,
+
+    # how long to keep siege stats cached in seconds
+    "SIEGE_CACHE_TIME": 120,
 }

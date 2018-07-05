@@ -42,22 +42,22 @@ async def create_siege_embed(user, data, stats_selection="overall"):
     stats_data = stats[stats_selection]
 
     if (stats_selection == "overall"):
-        embed.add_field(name="Accuracy", value="{:.2%}".format((stats_data["bullets_hit"] / stats_data["bullets_fired"]) if stats_data["bullets_fired"] else 0))
-        embed.add_field(name="Headshot %", value="{:.2%}".format((stats_data["headshots"] / stats_data["bullets_hit"]) if stats_data["bullets_hit"] else 0))
+        embed.add_field(name=":gun: Accuracy", value="{:.2%}".format((stats_data["bullets_hit"] / stats_data["bullets_fired"]) if stats_data["bullets_fired"] else 0))
+        embed.add_field(name=":skull_crossbones: Headshot %", value="{:.2%}".format((stats_data["headshots"] / stats_data["bullets_hit"]) if stats_data["bullets_hit"] else 0))
         embed.add_field(name="Penetration Kills", value="{:,}".format(stats_data["penetration_kills"]))
-        embed.add_field(name="Suicides", value="{:,}".format(stats_data["suicides"]))
-        embed.add_field(name="Revives", value="{:,}".format(stats_data["revives"]))
-        embed.add_field(name="Assists", value="{:,}".format(stats_data["assists"]))
-        embed.add_field(name="Melee Kills", value="{:,}".format(stats_data["melee_kills"]))
-        embed.add_field(name="Level", value="{:,}".format(stats["progression"]["level"]))
+        embed.add_field(name=":skull: Suicides", value="{:,}".format(stats_data["suicides"]))
+        embed.add_field(name=":syringe: Revives", value="{:,}".format(stats_data["revives"]))
+        embed.add_field(name=":handshake: Assists", value="{:,}".format(stats_data["assists"]))
+        embed.add_field(name=":knife: Melee Kills", value="{:,}".format(stats_data["melee_kills"]))
+        embed.add_field(name=":military_medal: Level", value="{:,}".format(stats["progression"]["level"]))
     else:
-        embed.add_field(name="Win/Loss Ratio", value="{:.2f}".format(stats_data["wlr"]))
-        embed.add_field(name="Wins", value="{:,}".format(stats_data["wins"]))
-        embed.add_field(name="Losses", value="{:,}".format(stats_data["losses"]))
-        embed.add_field(name="K/D Ratio", value="{:.2f}".format(stats_data["kd"]))
-        embed.add_field(name="Kills", value="{:,}".format(stats_data["kills"]))
-        embed.add_field(name="Deaths", value="{:,}".format(stats_data["deaths"]))
-        embed.add_field(name="Matches Played", value="{:,}".format(stats_data["wins"] + stats_data["losses"]))
-        embed.add_field(name="Playtime", value="{:,} hours".format(round(stats_data["playtime"] / 60 / 60)))
+        embed.add_field(name=":medal: Win/Loss Ratio", value="{:.2f}".format(stats_data["wlr"]))
+        embed.add_field(name=":trophy: Wins", value="{:,}".format(stats_data["wins"]))
+        embed.add_field(name=":second_place: Losses", value="{:,}".format(stats_data["losses"]))
+        embed.add_field(name=":skull_crossbones: K/D Ratio", value="{:.2f}".format(stats_data["kd"]))
+        embed.add_field(name=":gun: Kills", value="{:,}".format(stats_data["kills"]))
+        embed.add_field(name=":skull: Deaths", value="{:,}".format(stats_data["deaths"]))
+        embed.add_field(name=":video_game: Matches Played", value="{:,}".format(stats_data["wins"] + stats_data["losses"]))
+        embed.add_field(name=":stopwatch: Playtime", value="{:,} hours".format(round(stats_data["playtime"] / 60 / 60)))
 
     return embed

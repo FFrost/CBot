@@ -306,7 +306,7 @@ def create_fortnite_stats_embed(user, stats_data, stats, title=""):
             pass
 
         else:
-            embed.add_field(name="Ranking", value="{:,}".format(int(rank)))
+            embed.add_field(name=":military_medal: Ranking", value="{:,}".format(int(rank)))
     else:
         stats_options = {"solo": "p2",
                          "duo": "p10",

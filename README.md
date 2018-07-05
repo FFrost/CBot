@@ -29,7 +29,7 @@ For general questions, feel free to contact me on Discord: Frost#0261
 	* The easiest way is to go back to the [Discord applications page](https://discordapp.com/developers/applications/me) and select your bot
 		* Under `APP DETAILS`, find the `Client ID` 
 	* When you run CBot, it'll print its Discord ID and discriminator to the command line: `Logged in as CBot#0000 [101010101010101010]`
-	* Or you can simply use the info command and @ CBot to get the bot's info: `!info @CBot` and note the ID: `ID: 101010101010101010`
+	* Or you can use the info command and @ CBot to get the bot's info: `!info @CBot` and note the ID: `ID: 101010101010101010`
 2. Replace `YOUR_ID_HERE` with the ID you just found: `https://discordapp.com/oauth2/authorize?client_id=YOUR_ID_HERE&scope=bot` and navigate to the page
 	* If you want to invite the bot with the permissions already applied, use this link instead: `https://discordapp.com/oauth2/authorize?client_id=YOUR_ID_HERE&scope=bot&permissions=3271744`, however you will need to have [2-Factor Authentication](https://support.discordapp.com/hc/en-us/articles/219576828-Setting-up-Two-Factor-Authentication) enabled on your Discord account, as the `Manage Messages` permission requires it. 
 	* If you don't want to enable 2FA, change the permissions to `permissions=3263552` and apply the `Manage Messages` permissions after the bot has joined your server.
@@ -39,4 +39,4 @@ For general questions, feel free to contact me on Discord: Frost#0261
 ## Troubleshooting
 
 * If you're getting this error when trying to run the bot: `discord.errors.LoginFailure: Improper token has been passed.`, delete `cbot.yml`, run the bot again and reenter your bot token
-	* If you're still getting this error even after deleting `cbot.yml`, ensure your config file looks like the sample config (`example.yml`)
+	* If you're still getting this error even after deleting `cbot.yml`, ensure your config file looks like the sample config [example.yml](https://github.com/FFrost/CBot/blob/master/example.yml)
