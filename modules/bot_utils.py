@@ -30,7 +30,7 @@ class BotUtils:
         if (prefix):
             error = "[{}] {}".format(prefix, error)
 
-        self.write_to_file("cbot_errors.txt", "a", error, add_time=True)
+        self.write_to_file(self.bot.ERROR_FILEPATH, "a", error, add_time=True)
         
     # prints message
     # input: message; discord.Message; message to print

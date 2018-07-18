@@ -4,7 +4,7 @@ from discord.ext import commands
 from default_config import DEFAULT_CONFIG
 from modules import bot_utils, utils, enums, messaging, misc, checks, steam, amazon
 
-import logging, os, traceback, glob, yaml, sys
+import logging, os, traceback, glob, yaml, sys, atexit, psutil
 from random import randint
 
 # set up logger
@@ -22,12 +22,34 @@ class CBot(commands.Bot):
         self.source_url = "https://github.com/FFrost/CBot"
         
         self.bot_restart_arg = "-restarted"
+        self.bot_manager_arg = "-manager"
         
         self.token = ""
         self.dev_id = ""
         self.REAL_FILE = os.path.realpath(__file__)
         self.REAL_PATH = os.path.dirname(self.REAL_FILE)
         self.TOKEN_PATH = self.REAL_PATH + "/cbot.yml"
+
+        self.ERROR_FILEPATH = self.REAL_PATH + "/cbot_errors.txt"
+
+        # check if cbot exited properly on last run
+        self.PID_FILEPATH = "/tmp/cbot.pid"
+
+        if (os.path.exists(self.PID_FILEPATH)):
+            with open(self.PID_FILEPATH, "r") as f:
+                pid = int(f.read())
+            
+            if (psutil.pid_exists(pid)):
+                print("Another instance of CBot is already running, exiting...")
+                sys.exit()
+            else:
+                print("CBot crashed on last run, see error log at", self.ERROR_FILEPATH)
+                os.unlink(self.PID_FILEPATH)
+
+        with open(self.PID_FILEPATH, "w") as f:
+            f.write(str(os.getpid()))
+        
+        print("Created PID file at", self.PID_FILEPATH)
 
         self.get_token()
 
@@ -72,6 +94,13 @@ class CBot(commands.Bot):
         print("Finished loading cogs")
         
         print("CBot initialized")
+
+        atexit.register(self.on_exit)
+
+    # called when the script terminates
+    def on_exit(self):
+        print("Unlinking PID file...")
+        os.unlink(self.PID_FILEPATH)
         
     # save bot token and optional developer id to file
     def save_token(self):
@@ -183,6 +212,8 @@ class CBot(commands.Bot):
         
         if (self.bot_restart_arg in sys.argv):
             await self.messaging.message_developer("CBot restarted successfully")
+        elif (self.bot_manager_arg in sys.argv):
+            await self.messaging.message_developer("CBot was restarted by the manager")
     
     # print info about where the bot is
     async def print_bot_info(self):
