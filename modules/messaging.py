@@ -50,6 +50,17 @@ class Messaging:
             user = dest.message.author
         else:
             return None
+
+        # check if we have send message permissions
+        perms = None
+
+        if (channel):
+            perms = self.bot.bot_utils.get_permissions(channel)
+        elif (isinstance(destination, discord.Channel)):
+            perms = self.bot.bot_utils.get_permissions(destination)
+
+        if (perms and not perms.send_messages):
+            return
         
         # split the message into multiple replies if necessary
         max_message_length = enums.DISCORD_MAX_MESSAGE_LENGTH - enums.DISCORD_MAX_MENTION_LENGTH - 1 # 1 for the space between mention and message

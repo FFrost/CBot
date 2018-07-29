@@ -50,22 +50,6 @@ class Meta:
     async def cmd(self, ctx):
         if (not ctx.invoked_subcommand):
             await self.bot.messaging.reply(ctx.message, "Invalid command")
-        
-    @cmd.command(description="restarts the bot",
-                 brief="restarts the bot",
-                 pass_context=True)
-    async def restart(self, ctx):
-        path_to_cbot = self.bot.REAL_FILE
-        
-        await self.bot.messaging.reply(ctx.message, "Restarting...")
-        
-        args = ["python3", path_to_cbot] + sys.argv[1:]
-        
-        if (self.bot.bot_restart_arg not in args):
-            args += [self.bot.bot_restart_arg]
-        
-        await self.bot.logout()
-        subprocess.call(args) # TODO: replace this with a process manager
     
     @cmd.command(description="stops the bot",
                  brief="stops the bot",
