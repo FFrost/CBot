@@ -6,6 +6,7 @@ from modules import checks, utils
 import asyncio, aiohttp
 import time
 import youtube_dl
+import os
 from lxml import html
 from urllib.parse import quote
 
@@ -113,6 +114,8 @@ class VoiceState:
 class Music:
     def __init__(self, bot):
         self.bot = bot
+
+        self.ytdl.enabled = self.bot.CONFIG["YOUTUBEDL"]["ENABLED"]
         
         # load opus library for voice
         if (not discord.opus.is_loaded()):
@@ -305,6 +308,82 @@ class Music:
     async def skip(self, ctx):
         voice_state = self.voice_states.get(ctx.message.server.id)
         voice_state.skip()
+
+    @commands.command(description="downloads a video as an mp3 file",
+                      brief="downloads a video as an mp3 file",
+                      pass_context=True)
+    @commands.cooldown(1, 60, commands.BucketType.user)
+    async def ytdl(self, ctx, *, query : str=""):
+        if (not query):
+            query = await self.bot.bot_utils.find_last_youtube_embed(ctx.message)
+
+        if (not query):
+            await self.bot.messaging.reply(ctx.message, "No video specified")
+            return
+
+        # get the download path
+        download_path = self.bot.CONFIG["YOUTUBEDL"]["DOWNLOAD_DIRECTORY"]
+
+        if (download_path[-1] != "/" and download_path[-1] != "\\"):
+            download_path += "/"
+
+        # create it if it doesn't exist
+        try:
+            os.makedirs(download_path)
+
+        except FileExistsError as e:
+            pass
+
+        except Exception as e:
+            self.bot.bot_utils.log_error_to_file(e, "ytdl")
+
+        # youtube-dl options
+        ytdl_opts = {
+            "quiet": True,
+            "noplaylist": True,
+            "no_color": True,
+            "outtmpl": download_path + "%(title)s - %(id)s.%(ext)s",
+            "extractaudio": True,
+            "audioformat": "mp3",
+            "format": "mp3/bestaudio",
+            "postprocessors": [{
+                "key": "FFmpegExtractAudio",
+                "preferredcodec": "mp3",
+                "preferredquality": "320",
+            }]
+        }
+
+        with youtube_dl.YoutubeDL(ytdl_opts) as ydl:
+            try:
+                info = ydl.extract_info(query, download=False, process=False)
+
+            except Exception as e:
+                error = utils.extract_yt_error(e)
+                await self.bot.messaging.reply(ctx.message, f"Failed to find `{query}`: `{error}`")
+                return
+
+            embed = utils.create_youtube_embed(info, ctx.message.author)
+            await self.bot.send_message(ctx.message.channel, "Downloading...", embed=embed)
+            await self.bot.send_typing(ctx.message.channel)
+
+            if (info["duration"] > self.bot.CONFIG["YOUTUBEDL"]["MAX_VIDEO_LENGTH"]):
+                duration = time.strftime("%H:%M:%S", time.gmtime(info["duration"]))
+                max_duration = time.strftime("%H:%M:%S", time.gmtime( self.bot.CONFIG["YOUTUBEDL"]["MAX_VIDEO_LENGTH"]))
+
+                await self.bot.messaging.reply(ctx.message, f"Video is too long ({duration}), max duration: {max_duration}")
+                return
+
+            ydl.download([query])
+
+            filename = ydl.prepare_filename(info)
+            
+            if (filename.endswith(".NA")):
+                filename = filename[:-3] + ".mp3"
+
+            await self.bot.send_file(ctx.message.channel, filename)
+            
+            # delete the file after uploading
+            os.remove(filename)
     
 def setup(bot):
     bot.add_cog(Music(bot))

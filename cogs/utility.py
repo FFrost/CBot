@@ -426,6 +426,8 @@ Created at {date}
             await self.bot.messaging.reply(ctx.message, "Failed to find `{}` stats for `{}` on `{}`".format(stats_selection, username, platform))
 
     async def remove_siege_cache(self):
+        await self.bot.wait_until_ready()
+        
         while (not self.bot.is_closed):
             try:
                 siege_cache_copy = self.SIEGE_CACHE.copy()
@@ -439,7 +441,8 @@ Created at {date}
             except Exception as e:
                 self.bot.bot_utils.log_error_to_file(e)
             
-            await asyncio.sleep(self.bot.CONFIG["SIEGE_CACHE_TIME"] // 2)
+            #await asyncio.sleep(self.bot.CONFIG["SIEGE_CACHE_TIME"] // 2)
+            await asyncio.sleep(10)
 
 def setup(bot):
     bot.add_cog(Utility(bot))

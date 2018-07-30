@@ -233,7 +233,7 @@ class Fun:
                     else:
                         return enums.ImageCodes.BAD_URL
                     
-        except aiohttp.errors.ClientOSError as e:
+        except aiohttp.ClientError as e:
             return enums.ImageCodes.BAD_URL
         
         except Exception as e:
@@ -562,6 +562,8 @@ class Fun:
                         await self.update_img_search(user, message, -1) # decrement index
                         
     async def remove_inactive_image_searches(self):
+        await self.bot.wait_until_ready()
+        
         while (not self.bot.is_closed):
             try:
                 search_cache_copy = self.SEARCH_CACHE.copy()
@@ -581,7 +583,8 @@ class Fun:
             except Exception as e:
                 self.bot.bot_utils.log_error_to_file(e)
             
-            await asyncio.sleep(self.bot.CONFIG["IMAGESEARCH_TIME_TO_WAIT"] // 2)
+            #await asyncio.sleep(self.bot.CONFIG["IMAGESEARCH_TIME_TO_WAIT"] // 2)
+            await asyncio.sleep(20)
                         
     async def on_reaction_add(self, reaction, user):
         # call image search hook

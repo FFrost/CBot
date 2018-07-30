@@ -16,4 +16,16 @@ DEFAULT_CONFIG = {
 
     # how long to keep siege stats cached in seconds
     "SIEGE_CACHE_TIME": 120,
+
+    # youtube-dl options
+    "YOUTUBEDL": {
+        # enable the youtube-dl command to let users download mp3s using the bot
+        "ENABLED": True,
+
+        # max video length in seconds, any video longer than this will be ignored
+        "MAX_VIDEO_LENGTH": 1800,
+
+        # where to temporarily store the downloaded mp3s
+        "DOWNLOAD_DIRECTORY": "/tmp/cbot"
+    }
 }

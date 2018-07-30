@@ -58,6 +58,9 @@ class CBot(commands.Bot):
         
         self.load_config()
 
+        # remove any leftover files in the youtubedl download directory
+        self.cleanup_youtubedl_directory()
+
         steam.steam_api_key = self.CONFIG["steam_api_key"]
         
         checks.owner_id = self.dev_id
@@ -201,6 +204,18 @@ class CBot(commands.Bot):
         except Exception as e:
             print("Config file could not be loaded (general error): {}".format(e))
             return None
+
+    def cleanup_youtubedl_directory(self):
+        path = self.CONFIG["YOUTUBEDL"]["DOWNLOAD_DIRECTORY"]
+
+        if (not os.path.exists(path)):
+            return
+
+        if (path[-1] != "/" and path[-1] != "\\"):
+            path += "/"
+
+        for f in glob.glob(path + "*.mp3"):
+            os.remove(f)
     
     async def on_ready(self):
         print("Logged in as {name}#{disc} [{uid}]".format(name=self.user.name, disc=self.user.discriminator, uid=self.user.id))

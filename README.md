@@ -7,7 +7,7 @@ For general questions, feel free to contact me on Discord: Frost#0261
 
 ## Requirements
 
-* Python 3.5+
+* Python 3.6
 * [discord.py](https://github.com/Rapptz/discord.py)
 * All the modules defined in requirements.txt: `pip install -r requirements.txt`
 * [FFmpeg](https://www.ffmpeg.org)
