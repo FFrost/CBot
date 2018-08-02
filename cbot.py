@@ -2,7 +2,7 @@ import discord
 from discord.ext import commands
 
 from default_config import DEFAULT_CONFIG
-from modules import bot_utils, utils, enums, messaging, misc, checks, steam, amazon
+from modules import bot_utils, utils, enums, messaging, misc, checks
 
 import logging, os, traceback, glob, yaml, sys, atexit, psutil
 from random import randint
@@ -61,8 +61,6 @@ class CBot(commands.Bot):
         # remove any leftover files in the youtubedl download directory
         self.cleanup_youtubedl_directory()
 
-        steam.steam_api_key = self.CONFIG["steam_api_key"]
-        
         checks.owner_id = self.dev_id
         
         print("Loading modules...")
@@ -208,11 +206,17 @@ class CBot(commands.Bot):
     def cleanup_youtubedl_directory(self):
         path = self.CONFIG["YOUTUBEDL"]["DOWNLOAD_DIRECTORY"]
 
+        if (not path):
+            return
+
         if (not os.path.exists(path)):
             return
 
         if (path[-1] != "/" and path[-1] != "\\"):
             path += "/"
+
+        if (path == "/"):
+            return
 
         for f in glob.glob(path + "*.mp3"):
             os.remove(f)
@@ -306,27 +310,13 @@ class CBot(commands.Bot):
             if (message.content.lower().startswith("same")):
                 await self.send_message(message.channel, "same")
                 return
-
-            if (self.CONFIG["steam_api_key"] and steam.is_steam_url(message.content.lower())):
-                embed = await steam.create_steam_embed(message.author, message.content.lower())
-
-                if (embed):
-                    await self.send_message(message.channel, embed=embed)
-                    return
-
-            if (amazon.is_amazon_url(message.content)):
-                embed = await amazon.create_amazon_embed(message.author, message.content)
-
-                if (embed):
-                    await self.send_message(message.channel, embed=embed)
-                    return
                 
             # TODO: reactions will go here
             
             # process commands
             await self.process_commands(message)
             
-        except Exception as e:        
+        except Exception as e:
             await self.messaging.error_alert(e)
     
     async def on_member_join(self, member):

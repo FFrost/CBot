@@ -1,7 +1,5 @@
 import discord
 
-from . import steam
-
 import os, datetime, time, re
 import asyncio, aiohttp
 
