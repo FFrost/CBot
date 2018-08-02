@@ -5,6 +5,7 @@ from modules import utils
 
 import asyncio, aiohttp
 import re
+import random
 from lxml import html
 from datetime import datetime
 
@@ -32,6 +33,32 @@ class Steam:
 
         except Exception as e:
             await self.bot.bot_utils.log_error_to_file(e, prefix="Steam")
+
+    @commands.command(description="game recommendations from your steam profile",
+                  brief="game recommendations from your steam profile",
+                  pass_context=True)
+    async def game(self, ctx, url : str):
+        if (not self.is_steam_url(url)):
+            await self.bot.messaging.reply(ctx.message, "Invalid Steam url")
+            return
+
+        id64 = await self.extract_id64(url)
+
+        if (not id64):
+            await self.bot.messaging.reply(ctx.message, "Invalid Steam url")
+            return
+
+        games = await self.get_games(id64)
+
+        if (not games):
+            await self.bot.messaging.reply(ctx.message, "Failed to find games")
+            return
+
+        random_game = str(random.choice(games["games"])["appid"])
+        random_game_name = await self.get_game_name(random_game)
+        game_url = "http://store.steampowered.com/app/" + str(random_game)
+
+        await self.bot.messaging.reply(ctx.message, "You should play **{}**\n{}".format(random_game_name, game_url))
 
     async def resolve_vanity_url(self, sid):
         try:
