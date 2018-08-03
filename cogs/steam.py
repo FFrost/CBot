@@ -20,10 +20,6 @@ class Steam:
         try:
             if (not message.content or not message.author):
                 return
-            
-            if (message.author == self.bot.user):
-                await self.bot.bot_utils.output_log(message)
-                return
 
             if (self.steam_api_key and self.is_steam_url(message.content.lower())):
                 embed = await self.create_steam_embed(message.author, message.content.lower())

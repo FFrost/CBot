@@ -16,10 +16,6 @@ class Amazon:
         try:
             if (not message.content or not message.author):
                 return
-            
-            if (message.author == self.bot.user):
-                await self.bot.bot_utils.output_log(message)
-                return
 
             if (self.is_amazon_url(message.content)):
                 embed = await self.create_amazon_embed(message.author, message.content)

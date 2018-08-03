@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
 
-from modules import checks, utils, siege
+from modules import checks, utils
 
 import json
 import asyncio, aiohttp
@@ -16,9 +16,6 @@ class Utility:
     def __init__(self, bot):
         self.bot = bot
         self.translator = Translator()
-
-        self.SIEGE_CACHE = {}
-        self.bot.loop.create_task(self.remove_siege_cache())
         
     @commands.command(description="info about a Discord user", brief="info about a Discord user", pass_context=True)
     @commands.cooldown(1, 5, commands.BucketType.user)
@@ -286,184 +283,6 @@ class Utility:
         embed.set_thumbnail(url=server.icon_url)
         
         await self.bot.send_message(ctx.message.channel, embed=embed)
-
-    async def get_fortnite_stats(self, name, platform):
-        headers = {
-            "TRN-Api-Key": self.bot.CONFIG["trn_api_key"]
-        }
-
-        url = "https://api.fortnitetracker.com/v1/profile/{platform}/{name}".format(platform=platform, name=name)
-        
-        try:
-            async with aiohttp.ClientSession() as session:
-                async with session.get(url, headers=headers) as r:              
-                    if (r.status != 200):
-                        return r.status
-
-                    return await r.json()
-
-        except Exception:
-            return None
-
-    @commands.command(description="finds Fortnite stats for a user",
-                      brief="finds Fortnite stats for a user",
-                      pass_context=True,
-                      aliases=["fstats"])
-    @commands.cooldown(1, 1, commands.BucketType.server)
-    async def fortnite(self, ctx, name : str, stats : str="lifetime"):
-        await self.bot.send_typing(ctx.message.channel)
-
-        if (not "trn_api_key" in self.bot.CONFIG):
-            await self.bot.messaging.reply(ctx.message, "No Tracker API key found")
-            return
-
-        stats_options = ["lifetime", "solo", "duo", "squad"]
-        if (stats not in stats_options):
-            await self.bot.messaging.reply(ctx.message, "Invalid stat selection `{}`, options are: {}".format(stats,
-                ", ".join("`{}`".format(s) for s in stats_options)))
-            return
-
-        platforms = ["pc", "xbl", "psn"]
-
-        success = False
-
-        for platform in platforms:
-            data = await self.get_fortnite_stats(name, platform)
-            await asyncio.sleep(1) # cooldown in between each request, according to the api's guidelines
-
-            if (not data):
-                continue
-
-            if (isinstance(data, int)):
-                self.bot.bot_utils.log_error_to_file("Failed to get Fortnite stats for \"{name}\" ({platform}) failed with status code {code} ({string})".format(
-                        name=name,
-                        platform=platform,
-                        code=data,
-                        string=responses[data] if (data in responses) else "unknown"), prefix="Fortnite")
-                continue
-
-            try:
-                data = dict(data)
-
-            except Exception as e:
-                self.bot.bot_utils.log_error_to_file("Failed to find Fortnite stats for \"{}\" ({}) because of exception: {}".format(name, platform, e),
-                        prefix="Fortnite")
-                continue
-
-            if ("error" in data):
-                if (data["error"] != "Player Not Found"):
-                    self.bot.bot_utils.log_error_to_file("API error for \"{}\" ({}): {}".format(name, platform, data["error"]), prefix="Fortnite")
-                
-                continue
-
-            embed = utils.create_fortnite_stats_embed(ctx.message.author,
-                                                        data,
-                                                        stats,
-                                                        title=name)
-
-            if (not embed):
-                await self.bot.messaging.reply(ctx.message, "Failed to find `{}` Fortnite stats for `{}`".format(stats, name))
-                return
-
-            await self.bot.send_message(ctx.message.channel, embed=embed)
-            success = True
-
-        if (not success):
-            await self.bot.messaging.reply(ctx.message, "Failed to find `{}` Fortnite stats for `{}`".format(stats, name))
-
-    @commands.command(description="finds Rainbow Six Siege stats for a user",
-                      brief="finds Rainbow Six Siege stats for a user",
-                      pass_context=True,
-                      aliases=["r6s", "r6stats"])
-    @commands.cooldown(1, 5, commands.BucketType.server)
-    async def siege(self, ctx, username : str, stats_selection : str="overall", platform : str="uplay"):
-        stats_options = ["overall", "ranked", "casual", "all"]
-        if (stats_selection not in stats_options):
-            await self.bot.messaging.reply(ctx.message, "Invalid stat selection `{}`, options are: {}".format(stats_selection,
-                ", ".join("`{}`".format(s) for s in stats_options)))
-            return
-
-        if (platform not in siege.platforms.keys()):
-            await self.bot.messaging.reply(ctx.message, "Invalid platform selection `{}`, options are: {}".format(platform,
-                ", ".join("`{}`".format(s) for s in siege.platforms.keys())))
-            return
-
-        if (username in self.SIEGE_CACHE):
-            stats = self.SIEGE_CACHE[username]["stats"]
-            self.SIEGE_CACHE[username]["time"] = time.time()
-        else:
-            msg = await self.bot.messaging.reply(ctx.message, "Searching for stats (might take a while)...")
-            await self.bot.send_typing(ctx.message.channel)
-
-            stats = await siege.get_player(username, platform=platform)
-
-            await self.bot.bot_utils.delete_message(msg)
-
-            if (not stats):
-                await self.bot.messaging.reply(ctx.message, "Failed to find `{}` stats for `{}` on `{}`".format(stats_selection, username, platform))
-                return
-
-            if (not "player" in stats):
-                if ("errors" in stats):
-                    for error in stats["errors"]:
-                        detail = "Unknown error."
-                        description = "Unknown."
-
-                        if ("detail" in error):
-                            detail = error["detail"]
-
-                        if ("meta" in error and "description" in error["meta"]):
-                            description = error["meta"]["description"]
-
-                        await self.bot.messaging.reply(ctx.message, "An error occured searching for `{}` on `{}`: {} {}".format(username,
-                            platform,
-                            detail,
-                            description))
-
-                return
-
-            stats = stats["player"]
-
-        if (stats_selection == "all"):
-            stats_option = stats_options[:-1]
-        else:
-            stats_option = [stats_selection]
-
-        success = False
-
-        for option in stats_option:
-            embed = await siege.create_siege_embed(ctx.message.author, stats, stats_selection=option)
-
-            if (not embed):
-                continue
-
-            success = True
-            await self.bot.send_message(ctx.message.channel, embed=embed)
-
-            self.SIEGE_CACHE[username] = {"time": time.time(),
-                                          "stats": stats}
-
-        if (not success):
-            await self.bot.messaging.reply(ctx.message, "Failed to find `{}` stats for `{}` on `{}`".format(stats_selection, username, platform))
-
-    async def remove_siege_cache(self):
-        await self.bot.wait_until_ready()
-        
-        while (not self.bot.is_closed):
-            try:
-                siege_cache_copy = self.SIEGE_CACHE.copy()
-                
-                for username, cache in siege_cache_copy.items():
-                    if (time.time() > cache["time"] + self.bot.CONFIG["SIEGE_CACHE_TIME"]):
-                        del self.SIEGE_CACHE[username]
-                
-                siege_cache_copy.clear()
-
-            except Exception as e:
-                self.bot.bot_utils.log_error_to_file(e)
-            
-            #await asyncio.sleep(self.bot.CONFIG["SIEGE_CACHE_TIME"] // 2)
-            await asyncio.sleep(10)
 
 def setup(bot):
     bot.add_cog(Utility(bot))
