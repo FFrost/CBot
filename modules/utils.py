@@ -8,20 +8,6 @@ this file is for utility functions that do NOT require access to discord,
 e.g. general utility functions
 """
 
-# return some info about a user as a formatted string
-# input: user; discord.User; user to lookup
-def get_user_info(user):
-    info_msg = """
-Name: {name}
-Discriminator: {disc}
-ID: {id}
-User created at: {date}
-Avatar URL: {avatar}
-""".format(name=user.name, disc=user.discriminator, id=user.id, date=str(user.created_at),
-              avatar=(user.avatar_url if user.avatar_url is not None else ""))
-    
-    return info_msg
-
 # format current time
 def get_cur_time():
     return "{:%m/%d/%y %H:%M:%S}".format(datetime.datetime.now())

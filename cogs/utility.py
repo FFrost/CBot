@@ -21,10 +21,12 @@ class Utility:
         self.bot.loop.create_task(self.remove_siege_cache())
         
     @commands.command(description="info about a Discord user", brief="info about a Discord user", pass_context=True)
-    @commands.cooldown(2, 5, commands.BucketType.user)
+    @commands.cooldown(1, 5, commands.BucketType.user)
     async def info(self, ctx, *, name : str=""):
+        embed = discord.Embed()
+
         if (ctx.message.mentions):
-            info_msg = utils.get_user_info(ctx.message.mentions[0])
+            user = ctx.message.mentions[0]
         elif (name):
             user = await self.bot.bot_utils.find(name)
                     
@@ -32,11 +34,25 @@ class Utility:
                 await self.bot.messaging.reply(ctx, "Failed to find user `{}`".format(name))
                 return
                     
-            info_msg = utils.get_user_info(user)
         else:
-            info_msg = utils.get_user_info(ctx.message.author)
+            user = ctx.message.author
+
+        embed.set_author(name=ctx.message.author.name, icon_url=ctx.message.author.avatar_url)
+        embed.color = discord.Color.green()
+
+        embed.add_field(name="User", value="{}#{}".format(user.name, user.discriminator))
+        embed.add_field(name="ID", value=user.id)
+        embed.add_field(name="Created at", value=user.created_at)
+
+        if (user.bot):
+            embed.add_field(name="Bot", value=":white_check_mark:")
+        
+        if (user.display_name != user.name):
+            embed.add_field(name="Nickname", value=user.display_name)
+
+        embed.set_image(url=user.avatar_url)
     
-        await self.bot.messaging.reply(ctx, info_msg)
+        await self.bot.send_message(ctx.message.channel, embed=embed)
         
     @commands.command(description="get a user's avatar", brief="get a user's avatar", pass_context=True)
     @commands.cooldown(2, 5, commands.BucketType.user)
@@ -225,23 +241,25 @@ class Utility:
                  brief="get info about a server",
                  pass_context=True,
                  aliases=["sinfo"])
-    @commands.cooldown(1, 5, commands.BucketType.user)
+    @commands.cooldown(1, 5, commands.BucketType.server)
     async def serverinfo(self, ctx, *, search : str=""):
-        msg = """```\n{name} [{id}]
-Owned by {owner}
-Created at {date}
-{num_members} users
-```"""
+        embed = discord.Embed()
+        embed.set_author(name=ctx.message.author.name, icon_url=ctx.message.author.avatar_url)
+        embed.color = discord.Color.dark_blue()
 
         if (ctx.message.channel.is_private and not search):
             channel = ctx.message.channel
-            msg = msg.format(name=channel.name,
-                             id=channel.id,
-                             owner=channel.owner,
-                             date=channel.created_at,
-                             num_members=len(channel.recipients))
+
+            embed.title = channel.name
+
+            if (channel.owner is not None):
+                embed.add_field(name="Owner", value="{}#{}".format(channel.owner.name, channel.owner.discriminator))
             
-            await self.bot.messaging.reply(ctx.message, msg)
+            embed.add_field(name="ID", value=channel.id)
+            embed.add_field(name="Number of members", value=len(channel.recipients))
+            embed.add_field(name="Created at", value=channel.created_at)
+            
+            await self.bot.send_message(ctx.message.channel, embed=embed)
             return
         
         server = ctx.message.server
@@ -257,14 +275,17 @@ Created at {date}
         if (server.unavailable):
             await self.bot.messaging.reply(ctx.message, "Server `{}` ({}) is currently unavailable".format(server.id, search))
             return None
+
+        embed.title = server.name
+
+        embed.add_field(name="Owner", value="{}#{}".format(server.owner.name, server.owner.discriminator))
+        embed.add_field(name="ID", value=server.id)
+        embed.add_field(name="Number of members", value=server.member_count)
+        embed.add_field(name="Created at", value=server.created_at)
+
+        embed.set_thumbnail(url=server.icon_url)
         
-        msg = msg.format(name=server.name,
-                         id=server.id,
-                         owner=("{name}#{disc}".format(name=server.owner.name, disc=server.owner.discriminator)),
-                         date=server.created_at,
-                         num_members=server.member_count)
-        
-        await self.bot.messaging.reply(ctx.message, msg)
+        await self.bot.send_message(ctx.message.channel, embed=embed)
 
     async def get_fortnite_stats(self, name, platform):
         headers = {

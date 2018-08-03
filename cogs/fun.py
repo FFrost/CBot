@@ -709,7 +709,7 @@ class Fun:
     @commands.command(description="ask the magic 8 ball something",
                       brief="ask the magic 8 ball something",
                       pass_context=True,
-                      aliases=["8b"])
+                      aliases=["8b", "8", "8ball"])
     @commands.cooldown(2, 5, commands.BucketType.user)
     async def magic8ball(self, ctx):
         choice = random.choice(self.magic8ball_choices)
