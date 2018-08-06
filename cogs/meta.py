@@ -220,42 +220,5 @@ Unloaded cogs:
         else:
             await self.bot.messaging.reply(ctx.message, "Reloaded `{}`".format(cog))
 
-    @cmd.command(description="reloads the bot's config",
-                 brief="reloads the bot's config",
-                 pass_context=True,
-                 aliases=["rlcfg"])
-    async def reload_cfg(self, ctx):
-        await self.bot.send_typing(ctx.message.channel)
-
-        try:
-            self.bot.CONFIG = self.bot.get_config()
-
-        except Exception as e:
-            await self.bot.messaging.reply(ctx.message, "Failed to reload config: `{}`".format(e))
-        
-        else:
-            await self.bot.messaging.reply(ctx.message, "Reloaded config")
-
-    @cmd.command(description="reports the bot's current config (MAY CONTAIN SENSITIVE INFO)",
-                  brief="reports the bot's current config (MAY CONTAIN SENSITIVE INFO)",
-                  pass_context=True)
-    async def cfg(self, ctx):
-        if (not ctx.message.channel.is_private):
-            await self.bot.messaging.reply(ctx.message, "This command can only be used in a private message")
-            return
-
-        msg = "```\n"
-
-        for key in sorted(self.bot.CONFIG.keys()):
-            value = self.bot.CONFIG[key]
-            if (isinstance(value, str)):
-                value = "\"" + value + "\""
-
-            msg += "{key}: {value}\n".format(key=key, value=value)
-
-        msg += "\n```"
-
-        await self.bot.messaging.reply(ctx.message, msg)
-
 def setup(bot):
     bot.add_cog(Meta(bot))

@@ -11,3 +11,6 @@
 # ignore all text files except requirements
 *.txt
 !requirements.txt
+
+# ignore json files
+*.json

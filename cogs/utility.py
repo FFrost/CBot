@@ -11,6 +11,7 @@ from lxml import html
 from urllib.parse import quote
 from http.client import responses
 from googletrans import Translator, LANGUAGES, LANGCODES
+from datetime import datetime
 
 class Utility:
     def __init__(self, bot):
@@ -34,18 +35,39 @@ class Utility:
         else:
             user = ctx.message.author
 
+        if (not isinstance(user, discord.Member)):
+            member = user.member
+        else:
+            member = user
+
         embed.set_author(name=ctx.message.author.name, icon_url=ctx.message.author.avatar_url)
-        embed.color = discord.Color.green()
+
+        if (member.color):
+            embed.color = member.color
+        else:
+            embed.color = discord.Color.green()
 
         embed.add_field(name="User", value="{}#{}".format(user.name, user.discriminator))
         embed.add_field(name="ID", value=user.id)
-        embed.add_field(name="Created at", value=user.created_at)
+
+        if (member.game):
+            embed.add_field(name="Playing", value=member.game)
+
+        created_at = datetime.strptime(str(user.created_at), "%Y-%m-%d %H:%M:%S.%f")
+
+        embed.add_field(name="Created at", value=created_at.strftime("%H:%M on %-m/%-d/%Y"))
+
+        if (member.joined_at):
+            embed.add_field(name="Joined the server at", value=member.joined_at.strftime("%H:%M on %-m/%-d/%Y"))
+
+        if (member.top_role):
+            embed.add_field(name="Highest role", value=member.top_role)
+
+        if (user.display_name != user.name):
+            embed.add_field(name="Nickname", value=user.display_name)
 
         if (user.bot):
             embed.add_field(name="Bot", value=":white_check_mark:")
-        
-        if (user.display_name != user.name):
-            embed.add_field(name="Nickname", value=user.display_name)
 
         embed.set_image(url=user.avatar_url)
     
