@@ -13,6 +13,7 @@ class Config:
     @commands.group(description="reads, edits, and/or updates the config (owner only)",
                     brief="reads, edits, and/or updates the config (owner only)",
                     pass_context=True,
+                    hidden=True,
                     aliases=["config"])
     @commands.check(checks.is_owner)
     async def cfg(self, ctx):
@@ -26,7 +27,7 @@ class Config:
         await self.bot.send_typing(ctx.message.channel)
 
         try:
-            self.bot.CONFIG = self.bot.get_config()
+            self.bot.load_config()
 
         except Exception as e:
             await self.bot.messaging.reply(ctx.message, f"Failed to reload config: `{e}`")
@@ -37,7 +38,7 @@ class Config:
     @cfg.command(description="reports the bot's current config (MAY CONTAIN SENSITIVE INFO)",
                   brief="reports the bot's current config (MAY CONTAIN SENSITIVE INFO)",
                   pass_context=True,
-                  aliases=["print"])
+                  name="print")
     async def print_cfg(self, ctx):
         if (not ctx.message.channel.is_private):
             await self.bot.messaging.reply(ctx.message, "This command can only be used in a private message")

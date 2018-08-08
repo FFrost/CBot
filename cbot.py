@@ -1,10 +1,11 @@
 import discord
 from discord.ext import commands
 
-from default_config import DEFAULT_CONFIG
+#from default_config import DEFAULT_CONFIG
+import default_config
 from modules import bot_utils, utils, enums, messaging, misc, checks
 
-import logging, os, traceback, glob, yaml, sys, atexit, psutil
+import logging, os, traceback, glob, yaml, sys, atexit, psutil, importlib
 from random import randint
 
 # set up logger
@@ -154,7 +155,9 @@ class CBot(commands.Bot):
     # updates it if needed,
     # and loads it
     def load_config(self):
-        data = DEFAULT_CONFIG
+        importlib.reload(default_config)
+
+        data = default_config.DEFAULT_CONFIG
 
         if (not os.path.exists(self.CONFIG_PATH)):
             print("Saving config file to {}".format(self.CONFIG_PATH))
@@ -164,7 +167,7 @@ class CBot(commands.Bot):
 
             if (not disk_config):
                 print("Failed to load disk config, falling back to default config")
-                self.CONFIG = DEFAULT_CONFIG
+                self.CONFIG = default_config.DEFAULT_CONFIG
                 return
 
             # check if the saved config is up to date (do the keys match?)
@@ -272,6 +275,9 @@ class CBot(commands.Bot):
     
     # only output command messages
     async def on_command(self, command, ctx):
+        if (command.name == "eval" and checks.is_owner(ctx)):
+            return
+
         await self.bot_utils.output_log(ctx.message)
             
     # TODO: track completed commands for !stats
@@ -283,9 +289,9 @@ class CBot(commands.Bot):
             if (not message.content or not message.author):
                 return
             
-            # don't respond to ourself
+            # don't respond to ourselves
             if (message.author == self.user):
-                await self.bot_utils.output_log(message)
+                #await self.bot_utils.output_log(message)
                 return
             
             # insult anyone who @s us

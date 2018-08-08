@@ -2,12 +2,14 @@ import discord
 from discord.ext import commands
 
 from modules import checks
-import inspect, os, sys, subprocess, psutil
+import inspect, os, sys, subprocess, psutil, importlib, io, textwrap, traceback
 from hurry.filesize import size
+from contextlib import redirect_stdout
 
 class Meta:
     def __init__(self, bot):
         self.bot = bot
+        self._last_result = None
 
     # stolen from https://github.com/Rapptz/RoboDanny/blob/c8fef9f07145cef6c05416dc2421bbe1d05e3d33/cogs/meta.py#L164
     @commands.command(description="bot source code",
@@ -45,6 +47,7 @@ class Meta:
     @commands.group(description="run commands on the bot (owner only)",
                     brief="run commands on the bot (owner only)",
                     pass_context=True,
+                    hidden=True,
                     aliases=["command"])
     @commands.check(checks.is_owner)
     async def cmd(self, ctx):
@@ -197,28 +200,39 @@ Unloaded cogs:
             
             await self.bot.messaging.reply(ctx.message, "Unloaded `{}`".format(cog))
     
-    @cmd.command(description="reload a cog",
-                 brief="reload a cog",
+    @cmd.command(description="reload a cog or module",
+                 brief="reload a cog or module",
                  pass_context=True)
-    async def reload(self, ctx, cog : str):
-        if (not cog in self.bot.loaded_cogs):
-            await self.bot.messaging.reply(ctx.message, "Cog `{}` not found".format(cog))
-            return
-        
-        try:
-            self.bot.unload_extension(self.bot.loaded_cogs[cog]["ext"])
-            self.bot.loaded_cogs[cog] = {"ext": self.bot.loaded_cogs[cog]["ext"],
-                                         "loaded": False}
-            
-            self.bot.load_extension(self.bot.loaded_cogs[cog]["ext"])
-            self.bot.loaded_cogs[cog] = {"ext": self.bot.loaded_cogs[cog]["ext"],
-                                         "loaded": True}
-            
-        except Exception as e:
-            await self.bot.messaging.reply(ctx.message, "Failed to reload cog `{}`: ```{}```".format(cog, e))
-            
+    async def reload(self, ctx, name : str):
+        # reload cog
+        if (name in self.bot.loaded_cogs):
+            try:
+                self.bot.unload_extension(self.bot.loaded_cogs[name]["ext"])
+                self.bot.loaded_cogs[name] = {"ext": self.bot.loaded_cogs[name]["ext"],
+                                            "loaded": False}
+                
+                self.bot.load_extension(self.bot.loaded_cogs[name]["ext"])
+                self.bot.loaded_cogs[name] = {"ext": self.bot.loaded_cogs[name]["ext"],
+                                            "loaded": True}
+                
+            except Exception as e:
+                await self.bot.say(f"Failed to reload cog `{name}`: ```{e}```")
+                
+            else:
+                await self.bot.say(f"Reloaded cog `{name}`")
+        # reload module
+        elif (f"modules.{name}" in sys.modules.keys()):
+            try:
+                importlib.reload(sys.modules[f"modules.{name}"])
+
+            except Exception as e:
+                await self.bot.say(f"Failed to reload module `{name}`: ```{e}```")
+
+            else:
+                await self.bot.say(f"Reloaded module `{name}`")
+        # it's neither
         else:
-            await self.bot.messaging.reply(ctx.message, "Reloaded `{}`".format(cog))
+            await self.bot.say(f"No cog or module found named `{name}`")
 
     @commands.command(description="generates an invite link to invite the bot to your server",
                       brief="generates an invite link to invite the bot to your server",
@@ -263,6 +277,72 @@ Manage Messages **(2FA)**, Read Messages, Send Messages, Embed Links, Attach Fil
         embed.add_field(name=":no_mobile_phones: No Two-Factor Authentication permissions", value=f"{url}&permissions={no_2fa_perms}", inline=False)
 
         await self.bot.send_message(ctx.message.author, embed=embed)
+
+    # eval command stolen from ItWasAllIntended - https://gist.github.com/ItWasAllIntended/905500623d772d1a153049715e3e68b7
+    def cleanup_code(self, content):
+        """Automatically removes code blocks from the code."""
+        # Remove ```py\n```
+        if content.startswith('```') and content.endswith('```'):
+            return '\n'.join(content.split('\n')[1:-1])
+        
+        return content
+
+    @commands.command(pass_context=True, hidden=True, name='eval', aliases=["ev"])
+    @commands.check(checks.is_owner)
+    async def _eval(self, ctx, *, body: str):
+        env = {
+            'bot': self.bot,
+            'ctx': ctx,
+            'channel': ctx.message.channel,
+            'author': ctx.message.author,
+            'server': ctx.message.server,
+            'message': ctx.message,
+            '_': self._last_result,
+            "say": self.bot.say
+        }
+
+        env.update(globals())
+
+        body = self.cleanup_code(body)
+        stdout = io.StringIO()
+
+        to_compile = f'async def func():\n{textwrap.indent(body, "  ")}'
+
+        try:
+            exec(to_compile, env)
+        except Exception as e:
+            try:
+                await self.bot.add_reaction(ctx.message, "\N{NEGATIVE SQUARED CROSS MARK}")
+            except:
+                pass
+
+            return await self.bot.say(f'```py\n{e.__class__.__name__}: {e}\n```')
+
+        func = env['func']
+        try:
+            with redirect_stdout(stdout):
+                ret = await func()
+        except Exception as e:
+            value = stdout.getvalue()
+            await self.bot.say(f'```py\n{value}{traceback.format_exc()}\n```')
+
+            try:
+                await self.bot.add_reaction(ctx.message, "\N{NEGATIVE SQUARED CROSS MARK}")
+            except:
+                pass
+        else:
+            value = stdout.getvalue()
+            try:
+                await self.bot.add_reaction(ctx.message, "\N{WHITE HEAVY CHECK MARK}")
+            except:
+                pass
+
+            if ret is None:
+                if value:
+                    await self.bot.say(f'```py\n{value}\n```')
+            else:
+                self._last_result = ret
+                await self.bot.say(f'```py\n{value}{ret}\n```')
 
 def setup(bot):
     bot.add_cog(Meta(bot))
