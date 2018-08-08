@@ -27,5 +27,8 @@ DEFAULT_CONFIG = {
 
         # where to temporarily store the downloaded mp3s
         "DOWNLOAD_DIRECTORY": "/tmp/cbot"
-    }
+    },
+
+    # can other people use the !invite command to invite the bot to their own servers
+    "BOT_CAN_BE_INVITED": True
 }

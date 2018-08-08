@@ -220,5 +220,49 @@ Unloaded cogs:
         else:
             await self.bot.messaging.reply(ctx.message, "Reloaded `{}`".format(cog))
 
+    @commands.command(description="generates an invite link to invite the bot to your server",
+                      brief="generates an invite link to invite the bot to your server",
+                      pass_context=True)
+    @commands.cooldown(1, 5, commands.BucketType.user)
+    async def invite(self, ctx):
+        if (not ctx.message.channel.is_private):
+            await self.bot.send_message(ctx.message.author, "This command can only be used in a private message")
+            return
+
+        if (not self.bot.CONFIG["BOT_CAN_BE_INVITED"] and ctx.message.author.id != checks.owner_id):
+            await self.bot.say("Sorry, the owner has disabled invitations")
+            return
+
+        full_perms = 3271744
+        no_2fa_perms = 3263552
+
+        url = f"https://discordapp.com/oauth2/authorize?client_id={self.bot.user.id}&scope=bot"
+
+        embed = discord.Embed()
+        embed.set_author(name=ctx.message.author.name, icon_url=ctx.message.author.avatar_url)
+        embed.color = discord.Color.blue()
+
+        embed.description = """There are several options for inviting the bot:
+
+1. Inviting the bot with no permissions and manually adding the ones you want.
+
+2. Inviting the bot with full permissions. __**This requires Two-Factor Authentication (2FA) to be enabled on your account.**__
+See the list of required permissions below. For more information on 2FA, see: https://support.discordapp.com/hc/en-us/articles/219576828-Setting-up-Two-Factor-Authentication
+
+3. Inviting the bot without 2FA-required permissions, and then manually adding the required permissions afterwards.
+
+You need to have Manage Server permissions on the server you want to invite the bot to in order to invite it to that server.
+If you don't see the server on the list of servers after clicking the link, you don't have those permissions.
+
+Permissions the bot requires:
+Manage Messages **(2FA)**, Read Messages, Send Messages, Embed Links, Attach Files, Read Message History, Add Reactions, Connect, Speak
+"""
+
+        embed.add_field(name=":negative_squared_cross_mark: No permissions", value=url, inline=False)
+        embed.add_field(name=":white_check_mark: Full permissions", value=f"{url}&permissions={full_perms}", inline=False)
+        embed.add_field(name=":no_mobile_phones: No Two-Factor Authentication permissions", value=f"{url}&permissions={no_2fa_perms}", inline=False)
+
+        await self.bot.send_message(ctx.message.author, embed=embed)
+
 def setup(bot):
     bot.add_cog(Meta(bot))
