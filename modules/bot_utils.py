@@ -114,6 +114,13 @@ class BotUtils:
                         if ("provider" in keys and "name" in embed["provider"].keys() and embed["provider"]["name"] == "YouTube"):
                             if ("url" in keys and utils.youtube_url_validation(embed["url"])):
                                 return embed["url"]
+
+    # finds the last message sent before the command message
+    # input: message; discord.Message; the message to search before
+    # output: discord.Message; the message if found
+    async def find_last_message(self, message):
+        async for message in self.bot.logs_from(message.channel, before=message, limit=1):
+            return message
             
     # get bot's permissions in a channel
     # input: channel; discord.Channel; channel to get permissions from
