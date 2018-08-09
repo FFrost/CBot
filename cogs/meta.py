@@ -1,10 +1,10 @@
 import discord
 from discord.ext import commands
 
-from modules import checks
-import inspect, os, sys, subprocess, psutil, importlib, io, textwrap, traceback
-from hurry.filesize import size
+from modules import checks, utils
+import inspect, os, sys, subprocess, psutil, importlib, io, textwrap, traceback, humanize
 from contextlib import redirect_stdout
+from datetime import datetime
 
 class Meta:
     def __init__(self, bot):
@@ -114,28 +114,6 @@ class Meta:
         
         await self.bot.leave_server(server)
         await self.bot.messaging.reply(ctx.message, "Left `{name}` [{id}]".format(name=server.name, id=server.id))
-        
-    @cmd.command(description="resource usage on the bot's server",
-                 brief="resource usage on the bot's server",
-                 pass_context=True)
-    async def usage(self, ctx):
-        cpu = psutil.cpu_percent()
-        memory = psutil.virtual_memory()
-        
-        cbot_process = psutil.Process(os.getpid())
-        cbot_mem = cbot_process.memory_info().rss
-        cbot_percent = (cbot_mem / memory.total) * 100
-
-        msg = """CPU: {cpu}%
-Memory: {percent}% ({used}/{total})
-CBot memory usage: {cbot_percent:.1f}% ({cbot_used})""".format(cpu=cpu,
-                                                        percent=memory.percent,
-                                                        used=size(memory.used),
-                                                        total=size(memory.total),
-                                                        cbot_percent=cbot_percent,
-                                                        cbot_used=size(cbot_mem))
-
-        await self.bot.messaging.reply(ctx.message, msg)
         
     @cmd.command(description="prints status of cogs",
                  brief="prints status of cogs",
@@ -343,6 +321,33 @@ Manage Messages **(2FA)**, Read Messages, Send Messages, Embed Links, Attach Fil
             else:
                 self._last_result = ret
                 await self.bot.say(f'```py\n{value}{ret}\n```')
+
+    @commands.command(description="information about the bot",
+                      brief="information about the bot",
+                      pass_context=True)
+    async def about(self, ctx):
+        embed = discord.Embed(title=f"About {self.bot.user.name}#{self.bot.user.discriminator}", color=discord.Color.blue())
+
+        embed.set_author(name=ctx.message.author.name, icon_url=ctx.message.author.avatar_url)
+
+        embed.add_field(name="ID", value=f"{self.bot.user.id}")
+
+        if (self.bot.user.display_name != self.bot.user.name):
+            embed.add_field(name="Nickname", value=f"")
+
+        cbot_process = psutil.Process(os.getpid())
+
+        if (ctx.message.server is not None):
+            embed.add_field(name="Joined the server at", value=f"{utils.format_time(ctx.message.server.me.joined_at)}",)
+        
+        embed.add_field(name="Created at", value=f"{utils.format_time(self.bot.user.created_at)}")
+        embed.add_field(name="Servers", value=f"{len(self.bot.servers)}")
+        embed.add_field(name="Users", value=f"{len([member for member in self.bot.get_all_members()])}")
+        embed.add_field(name="CPU", value=f"{cbot_process.cpu_percent()}%")
+        embed.add_field(name="Memory used", value=f"{humanize.naturalsize(cbot_process.memory_info().rss)}")
+        embed.add_field(name="Uptime", value=f"{humanize.naturaldelta(datetime.fromtimestamp(os.path.getmtime(self.bot.PID_FILEPATH)))}")
+
+        await self.bot.say(embed=embed)
 
 def setup(bot):
     bot.add_cog(Meta(bot))

@@ -55,10 +55,10 @@ class Utility:
 
         created_at = datetime.strptime(str(user.created_at), "%Y-%m-%d %H:%M:%S.%f")
 
-        embed.add_field(name="Created at", value=created_at.strftime("%H:%M on %-m/%-d/%Y"))
+        embed.add_field(name="Created at", value=utils.format_time(created_at))
 
         if (member.joined_at):
-            embed.add_field(name="Joined the server at", value=member.joined_at.strftime("%H:%M on %-m/%-d/%Y"))
+            embed.add_field(name="Joined the server at", value=utils.format_time(member.joined_at))
 
         if (member.top_role):
             embed.add_field(name="Highest role", value=member.top_role)

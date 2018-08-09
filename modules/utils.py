@@ -16,6 +16,9 @@ def get_cur_time():
 def get_date():
     return "{:%m-%d-%y}".format(datetime.datetime.now())
 
+def format_time(datetime_obj):
+    return datetime_obj.strftime("%H:%M on %-m/%-d/%Y")
+
 # format message to log
 # input: message; discord.Message; message to format to be output
 # output: string; formatted string of message content

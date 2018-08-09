@@ -1,7 +1,6 @@
 import discord
 from discord.ext import commands
 
-#from default_config import DEFAULT_CONFIG
 import default_config
 from modules import bot_utils, utils, enums, messaging, misc, checks
 
