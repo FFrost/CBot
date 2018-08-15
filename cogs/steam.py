@@ -3,11 +3,13 @@ from discord.ext import commands
 
 from modules import utils
 
-import asyncio, aiohttp
+import asyncio
+import aiohttp
 import re
 import random
 from lxml import html
 from datetime import datetime
+from typing import Optional, List
 
 class Steam:
     def __init__(self, bot):
@@ -16,7 +18,7 @@ class Steam:
 
         self.steam_url_regex = re.compile(r"((https?:\/\/)(www.)?)?(steamcommunity.com\/(?P<type>id|profiles)\/(?P<id>[A-Za-z0-9]{2,32}))")
 
-    async def on_message(self, message):
+    async def on_message(self, message: discord.Message):
         try:
             if (not message.content or not message.author):
                 return
@@ -28,12 +30,12 @@ class Steam:
                     await self.bot.send_message(message.channel, embed=embed)
 
         except Exception as e:
-            await self.bot.bot_utils.log_error_to_file(e, prefix="Steam")
+            self.bot.bot_utils.log_error_to_file(e, prefix="Steam")
 
     @commands.command(description="game recommendations from your steam profile",
                   brief="game recommendations from your steam profile",
                   pass_context=True)
-    async def game(self, ctx, url : str):
+    async def game(self, ctx, url: str):
         if (not self.is_steam_url(url)):
             await self.bot.messaging.reply(ctx.message, "Invalid Steam url")
             return
@@ -56,10 +58,10 @@ class Steam:
 
         await self.bot.messaging.reply(ctx.message, "You should play **{}**\n{}".format(random_game_name, game_url))
 
-    async def resolve_vanity_url(self, sid):
+    async def resolve_vanity_url(self, sid: str) -> Optional[str]:
         try:
             async with aiohttp.ClientSession() as session:
-                async with session.get("http://api.steampowered.com/ISteamUser/ResolveVanityURL/v0001/?key=%s&vanityurl=%s" % (self.steam_api_key, sid)) as r:
+                async with session.get(f"http://api.steampowered.com/ISteamUser/ResolveVanityURL/v0001/?key={self.steam_api_key}&vanityurl={sid}") as r:
                     if (r.status != 200):
                         return None
                     
@@ -77,10 +79,10 @@ class Steam:
         except Exception:
             return None
 
-    async def get_profile_summary(self, id64):
+    async def get_profile_summary(self, id64: str) -> Optional[str]:
         try:
             async with aiohttp.ClientSession() as session:
-                async with session.get("http://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key=%s&steamids=%s" % (self.steam_api_key, id64)) as r:
+                async with session.get(f"http://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key={self.steam_api_key}&steamids={id64}") as r:
                     if (r.status != 200):
                         return None
                     
@@ -101,40 +103,16 @@ class Steam:
         except Exception:
             return None
 
-    async def is_profile_public(self, id64):
-        try:
-            async with aiohttp.ClientSession() as session:
-                async with session.get("http://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key=%s&steamids=%s" % (self.steam_api_key, id64)) as r:
-                    if (r.status != 200):
-                        return False
-                        
-                    data = await r.json()
-
-                    if ("response" not in data):
-                        return False
-
-                    if ("players" not in data["response"]):
-                        return False
-
-                    if (len(data["response"]["players"]) == 0):
-                        return False
-
-                    summary = data["response"]["players"][0]
-
-                    if ("communityvisibilitystate" not in summary):
-                        return False
-
-                    return (summary["communityvisibilitystate"] == 3)
+    def is_profile_public(self, profile_summary: dict) -> bool:
+        if (profile_summary is None):
+            return False
         
-        except Exception:
+        if ("communityvisibilitystate" not in profile_summary):
             return False
 
-        return False
+        return (profile_summary["communityvisibilitystate"] == 3)
 
-    async def get_profile_page(self, id64):
-        if (not await self.is_profile_public(id64)):
-            return None
-        
+    async def get_profile_page(self, id64: str) -> Optional[str]:
         async with aiohttp.ClientSession() as session:
             async with session.get("https://steamcommunity.com/profiles/%s" % id64) as r:
                 if (r.status != 200):
@@ -142,16 +120,8 @@ class Steam:
 
                 return await r.text()
 
-    async def get_profile_description(self, id64, page=None):
+    async def get_profile_description(self, id64: str, tree: html.HtmlElement) -> Optional[str]:
         try:
-            if (not page):
-                page = await self.get_profile_page(id64)
-
-            if (not page):
-                return None
-            
-            tree = html.fromstring(page)
-
             # replace line breaks with newlines
             for br in tree.xpath("*//br"):
                 br.tail = "\n" + br.tail if br.tail else "\n"
@@ -170,16 +140,8 @@ class Steam:
         except Exception:
             return None
 
-    async def get_friends(self, id64, page=None):
+    async def get_friends(self, id64: str, tree: html.HtmlElement) -> Optional[str]:
         try:
-            if (not page):
-                page = await self.get_profile_page(id64)
-
-            if (not page):
-                return None
-            
-            tree = html.fromstring(page)
-
             path = tree.xpath("//span[@class='profile_count_link_total']/text()")
 
             if (not path):
@@ -193,10 +155,10 @@ class Steam:
         except Exception:
             return None
 
-    async def get_games(self, id64):
+    async def get_games(self, id64: str) -> Optional[List[dict]]:
         try:
             async with aiohttp.ClientSession() as session:
-                async with session.get("http://api.steampowered.com/IPlayerService/GetOwnedGames/v0001/?key=%s&steamid=%s&format=json" % (self.steam_api_key, id64)) as r:
+                async with session.get(f"http://api.steampowered.com/IPlayerService/GetOwnedGames/v0001/?key={self.steam_api_key}&steamid={id64}&format=json") as r:
                     if (r.status != 200):
                         return None
                     
@@ -214,10 +176,10 @@ class Steam:
         except Exception:
             return None
 
-    async def get_game_name(self, appid):
+    async def get_game_name(self, appid: int) -> str:
         try:
             async with aiohttp.ClientSession() as session:
-                async with session.get("http://api.steampowered.com/ISteamUserStats/GetSchemaForGame/v2/?key=%s&appid=%s" % (self.steam_api_key, appid)) as r:
+                async with session.get(f"http://api.steampowered.com/ISteamUserStats/GetSchemaForGame/v2/?key={self.steam_api_key}&appid={appid}") as r:
                     if (r.status != 200):
                         return await self.get_game_name_from_store(appid)
                     
@@ -241,8 +203,8 @@ class Steam:
         except Exception:
             return await self.get_game_name_from_store(appid)
 
-    async def get_game_name_from_store(self, appid):
-        game_url = "http://store.steampowered.com/app/" + str(appid)
+    async def get_game_name_from_store(self, appid: int) -> str:
+        game_url = f"http://store.steampowered.com/app/{appid}"
 
         try:
             async with aiohttp.ClientSession() as session:
@@ -265,10 +227,10 @@ class Steam:
         except Exception:
             return "unknown"
 
-    async def get_num_bans(self, id64):
+    async def get_num_bans(self, id64: str) -> int:
         try:
             async with aiohttp.ClientSession() as session:
-                async with session.get("http://api.steampowered.com/ISteamUser/GetPlayerBans/v1/?key=%s&steamids=%s" % (self.steam_api_key, id64)) as r: 
+                async with session.get(f"http://api.steampowered.com/ISteamUser/GetPlayerBans/v1/?key={self.steam_api_key}&steamids={id64}") as r: 
                     if (r.status != 200):
                         return 0
                     
@@ -294,15 +256,15 @@ class Steam:
             return 0
 
     # thanks to https://stackoverflow.com/a/36472887
-    def steamid64_to_32(self, id64):
+    def steamid64_to_32(self, id64: str) -> str:
         y = int(id64) - 76561197960265728
         x = y % 2 
         return "STEAM_0:{}:{}".format(x, (y - x) // 2)
 
-    async def get_account_age(self, id64):
+    async def get_account_age(self, id64: str) -> Optional[int]:
         try:
             async with aiohttp.ClientSession() as session:
-                async with session.get("https://steamcommunity.com/profiles/%s/badges/1" % id64) as r:
+                async with session.get(f"https://steamcommunity.com/profiles/{id64}/badges/1") as r:
                     if (r.status != 200):
                         return None
                     
@@ -326,16 +288,8 @@ class Steam:
         except Exception:
             return None
 
-    async def get_level(self, id64, page=None):
+    async def get_level(self, id64: str, tree: html.HtmlElement) -> Optional[str]:
         try:
-            if (not page):
-                page = await self.get_profile_page(id64)
-
-            if (not page):
-                return None
-            
-            tree = html.fromstring(page)
-
             path = tree.xpath("//span[@class='friendPlayerLevelNum']/text()")
 
             if (not path):
@@ -349,10 +303,10 @@ class Steam:
         except Exception:
             return None
 
-    def is_steam_url(self, string):
+    def is_steam_url(self, string: str) -> bool:
         return (self.steam_url_regex.match(string) is not None)
 
-    async def extract_id64(self, url):
+    async def extract_id64(self, url: str) -> Optional[str]:
         search = self.steam_url_regex.search(url)
         url_id = search.group("id")
         url_type = search.group("type")
@@ -375,7 +329,7 @@ class Steam:
 
         return id64
 
-    async def create_steam_embed(self, user, url):
+    async def create_steam_embed(self, user: discord.User, url: str) -> discord.Embed:
         id64 = await self.extract_id64(url)
 
         if (not id64):
@@ -388,19 +342,32 @@ class Steam:
         profile_summary = await self.get_profile_summary(id64) # profile name gives us "avatarfull" (url to avatar) and "personaname" (username)
 
         # get profile username
-        if ("personaname" in profile_summary):
+        if (profile_summary is not None and "personaname" in profile_summary):
             username = profile_summary["personaname"]
         else:
             username = "unknown"
 
-        # load profile page
-        profile_page = await self.get_profile_page(id64)
+        profile_is_visible = self.is_profile_public(profile_summary)
 
-        # get profile description
-        description = await self.get_profile_description(id64, page=profile_page) # gives us description
+        description = None
+        num_friends = None
+        level = None
 
-        # get number of friends
-        num_friends = await self.get_friends(id64, page=profile_page)
+        # we can only see this if the profile is public
+        if (profile_is_visible):
+            # load profile page
+            profile_page = await self.get_profile_page(id64)
+
+            tree = html.fromstring(profile_page)
+
+            # get profile description
+            description = await self.get_profile_description(id64, tree) # gives us description
+
+            # get number of friends
+            num_friends = await self.get_friends(id64, tree)
+
+            # account level
+            level = await self.get_level(id64, tree)
 
         # get number of games
         games = await self.get_games(id64)
@@ -443,8 +410,6 @@ class Steam:
         # get account age
         account_age = await self.get_account_age(id64)
 
-        level = await self.get_level(id64, page=profile_page)
-
         # create the embed
         embed = discord.Embed()
 
@@ -453,6 +418,8 @@ class Steam:
         embed.set_author(name=user.name, icon_url=user.avatar_url)
         
         embed.color = discord.Color.blue()
+
+        embed.url = f"https://steamcommunity.com/profiles/{id64}"
 
         if (description):
             embed.description = utils.cap_string_and_ellipsis(description, 240)
@@ -483,7 +450,7 @@ class Steam:
         if (level):
             embed.add_field(name="Level", value="{:,}".format(int(level)))
 
-        if (not await self.is_profile_public(id64)):
+        if (not profile_is_visible):
             embed.set_footer(text="Private profile")
 
         return embed

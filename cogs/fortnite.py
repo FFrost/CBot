@@ -3,14 +3,16 @@ from discord.ext import commands
 
 from modules import utils
 
-import asyncio, aiohttp
+import asyncio
+import aiohttp
 from http.client import responses
+from typing import Optional
 
 class Fortnite:
     def __init__(self, bot):
         self.bot = bot
 
-    async def get_fortnite_stats(self, name, platform):
+    async def get_fortnite_stats(self, name: str, platform: str) -> Optional[dict]:
         headers = {
             "TRN-Api-Key": self.bot.CONFIG["trn_api_key"]
         }
@@ -28,7 +30,7 @@ class Fortnite:
         except Exception:
             return None
 
-    def create_fortnite_stats_embed(self, user, stats_data, stats, title=""):
+    def create_fortnite_stats_embed(self, user: discord.User, stats_data: dict, stats: str, title: str = "") -> discord.Embed:
         embed = discord.Embed()
         
         embed.title = title
@@ -89,7 +91,7 @@ class Fortnite:
                       pass_context=True,
                       aliases=["fstats"])
     @commands.cooldown(1, 1, commands.BucketType.server)
-    async def fortnite(self, ctx, name : str, stats : str="lifetime"):
+    async def fortnite(self, ctx, name: str, stats: str = "lifetime"):
         await self.bot.send_typing(ctx.message.channel)
 
         if (not "trn_api_key" in self.bot.CONFIG):

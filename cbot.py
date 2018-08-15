@@ -28,9 +28,9 @@ class CBot(commands.Bot):
         self.dev_id = ""
         self.REAL_FILE = os.path.realpath(__file__)
         self.REAL_PATH = os.path.dirname(self.REAL_FILE)
-        self.TOKEN_PATH = self.REAL_PATH + "/cbot.yml"
+        self.TOKEN_PATH = f"{self.REAL_PATH}/cbot.yml"
 
-        self.ERROR_FILEPATH = self.REAL_PATH + "/cbot_errors.txt"
+        self.ERROR_FILEPATH = f"{self.REAL_PATH}/cbot_errors.txt"
 
         # check if cbot exited properly on last run
         self.PID_FILEPATH = "/tmp/cbot.pid"

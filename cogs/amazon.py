@@ -2,9 +2,11 @@ import discord
 
 from modules import utils
 
-import asyncio, aiohttp
+import asyncio
+import aiohttp
 import re
 from lxml import html
+from typing import Optional
 
 class Amazon:
     def __init__(self, bot):
@@ -26,10 +28,10 @@ class Amazon:
         except Exception as e:
             await self.bot.bot_utils.log_error_to_file(e, prefix="Steam")
 
-    def is_amazon_url(self, url):
+    def is_amazon_url(self, url: str) -> bool:
         return (self.amazon_url_regex.match(url) is not None)
 
-    async def get_item_page(self, url):
+    async def get_item_page(self, url: str) -> Optional[str]:
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.get(url) as r:
@@ -41,7 +43,7 @@ class Amazon:
         except Exception:
             return None
 
-    def get_element(self, tree, expression):
+    def get_element(self, tree: html.HtmlElement, expression: str) -> Optional[str]:
         path = tree.xpath(expression)
 
         if (not path):
@@ -52,7 +54,7 @@ class Amazon:
 
         return path.strip()
 
-    def get_description_list(self, tree):
+    def get_description_list(self, tree: html.HtmlElement) -> Optional[str]:
         path = tree.xpath("//div[@id='feature-bullets']/ul/li")
 
         if (path is None or not isinstance(path, list) or len(path) < 1):
@@ -72,7 +74,7 @@ class Amazon:
 
         return "\n".join("- {}".format(d) for d in description)
 
-    async def create_amazon_embed(self, user, url):
+    async def create_amazon_embed(self, user: discord.User, url: str) -> discord.Embed:
         page = await self.get_item_page(url)
 
         if (page is None):

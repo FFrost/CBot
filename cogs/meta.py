@@ -2,7 +2,16 @@ import discord
 from discord.ext import commands
 
 from modules import checks, utils
-import inspect, os, sys, subprocess, psutil, importlib, io, textwrap, traceback, humanize
+import inspect
+import os
+import sys
+import subprocess
+import psutil
+import importlib
+import io
+import textwrap
+import traceback
+import humanize
 from contextlib import redirect_stdout
 from datetime import datetime
 
@@ -17,7 +26,7 @@ class Meta:
                       pass_context=True,
                       aliases=["src"])
     @commands.cooldown(2, 5, commands.BucketType.channel)
-    async def source(self, ctx, *, command : str=""):
+    async def source(self, ctx, *, command: str = ""):
         if (not command):
             await self.bot.messaging.reply(ctx.message, self.bot.source_url)
             return
@@ -63,13 +72,13 @@ class Meta:
         
     @cmd.command(description="makes the bot say something",
                  brief="makes the bot say something")
-    async def say(self, *, msg : str):
+    async def say(self, *, msg: str):
         await self.bot.say(msg)
         
     @cmd.command(description="changes the bot's status",
                  brief="changes the bot's status",
                  pass_context=True)
-    async def status(self, ctx, *, status : str):
+    async def status(self, ctx, *, status: str):
         await self.bot.change_presence(game=discord.Game(name=status))
         await self.bot.messaging.reply(ctx.message, "Set status to `{}`".format(status))
         
@@ -97,7 +106,7 @@ class Meta:
     @cmd.command(description="have the bot leave a server",
                  brief="have the bot leave a server",
                  pass_context=True)
-    async def leave(self, ctx, *, search : str):
+    async def leave(self, ctx, *, search: str):
         server = self.bot.bot_utils.find_server(search)
         
         if (not server):
@@ -141,7 +150,7 @@ Unloaded cogs:
     @cmd.command(description="load a cog",
                  brief="load a cog",
                  pass_context=True)
-    async def load(self, ctx, cog : str):
+    async def load(self, ctx, cog: str):
         if (not cog in self.bot.loaded_cogs):
             await self.bot.messaging.reply(ctx.message, "Cog `{}` not found".format(cog))
             return
@@ -161,7 +170,7 @@ Unloaded cogs:
     @cmd.command(description="unload a cog",
                  brief="unload a cog",
                  pass_context=True)
-    async def unload(self, ctx, cog : str):
+    async def unload(self, ctx, cog: str):
         if (not cog in self.bot.loaded_cogs):
             await self.bot.messaging.reply(ctx.message, "Cog `{}` not found".format(cog))
             return
@@ -181,7 +190,7 @@ Unloaded cogs:
     @cmd.command(description="reload a cog or module",
                  brief="reload a cog or module",
                  pass_context=True)
-    async def reload(self, ctx, name : str):
+    async def reload(self, ctx, name: str):
         # reload cog
         if (name in self.bot.loaded_cogs):
             try:
@@ -257,7 +266,7 @@ Manage Messages **(2FA)**, Read Messages, Send Messages, Embed Links, Attach Fil
         await self.bot.send_message(ctx.message.author, embed=embed)
 
     # eval command stolen from ItWasAllIntended - https://gist.github.com/ItWasAllIntended/905500623d772d1a153049715e3e68b7
-    def cleanup_code(self, content):
+    def cleanup_code(self, content: str) -> str:
         """Automatically removes code blocks from the code."""
         # Remove ```py\n```
         if content.startswith('```') and content.endswith('```'):

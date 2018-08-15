@@ -6,11 +6,11 @@ class NoVoiceChannel(commands.CommandError):
 
 owner_id = None
     
-def is_owner(ctx):
+def is_owner(ctx: commands.Context) -> bool:
     return (ctx.message.author.id == owner_id)
 
 # if the channel is private or the user has "manage messages" permissions
-def can_manage_messages(ctx):
+def can_manage_messages(ctx: commands.Context) -> bool:
     if (ctx.message.channel.is_private):
         return True
     elif (ctx.message.author.permissions_in(ctx.message.channel).manage_messages):
@@ -20,7 +20,7 @@ def can_manage_messages(ctx):
 
 # if the message author is in a voice channel
 # TODO: permission check if we can join the channel
-def is_in_voice_channel(ctx):
+def is_in_voice_channel(ctx: commands.Context) -> bool:
     if (ctx.message.channel.is_private):
         return False
     
@@ -29,8 +29,8 @@ def is_in_voice_channel(ctx):
     
     return True
 
-def yes_no_check(message):
+def yes_no_check(message: discord.Message) -> bool:
     return (message.content.lower() == "yes")
 
-def is_yes_or_no(message):
+def is_yes_or_no(message: discord.Message) -> bool:
     return (message.content.lower() in ["yes", "no"])

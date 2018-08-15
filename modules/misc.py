@@ -7,7 +7,7 @@ class Misc:
         
     # get insults from insult generator
     # output: string; the insult if found or "fucker"
-    async def get_insult(self):
+    async def get_insult(self) -> str:
         try:
             conn = aiohttp.TCPConnector(verify_ssl=False) # for https
             async with aiohttp.ClientSession(connector=conn) as session:

@@ -3,17 +3,19 @@ from discord.ext import commands
 
 from modules import checks, utils
 
-import asyncio, aiohttp
+import asyncio
+import aiohttp
 import time
 import youtube_dl
 import os
 from lxml import html
 from urllib.parse import quote
+from typing import Optional, Tuple
 
 # mostly stolen from PyVox (https://github.com/Hiroyu/_PyVox) and Rapptz's playlist example (https://github.com/Rapptz/discord.py/blob/async/examples/playlist.py)
 
 class VoiceEntry:
-    def __init__(self, message, player):
+    def __init__(self, message: discord.Message, player: discord.voice_client.StreamPlayer):
         self.author = message.author
         self.channel = message.channel
         self.player = player
@@ -128,10 +130,10 @@ class Music:
             state.disconnect()
     
     # returns the first video result from youtube with the given query
-    async def get_first_yt_result(self, query):
+    async def get_first_yt_result(self, query: str) -> Tuple[Optional[str], Optional[str]]:
         ydl = youtube_dl.YoutubeDL()
         
-        url = "https://www.youtube.com/results?search_query=" + quote(query)
+        url = f"https://www.youtube.com/results?search_query={query}"
         
         conn = aiohttp.TCPConnector(verify_ssl=False)
         async with aiohttp.ClientSession(connector=conn) as session:
@@ -149,7 +151,7 @@ class Music:
                             continue
                         
                         if (r.startswith("/watch")):
-                            ret = "http://youtube.com" + r
+                            ret = f"http://youtube.com{r}"
                             
                             try:
                                 info = ydl.extract_info(ret, download=False, process=False)
@@ -171,7 +173,7 @@ class Music:
                       pass_context=True,
                       aliases=["youtube"])
     @commands.cooldown(1, 5, commands.BucketType.channel)
-    async def yt(self, ctx, *, query : str):
+    async def yt(self, ctx, *, query: str):
         await self.bot.send_typing(ctx.message.channel)
         
         try:
@@ -208,7 +210,7 @@ class Music:
                       no_pm=True)
     @commands.check(checks.is_in_voice_channel)
     @commands.cooldown(1, 4, commands.BucketType.server)
-    async def play(self, ctx, *, query : str=""):
+    async def play(self, ctx, *, query: str = ""):
         await self.bot.send_typing(ctx.message.channel)
         
         if (not query):
@@ -309,11 +311,12 @@ class Music:
         voice_state = self.voice_states.get(ctx.message.server.id)
         voice_state.skip()
 
+    # TODO: create task for download
     @commands.command(description="downloads a video as an mp3 file",
                       brief="downloads a video as an mp3 file",
                       pass_context=True)
     @commands.cooldown(1, 60, commands.BucketType.user)
-    async def ytdl(self, ctx, *, query : str=""):
+    async def ytdl(self, ctx, *, query: str = ""):
         if (not query):
             query = await self.bot.bot_utils.find_last_youtube_embed(ctx.message)
 
@@ -342,7 +345,7 @@ class Music:
             "quiet": True,
             "noplaylist": True,
             "no_color": True,
-            "outtmpl": download_path + "%(title)s - %(id)s.%(ext)s",
+            "outtmpl": f"{download_path}%(title)s - %(id)s.%(ext)s",
             "extractaudio": True,
             "audioformat": "mp3",
             "format": "mp3/bestaudio",
@@ -368,7 +371,7 @@ class Music:
 
             if (info["duration"] > self.bot.CONFIG["YOUTUBEDL"]["MAX_VIDEO_LENGTH"]):
                 duration = time.strftime("%H:%M:%S", time.gmtime(info["duration"]))
-                max_duration = time.strftime("%H:%M:%S", time.gmtime( self.bot.CONFIG["YOUTUBEDL"]["MAX_VIDEO_LENGTH"]))
+                max_duration = time.strftime("%H:%M:%S", time.gmtime(self.bot.CONFIG["YOUTUBEDL"]["MAX_VIDEO_LENGTH"]))
 
                 await self.bot.messaging.reply(ctx.message, f"Video is too long ({duration}), max duration: {max_duration}")
                 return

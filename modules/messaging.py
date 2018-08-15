@@ -4,8 +4,11 @@ from discord.ext import commands
 from modules import enums
 
 import asyncio
-import inspect, re, math
+import inspect
+import re
+import math
 from collections import OrderedDict
+from typing import Union, List
 
 class Messaging:
     def __init__(self, bot):
@@ -13,15 +16,19 @@ class Messaging:
         
         # emojis for browsing image searches
         self.EMOJI_CHARS = OrderedDict()
-        self.EMOJI_CHARS["arrow_backward"] = "◀"
-        self.EMOJI_CHARS["arrow_forward"] = "▶"
-        self.EMOJI_CHARS["stop_button"] = "⏹"
+        self.EMOJI_CHARS["arrow_backward"] = "\N{BLACK LEFT-POINTING TRIANGLE}"
+        self.EMOJI_CHARS["arrow_forward"] = "\N{BLACK RIGHT-POINTING TRIANGLE}"
+        self.EMOJI_CHARS["stop_button"] = "\N{BLACK SQUARE FOR STOP}"
         
     # send a user a message and mention them in it
-    # input: dest; discord.User, discord.Message, discord.ext.commands.Context, or string; destination to send message to (string should be id of user)
-    #        msg; string; message to send
-    # output: discord.Message; the reply message object sent to the user
-    async def reply(self, dest, msg, channel=None):
+    # input: dest, destination to send message to (string should be id of user)
+    #        msg, message to send
+    # output: the reply message object sent to the user
+    async def reply(self,
+                    dest: Union[discord.User, discord.Message, commands.Context, str],
+                    msg: str,
+                    channel: discord.Channel = None
+                    ) -> discord.Message:
         try:
             msg = str(msg)
         
@@ -93,8 +100,8 @@ class Messaging:
             return await self.bot.send_message(destination, "{} {}".format(user.mention, msg))
     
     # private message the developer
-    # input: msg; string; message to send
-    async def message_developer(self, msg):
+    # input: msg, message to send
+    async def message_developer(self, msg: str) -> None:
         if (not self.bot.dev_id):
             return
         
@@ -106,9 +113,9 @@ class Messaging:
         await self.reply(user, msg)
     
     # private message a user
-    # input: uid; string; id of user to message
-    #        msg; string; message content to send
-    async def private_message(self, uid, msg):
+    # input: uid, id of user to message
+    #        msg, message content to send
+    async def private_message(self, uid: str, msg: str) -> None:
         user = await self.bot.bot_utils.find(uid)
             
         if (user is None):
@@ -117,9 +124,9 @@ class Messaging:
         await self.reply(user, msg)
     
     # send message to the "admin" channel if it exists
-    # input: msg; string; content of message to send
-    #        server; discord.Server; server to send message in
-    async def msg_admin_channel(self, msg, server):
+    # input: msg, content of message to send
+    #        server, server to send message in
+    async def msg_admin_channel(self, msg: str, server: discord.Server) -> None:
         try:
             if (not server):
                 return
@@ -138,10 +145,10 @@ class Messaging:
             await self.error_alert(e)
             
     # alerts a user if an error occurs, will always alert developer
-    # input: e; error object; the error to output
-    #        uid; string=""; the user's unique id
-    #        extra; string=""; any extra information to include
-    async def error_alert(self, e, uid="", extra=""):
+    # input: e, the error to output
+    #        uid, the user's unique id
+    #        extra, any extra information to include
+    async def error_alert(self, e: Exception, uid: str = "", extra: str = "") -> None:
         if (not uid):
             if (not self.bot.dev_id):
                 return
@@ -167,11 +174,16 @@ class Messaging:
             await self.message_developer(err)
             
     # add reaction to message if any keyword is in message
-    # input: message; discord.Message; message to react to
-    #        keyword; string or list; keyword(s) to look for in message content, author name or id
-    #        emoji; string or list; emoji(s) to react with
-    #        partial; bool=True; should react if partial keywords are found
-    async def react(self, message, keyword, emojis, partial=True):
+    # input: message, message to react to
+    #        keyword, keyword(s) to look for in message content, author name or id
+    #        emoji, emoji(s) to react with
+    #        partial, should react if partial keywords are found
+    async def react(self,
+                    message: discord.Message,
+                    keyword: Union[str, List[str]],
+                    emojis: Union[str, List[str]],
+                    partial: bool = True
+                    ) -> None:
         if (not self.bot.bot_utils.get_permissions(message.channel).add_reactions):
             return
     
@@ -209,9 +221,9 @@ class Messaging:
             
             if found:
                 # react with custom emojis
-                for custom_emoji in self.get_all_emojis():
+                for custom_emoji in self.bot.get_all_emojis():
                     if (custom_emoji.name in emojis and custom_emoji.server == message.server):
-                        await self.add_reaction(message, custom_emoji)
+                        await self.bot.add_reaction(message, custom_emoji)
                 
                 for e in emojis:                
                     # react with normal emojis and ignore custom ones
@@ -228,8 +240,8 @@ class Messaging:
             await self.error_alert(e)
             
     # adds reactions for browsing an image to a message
-    # input: message; discord.Message; message to add reactions to
-    async def add_img_reactions(self, message):
+    # input: message, message to add reactions to
+    async def add_img_reactions(self, message: discord.Message) -> None:
         try:
             for name, emoji in self.EMOJI_CHARS.items():
                 if (name == "stop_button" and not self.bot.bot_utils.get_permissions(message.channel).manage_messages): # skip delete if we can't delete messages

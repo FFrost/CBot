@@ -3,14 +3,22 @@ from discord.ext import commands
 
 from modules import enums, utils, checks
 
-import os, re, time, ipaddress, json, tempfile, random
-import asyncio, aiohttp
+import os
+import re
+import time
+import ipaddress
+import json
+import tempfile
+import random
+import asyncio
+import aiohttp
 from random import randint, uniform
 from lxml import html
 from urllib.parse import quote
 from collections import OrderedDict
 from http.client import responses
 from PIL import Image
+from typing import Optional, Union
 
 liquid_command_enabled = True
 
@@ -18,7 +26,7 @@ try:
     import wand, wand.color, wand.drawing
 
 except Exception as e:
-    print("{}\nDisabling liquid command.".format(e))
+    print(f"{e}\nDisabling liquid command.")
     liquid_command_enabled = False
 
 class Fun:
@@ -47,7 +55,7 @@ class Fun:
                       pass_context=True,
                       enabled=liquid_command_enabled)
     @commands.cooldown(2, 5, commands.BucketType.channel)
-    async def liquid(self, ctx, url : str=""):
+    async def liquid(self, ctx, url: str = ""):
         try:
             message = ctx.message
             
@@ -85,9 +93,9 @@ class Fun:
             await self.bot.messaging.error_alert(e)
             
     # finds the last image sent from a message
-    # input: message; discord.Message; the message the user sent and where to start the search
-    # output: str or None; path to the downloaded file or none if the download failed
-    async def find_and_download_image(self, message):       
+    # input: message, the message the user sent and where to start the search
+    # output: path to the downloaded file or None if the download failed
+    async def find_and_download_image(self, message: discord.Message) -> Optional[str]:
         if (message.attachments):
             url = message.attachments[0]["url"]
         else:
@@ -105,15 +113,15 @@ class Fun:
         if (isinstance(path, enums.ImageCodes)):
             await self.image_error_message(message, path, url)
             return
-        else:
-            return path
+        
+        return path
         
     # save an image file with a new filename and upload it to a discord channel
-    # input: message; discord.Message; command message
-    #        path; str; path to the original downloaded file
-    #        image; PIL.Image; edited image file currently open
-    #        url; str; the url of the original image that was downloaded
-    async def save_and_upload(self, message, path, image, url):
+    # input: message, command message
+    #        path, path to the original downloaded file
+    #        image, edited image file currently open
+    #        url, the url of the original image that was downloaded
+    async def save_and_upload(self, message: discord.Message, path: str, image: Image, url: str) -> None:
         file_path = os.path.splitext(path)[0]
         edited_file_path = file_path + "_edited.png"
         
@@ -137,10 +145,10 @@ class Fun:
         utils.remove_file_safe(edited_file_path)
             
     # message the user an error if liquidizing fails
-    # input: message; discord.Message; message to reply to
-    #        code; ImageCodes; the error code
-    #        url; string; the url that was attempted to be liquidized
-    async def image_error_message(self, message, code, url=""):
+    # input: message, message to reply to
+    #        code, the error code
+    #        url, the url that was attempted to be liquidized
+    async def image_error_message(self, message: discord.Message, code: enums.ImageCodes, url: str = "") -> None:
         if (code == enums.ImageCodes.MISC_ERROR):
             await self.bot.messaging.reply(message, "Image error")
         elif (code == enums.ImageCodes.MAX_FILESIZE):
@@ -155,11 +163,11 @@ class Fun:
             await self.bot.messaging.reply(message, "Missing attach file permissions, can't upload image file")
     
     # download an image from a url and save it as a temp file
-    # input: url; string; image to download
-    #        simulate; bool=False; should the image be downloaded or only checked to see if it's valid
+    # input: url, image to download
+    #        simulate, should the image be downloaded or only checked to see if it's valid
     # output: if successful: string; path to temp file;
     #         if unsuccessful: ImageCodes; error code
-    async def download_image(self, url, simulate=False):
+    async def download_image(self, url: str, simulate: bool = False) -> Union[str, enums.ImageCodes]:
         # check for private ip
         try:
             ip = ipaddress.ip_address(url)
@@ -243,10 +251,10 @@ class Fun:
         return enums.ImageCodes.MISC_ERROR
     
     # liquify image
-    # input: channel; discord.Channel; the channel to send the image in
-    #        url; string; the url of the image to download and liquify
-    # output: int; return code of the operation
-    async def do_magic(self, channel, path):
+    # input: channel, the channel to send the image in
+    #        path, path to the image to liquify
+    # output: return code of the operation
+    async def do_magic(self, channel: discord.Channel, path: str) -> enums.ImageCodes:
         try:
             # get a wand image object
             img = wand.image.Image(filename=path)
@@ -318,7 +326,7 @@ class Fun:
                       brief="random number generator, supports hex/floats",
                       pass_context=True)
     @commands.cooldown(2, 5, commands.BucketType.channel)
-    async def random(self, ctx, low : str, high : str):
+    async def random(self, ctx, low: str, high: str):
         message = ctx.message
                 
         base = 10
@@ -383,7 +391,7 @@ class Fun:
                       pass_context=True,
                       aliases=["image"])
     @commands.cooldown(2, 5, commands.BucketType.channel)
-    async def img(self, ctx, *, query : str):
+    async def img(self, ctx, *, query: str):
         channel = ctx.message.channel
         await self.bot.send_typing(channel)
         
@@ -432,9 +440,9 @@ class Fun:
         self.SEARCH_CACHE[img_msg.id] = {"images": images, "index": 0, "time": time.time(), "command_msg": ctx.message, "channel": channel}
 
     # gets an image url from a dict
-    # input: image_dict; str; dictionary in string form containing info from google image search
-    # output: str or None; url of the image if valid or None if invalid
-    def extract_image_url(self, image_dict):
+    # input: image_dict, dictionary in string form containing info from google image search
+    # output: url of the image if valid or None if invalid
+    def extract_image_url(self, image_dict: str) -> Optional[str]:
         try:
             image_dict = json.loads(image_dict)
             
@@ -447,9 +455,9 @@ class Fun:
         return image_dict["ou"]
     
     # checks if an image is one discord can embed
-    # input: image_url; str; url of image
-    # output: str or None; url of the image or None if invalid
-    async def validate_image(self, image_url):
+    # input: image_url, url of image
+    # output: url of the image or None if invalid
+    async def validate_image(self, image_url: str) -> Optional[str]:
         result = await self.download_image(image_url, simulate=True)
         
         if (result == enums.ImageCodes.SUCCESS):
@@ -458,10 +466,10 @@ class Fun:
         return None
                 
     # edits a message with the new embed
-    # input: user; discord.Member; the user who originally requested the image search
-    #        message; discord.Message; the message to edit
-    #        i; int=1; the index modifier, which direction to display images in, forwards or backwards from current index, can be 1 or -1
-    async def update_img_search(self, user, message, i=1):
+    # input: user, the user who originally requested the image search
+    #        message, the message to edit
+    #        i, the index modifier, which direction to display images in, forwards or backwards from current index, can be 1 or -1
+    async def update_img_search(self, user: discord.User, message: discord.Message, i: int = 1) -> None:
         if (message.id not in self.SEARCH_CACHE):
             return
         
@@ -506,8 +514,8 @@ class Fun:
             self.SEARCH_CACHE[msg.id] = {"images": images, "index": index, "time": time.time(), "command_msg": command_msg, "channel": channel}
         
     # remove an image from the cache and prevent it from being scrolled
-    # input: message; discord.Message; message to clear
-    async def remove_img_from_cache(self, message):
+    # input: message, message to remove
+    async def remove_img_from_cache(self, message: discord.Message) -> None:
         try:
             del self.SEARCH_CACHE[message.id]
         except KeyError:
@@ -519,8 +527,8 @@ class Fun:
             pass
         
     # deletes an embed and removes it from the cache
-    # input: message; discord.Message; the message to delete
-    async def remove_img_search(self, message):
+    # input: message, the message to delete
+    async def remove_img_search(self, message: discord.Message) -> None:
         try:
             await self.bot.bot_utils.delete_message(self.SEARCH_CACHE[message.id]["command_msg"])
             del self.SEARCH_CACHE[message.id]
@@ -531,9 +539,9 @@ class Fun:
         await self.bot.bot_utils.delete_message(message)
         
     # handles reactions and calls appropriate functions
-    # input: reaction; discord.Reaction; the reaction applied to the message
-    #        user; discord.Member; the user that applied the reaction
-    async def image_search_reaction_hook(self, reaction, user):
+    # input: reaction, the reaction applied to the message
+    #        user, the user that applied the reaction
+    async def image_search_reaction_hook(self, reaction: discord.Reaction, user: discord.User) -> None:
         message = reaction.message
           
         if (user == self.bot.user):
@@ -561,7 +569,7 @@ class Fun:
                     elif (emoji == self.bot.messaging.EMOJI_CHARS["arrow_backward"]):
                         await self.update_img_search(user, message, -1) # decrement index
                         
-    async def remove_inactive_image_searches(self):
+    async def remove_inactive_image_searches(self) -> None:
         await self.bot.wait_until_ready()
         
         while (not self.bot.is_closed):
@@ -597,7 +605,7 @@ class Fun:
                       aliases=["rev"],
                       enabled=False)
     @commands.cooldown(1, 5, commands.BucketType.channel)
-    async def reverse(self, ctx, *, query : str=""):
+    async def reverse(self, ctx, *, query: str = ""):
         message = ctx.message
         
         await self.bot.send_typing(message.channel)
@@ -648,10 +656,10 @@ class Fun:
                 await self.bot.messaging.bot.send_message(message.channel, embed=embed)
                 
     # pixelates image
-    # input: message; discord.Message, command message
-    #        pixel_size; inthow much to pixelate the image
-    #        url; str; url of the image to download
-    async def do_pixel(self, message, pixel_size, url):
+    # input: message, command message
+    #        pixel_size, how much to pixelate the image
+    #        url, url of the image to download
+    async def do_pixel(self, message: discord.Message, pixel_size: int, url: str) -> None:
         if (not url):
             path = await self.find_and_download_image(message)
         else:
@@ -695,7 +703,7 @@ class Fun:
                       pass_context=True,
                       aliases=["pix"])
     @commands.cooldown(2, 5, commands.BucketType.channel)
-    async def pixelate(self, ctx, pixel_size : int=5, *, url : str=""):
+    async def pixelate(self, ctx, pixel_size: int = 5, *, url: str = "") -> None:
         if (pixel_size < 1):
             await self.bot.messaging.reply(ctx.message, "Pixel size must be at least 1")
             return
@@ -709,7 +717,8 @@ class Fun:
     @commands.command(description="ask the magic 8 ball something",
                       brief="ask the magic 8 ball something",
                       pass_context=True,
-                      aliases=["8b", "8", "8ball"])
+                      name="8ball",
+                      aliases=["8b", "8"])
     @commands.cooldown(2, 5, commands.BucketType.user)
     async def magic8ball(self, ctx):
         choice = random.choice(self.magic8ball_choices)
@@ -720,7 +729,7 @@ class Fun:
                       pass_context=True,
                       aliases=["gpseed"])
     @commands.cooldown(2, 5, commands.BucketType.channel)
-    async def gspeed(self, ctx, image : str=""):
+    async def gspeed(self, ctx, image: str = ""):
         if (not image):
             path = await self.find_and_download_image(ctx.message)
         else:
@@ -768,9 +777,10 @@ class Fun:
 
     @commands.command(description="annoys someone (owner only)",
                     brief="annoys someone (owner only)",
-                    pass_context=True)
+                    pass_context=True,
+                    hidden=True)
     @commands.check(checks.is_owner)
-    async def annoy(self, ctx, user : discord.User, amount : int=10):
+    async def annoy(self, ctx, user: discord.User, amount: int = 10):
         await self.bot.bot_utils.delete_message(ctx.message)
 
         for _i in range(amount):
@@ -779,9 +789,10 @@ class Fun:
 
     @commands.command(description="scrambles someone out of a voice channel (owner only)",
                       brief="scrambles someone out of a voice channel (owner only)",
-                      pass_context=True)
+                      pass_context=True,
+                      hidden=True)
     @commands.check(checks.is_owner)
-    async def scramble(self, ctx, user : discord.User, amount : int=5):
+    async def scramble(self, ctx, user: discord.User, amount: int = 5):
         await self.bot.bot_utils.delete_message(ctx.message)
 
         old_channel = user.voice_channel

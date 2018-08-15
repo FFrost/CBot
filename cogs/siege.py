@@ -1,9 +1,11 @@
 import discord
 from discord.ext import commands
 
-import asyncio, aiohttp
+import asyncio
+import aiohttp
 import datetime
 import time
+from typing import Optional
 
 class Siege:
     def __init__(self, bot):
@@ -24,7 +26,7 @@ class Siege:
                       pass_context=True,
                       aliases=["r6s", "r6stats"])
     @commands.cooldown(1, 5, commands.BucketType.server)
-    async def siege(self, ctx, username : str, stats_selection : str="overall", platform : str="uplay"):
+    async def siege(self, ctx, username: str, stats_selection: str = "overall", platform: str = "uplay"):
         stats_options = ["overall", "ranked", "casual", "all"]
         if (stats_selection not in stats_options):
             await self.bot.messaging.reply(ctx.message, "Invalid stat selection `{}`, options are: {}".format(stats_selection,
@@ -94,7 +96,7 @@ class Siege:
         if (not success):
             await self.bot.messaging.reply(ctx.message, "Failed to find `{}` stats for `{}` on `{}`".format(stats_selection, username, platform))
 
-    async def remove_siege_cache(self):
+    async def remove_siege_cache(self) -> None:
         await self.bot.wait_until_ready()
         
         while (not self.bot.is_closed):
@@ -113,7 +115,7 @@ class Siege:
             #await asyncio.sleep(self.bot.CONFIG["SIEGE_CACHE_TIME"] // 2)
             await asyncio.sleep(10)
 
-    async def get_player(self, username, platform="uplay"):
+    async def get_player(self, username: str, platform: str = "uplay") -> Optional[dict]:
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.get(self.base_url + "players/{}?platform={}".format(username, platform)) as r:
@@ -122,7 +124,7 @@ class Siege:
         except Exception:
             return None
 
-    async def create_siege_embed(self, user, data, stats_selection="overall"):
+    async def create_siege_embed(self, user: discord.User, data: dict, stats_selection: str = "overall") -> discord.Embed:
         stats = data["stats"]
 
         embed = discord.Embed()

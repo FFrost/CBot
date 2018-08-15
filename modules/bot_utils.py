@@ -1,8 +1,10 @@
 import discord
+from discord.ext import commands
 
 from modules import utils
 
 import asyncio
+from typing import Optional, List
 
 """
 this file is for utility functions that require access to discord
@@ -12,49 +14,47 @@ class BotUtils:
     def __init__(self, bot):
         self.bot = bot
     
-    # add real filepath to relative filepath when writing a file
-    # input: filename; string; filename to write to
-    #        mode; string; what mode to open the file in, r, w, or a
-    #        string; string; what should be written
-    #        add_time; bool; if should the current time be prepended
-    def write_to_file(self, filename, mode, string, add_time=False):
+    # writes to a file
+    # input: filename, filename to write to
+    #        mode, what mode to open the file in, r, w, or a
+    #        string, what should be written
+    #        add_time, if should the current time be prepended
+    def write_to_file(self, filename: str, mode: str, string: str, add_time: bool = False) -> None:
         if (add_time):
-            string = "[{}] {}".format(utils.get_cur_time(), string)
+            string = f"[{utils.get_cur_time()}] {string}"
         
-        with open(self.bot.REAL_PATH + "/" + filename, mode) as f:            
-            f.write(string + "\n")
+        with open(filename, mode) as f:
+            f.write(f"{string}\n")
         
     # logs an error to file
-    # input: error; string; the error to write
-    def log_error_to_file(self, error, prefix=""):
+    def log_error_to_file(self, error: str, prefix: str = "") -> None:
         if (prefix):
-            error = "[{}] {}".format(prefix, error)
+            error = f"[{prefix}] {error}"
 
         self.write_to_file(self.bot.ERROR_FILEPATH, "a", error, add_time=True)
         
-    # prints message
-    # input: message; discord.Message; message to print
-    async def output_log(self, message):
+    # prints a message
+    async def output_log(self, message: discord.Message) -> None:
         try:
             print(utils.format_log_message(message))
         
         except Exception as e:
             await self.bot.messaging.error_alert(e, extra="on_command")
     
-    # find a user by full or partial name or id
-    # input: name; string; keyword to search usernames for
-    # output: discord.User or None; found user or None if no users were found  
-    async def find(self, name):
+    # finds a user by full or partial name or id
+    # input: name, keyword to search usernames for
+    # output: found user or None if no users were found  
+    async def find(self, name: str) -> Optional[discord.User]:
         if (not name):
-            return
+            return None
         
         return discord.utils.find(lambda m: (m.name.lower().startswith(name.lower()) or m.id == name), self.bot.get_all_members())
     
-    # get channel by name
-    # input: name; string; keyword to search channel names for
-    #        server; discord.Server; server to search for the channel
-    # output: discord.Channel or None; channel object matching search or None if no channels were found
-    def find_channel(self, name, server):
+    # gets a channel by name
+    # input: name, keyword to search channel names for
+    #        server,  server to search for the channel
+    # output: channel object matching search or None if no channels were found
+    def find_channel(self, name: str, server: discord.Server) -> Optional[discord.Channel]:
         if (not server):
             return None
         
@@ -62,10 +62,10 @@ class BotUtils:
         return discord.utils.get(self.bot.get_all_channels(), server__name=server, name=name)
     
     # find last embed in channel
-    # input: channel; discord.Channel; channel to search for embeds
-    #        embed_type; string; type of embed to search for, video or image
-    # output: string or None; url of the embed or None if not found
-    async def find_last_embed(self, channel, embed_type):
+    # input: channel, channel to search for embeds
+    #        embed_type, type of embed to search for, video or image
+    # output: url of the embed or None if not found
+    async def find_last_embed(self, channel: discord.Channel, embed_type: str) -> Optional[str]:
         async for message in self.bot.logs_from(channel):
             embed = utils.find_image_embed(message)
     
@@ -75,9 +75,9 @@ class BotUtils:
         return None
     
     # finds last image in channel
-    # input: message; discord.Message; message from which channel will be extracted and point to search before
-    # output: string or None; url of image found or None if no images were found
-    async def find_last_image(self, message):
+    # input: message, message from which channel will be extracted and point to search before
+    # output: url of image found or None if no images were found
+    async def find_last_image(self, message: discord.Message) -> Optional[str]:
         channel = message.channel
         
         async for message in self.bot.logs_from(channel, before=message):
@@ -94,17 +94,17 @@ class BotUtils:
         return None
     
     # finds last text message in channel
-    # input: message; discord.Message; message from which channel will be used as point to search before
-    # output: string or None; text of message or None if no text messages were found
-    async def find_last_text(self, message):
+    # input: message, message from which channel will be used as point to search before
+    # output: text of message or None if no text messages were found
+    async def find_last_text(self, message: discord.Message) -> Optional[str]:
         async for message in self.bot.logs_from(message.channel, before=message):
             if (message.content):
                 return message.content
             
     # finds last youtube video embed in channel
-    # input: message; discord.Message; message from which channel will be used as point to search before
-    # output: string or None; url of youtube embed or None if no youtube video embeds were found
-    async def find_last_youtube_embed(self, message):
+    # input: message, message from which channel will be used as point to search before
+    # output: url of youtube embed or None if no youtube video embeds were found
+    async def find_last_youtube_embed(self, message: discord.Message) -> Optional[str]:
         async for message in self.bot.logs_from(message.channel, before=message, limit=50):
             if (message.embeds):            
                 for embed in message.embeds:
@@ -116,27 +116,30 @@ class BotUtils:
                                 return embed["url"]
 
     # finds the last message sent before the command message
-    # input: message; discord.Message; the message to search before
-    # output: discord.Message; the message if found
-    async def find_last_message(self, message):
+    # input: message, the message to search before
+    # output: the message if found or None
+    async def find_last_message(self, message: discord.Message) -> Optional[discord.Message]:
         async for message in self.bot.logs_from(message.channel, before=message, limit=1):
             return message
+
+        return None
             
     # get bot's permissions in a channel
-    # input: channel; discord.Channel; channel to get permissions from
-    # output: discord.Permissions; permissions in the channel
-    def get_permissions(self, channel, user=None):
+    # input: channel, channel to get permissions from
+    # output: permissions in the channel
+    def get_permissions(self, channel: discord.Channel, user: discord.User = None) -> discord.Permissions:
         if (channel.is_private):
             return discord.Permissions.all_channel()
         
-        if (user == self.bot.user or not user):
+        if (not user or user == self.bot.user):
             user = channel.server.me # needs member version of bot
         
         return user.permissions_in(channel)
     
     # deletes a message if the bot has permission to do so
-    # input: message; discord.Message; message to delete
-    async def delete_message(self, message):
+    # input: message, message to delete
+    # output: success of the operation
+    async def delete_message(self, message: discord.Message) -> bool:
         channel = message.channel
                 
         if (channel.is_private and message.author != self.bot.user):
@@ -152,11 +155,11 @@ class BotUtils:
         return False
             
     # deletes a number messages from a channel by user
-    # input: ctx; discord.Context; context to reference
-    #        num_to_delete; int; number of messages to delete
-    #        users; list or None; list of users to delete messages from or None to delete regardless of author
-    # output: int; number of messages successfully deleted
-    async def purge(self, ctx, num_to_delete, users):
+    # input: ctx, context to reference
+    #        num_to_delete, number of messages to delete
+    #        users, list of users to delete messages from or None to delete regardless of author
+    # output: number of messages successfully deleted
+    async def purge(self, ctx: commands.Context, num_to_delete: int, users: List[discord.User]) -> int:
         num_to_delete = abs(num_to_delete)
         num_deleted = 0
     
@@ -173,9 +176,9 @@ class BotUtils:
         return num_deleted
     
     # find a server from the ones we are currently in
-    # input: search; str; string to search for, either part/all of server name or index in list of servers
-    # output: discord.Server or None; the server if found or None
-    def find_server(self, search):
+    # input: search, string to search for, either part/all of server name or index in list of servers
+    # output: the server if found or None
+    def find_server(self, search: str) -> Optional[discord.Server]:
         servers = list(self.bot.servers)
         server = None
         

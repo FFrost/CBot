@@ -1,7 +1,12 @@
 import discord
 
-import os, datetime, time, re
-import asyncio, aiohttp
+import os
+import datetime
+import time
+import re
+import asyncio
+import aiohttp
+from typing import Optional, Union
 
 """
 this file is for utility functions that do NOT require access to discord,
@@ -9,20 +14,20 @@ e.g. general utility functions
 """
 
 # format current time
-def get_cur_time():
+def get_cur_time() -> str:
     return "{:%m/%d/%y %H:%M:%S}".format(datetime.datetime.now())
 
 # format current date
-def get_date():
+def get_date() -> str:
     return "{:%m-%d-%y}".format(datetime.datetime.now())
 
-def format_time(datetime_obj):
+def format_time(datetime_obj: datetime.datetime) -> str:
     return datetime_obj.strftime("%H:%M on %-m/%-d/%Y")
 
 # format message to log
-# input: message; discord.Message; message to format to be output
-# output: string; formatted string of message content
-def format_log_message(message):
+# input: message, message to format to be output
+# output: formatted string of message content
+def format_log_message(message: discord.Message) -> str:
     content = message.clean_content
     server_name = ("[{}]".format(message.server.name)) if message.server else ""
     
@@ -34,9 +39,9 @@ def format_log_message(message):
                                                                     message=content)
     
 # find last attachment in message
-# input: message; discord.Message; message to search for attachments
-# output: string or None; url of the attachment or None if not found
-def find_attachment(message):
+# input: message, message to search for attachments
+# output: url of the attachment or None if not found
+def find_attachment(message: discord.Message) -> Optional[str]:
     if (message.attachments):
         for attach in message.attachments:
             if (attach):
@@ -45,9 +50,9 @@ def find_attachment(message):
     return None
 
 # find last embed in message
-# input: message; discord.Message; message to search for image embeds
-# output: string or None; url of the embed or None if not found
-def find_image_embed(message): # video, image
+# input: message, message to search for image embeds
+# output: url of the embed or None if not found
+def find_image_embed(message: discord.Message) -> Optional[str]:
     if (message.embeds):            
         for embed in message.embeds:
             if (embed):
@@ -59,19 +64,26 @@ def find_image_embed(message): # video, image
     return None
 
 # format member name as user#discriminator
-# input: user; discord.User; the user to format
-# output: string; formatted string in the form username#discriminator (ex. CBot#8071)
-def format_member_name(user):
+# input: user, the user to format
+# output: formatted string in the form username#discriminator (ex. CBot#8071)
+def format_member_name(user: discord.User) -> str:
     return "{}#{}".format(user.name, user.discriminator)
             
-# creates a discord.Embed featuring an image
-# input: user; discord.Member; the author of the embed
-#        title; string=""; the title of the embed
-#        footer; string=""; the footer of the embed
-#        image; string=""; url of the image to embed
-#        color; discord.Color; the color of the embed
-# output: embed; discord.Embed; the generated embed
-def create_image_embed(user, title="", description="", footer="", image="", thumbnail="", color=discord.Color.blue()):
+# creates an embed featuring an image
+# input: user, the author of the embed
+#        title, the title of the embed
+#        footer, the footer of the embed
+#        image, url of the image to embed
+#        color, the color of the embed
+# output: the generated embed
+def create_image_embed(user: discord.Member,
+                       title: str = "",
+                       description: str = "",
+                       footer: str ="",
+                       image: str ="",
+                       thumbnail: str ="",
+                       color: discord.Color = discord.Color.blue()
+                       ) -> discord.Embed:
     embed = discord.Embed()
     
     embed.title = title
@@ -94,11 +106,11 @@ def create_image_embed(user, title="", description="", footer="", image="", thum
     
     return embed
 
-# creates a discord.Embed with an embedded YouTube video
-# input: info; dict; youtube-dl dict of extracted info from the video
-#        user; discord.User; the user who requested the video
-# output: embed; discord.Embed; generated video embed
-def create_youtube_embed(info, user=None):
+# creates an embed with info about a youtube video
+# input: info, youtube-dl dict of extracted info from the video
+#        user, the user who requested the video
+# output: the generated embed
+def create_youtube_embed(info: dict, user: discord.User = None) -> discord.Embed:
     if ("entries" in info.keys()):
         info = info["entries"][0]
     
@@ -143,11 +155,11 @@ def create_youtube_embed(info, user=None):
 
     return embed
 
-# creates a discord embed from a youtube-dl extractor dict
-# input: info; dict; youtube-dl dict of extracted info from the song
-#        user; discord.User; the user who requested the song
-# output: embed; discord.Embed; formatted song info embed
-def create_soundcloud_embed(info, user=None):
+# creates an embed from a youtube-dl extractor dict containing info about a soundcloud song
+# input: info, youtube-dl dict of extracted info from the song
+#        user, the user who requested the song
+# output: formatted song info embed
+def create_soundcloud_embed(info: dict, user: discord.User = None) -> discord.Embed:
     if ("entries" in info.keys()):
         info = info["entries"][0]
 
@@ -157,7 +169,6 @@ def create_soundcloud_embed(info, user=None):
             "thumbnail": {
                 "url": info["thumbnail"]
                 },
-            #"description": "\n".join(info["description"][:140].split("\n")[:3]).strip() + ("..." if len(info["description"]) > 140 else "")
             "description": cap_string_and_ellipsis(info["description"])
            }
     
@@ -173,10 +184,10 @@ def create_soundcloud_embed(info, user=None):
     return embed
 
 # creates an embed with information about a game
-# input: info; dict; custom dict created from Utility.game that contains info from a google search
-#        user; discord.User; user who requested the search
-# output: discord.Embed; the formatted embed
-def create_game_info_embed(info, user=None):
+# input: info, custom dict created from Utility.game that contains info from a google search
+#        user, user who requested the search
+# output: the generated embed
+def create_game_info_embed(info: dict, user: discord.User = None) -> discord.Embed:
     embed = discord.Embed()
     
     embed.title = info["title"]
@@ -201,11 +212,11 @@ def create_game_info_embed(info, user=None):
 
 # check if a url matches a youtube url format
 # thanks to stack overflow (https://stackoverflow.com/a/19161373)
-def youtube_url_validation(url):
+def youtube_url_validation(url: str) -> Union[str, re.match, None]:
     youtube_regex = (
         r'(https?://)?(www\.)?'
-        '(youtube|youtu|youtube-nocookie)\.(com|be)/'
-        '(watch\?v=|embed/|v/|.+\?v=)?([^&=%\?]{11})')
+        r'(youtube|youtu|youtube-nocookie)\.(com|be)/'
+        r'(watch\?v=|embed/|v/|.+\?v=)?([^&=%\?]{11})')
 
     youtube_regex_match = re.match(youtube_regex, url)
     if youtube_regex_match:
@@ -216,15 +227,15 @@ def youtube_url_validation(url):
 # 'safely' remove a file
 # TODO: not that safe, sanity check path / dir just to be safe... we don't want people ever abusing this
 #       os.remove only raises OSError?
-# input: filename; string; filename to remove
-def remove_file_safe(filename):
+# input: filename, filename to remove
+def remove_file_safe(filename: str) -> None:
     if (os.path.exists(filename)):
         os.remove(filename)
         
 # format youtube_dl error to inform user of what occured
-# input: e; str; the error
-# output: str; formatted error removing "YouTube said: " or original error
-def extract_yt_error(e):
+# input: e, the error
+# output: formatted error removing "YouTube said: " or original error
+def extract_yt_error(e: str) -> str:
     e = str(e)    
     err_to_look_for = "YouTube said:"
     
@@ -246,16 +257,16 @@ def extract_yt_error(e):
 
 # limits the length of a string and appends "..." if the string is longer than the length
 # if the string is
-# input: s; str; the string
-#        length; int; the length to cap the string at
-#        num_lines; int; the number of lines to use if the string is more than 1 line
-# output: str; capped string
+# input: s, the string
+#        length, the length to cap the string at
+#        num_lines, the number of lines to use if the string is more than 1 line
+# output: capped string
 # sample input: "hello i am an example string", 20
 # sample output: "hello i am an exampl..."
-def cap_string_and_ellipsis(s, length=140, num_lines=3):
+def cap_string_and_ellipsis(s: str, length: int = 140, num_lines: int = 3) -> str:
     return "\n".join(s[:length].split("\n")[:num_lines]).strip() + ("..." if len(s) > length else "")
 
-def list_of_pairs_to_dict(obj):
+def list_of_pairs_to_dict(obj: list) -> dict:
     ret = {}
 
     for pair in obj:

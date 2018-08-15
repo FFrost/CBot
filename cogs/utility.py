@@ -4,7 +4,8 @@ from discord.ext import commands
 from modules import checks, utils
 
 import json
-import asyncio, aiohttp
+import asyncio
+import aiohttp
 import requests
 import time
 from lxml import html
@@ -20,7 +21,7 @@ class Utility:
         
     @commands.command(description="info about a Discord user", brief="info about a Discord user", pass_context=True)
     @commands.cooldown(1, 5, commands.BucketType.user)
-    async def info(self, ctx, *, name : str=""):
+    async def info(self, ctx, *, name: str = ""):
         embed = discord.Embed()
 
         if (ctx.message.mentions):
@@ -75,7 +76,7 @@ class Utility:
         
     @commands.command(description="get a user's avatar", brief="get a user's avatar", pass_context=True)
     @commands.cooldown(2, 5, commands.BucketType.user)
-    async def avatar(self, ctx, *, name : str=""):
+    async def avatar(self, ctx, *, name: str = ""):
         if (ctx.message.mentions):
             users = ctx.message.mentions
         elif (name):
@@ -98,7 +99,7 @@ class Utility:
                       pass_context=True)
     @commands.cooldown(1, 10, commands.BucketType.channel)
     @commands.check(checks.can_manage_messages)
-    async def purge(self, ctx, num_to_delete : int=1, user : str=""):
+    async def purge(self, ctx, num_to_delete: int = 1, user: str = ""):
         num_to_delete = abs(num_to_delete)
 
         if (num_to_delete > self.bot.CONFIG["MAX_PURGE"]):
@@ -140,7 +141,7 @@ class Utility:
                       brief="translates text into another language",
                       pass_context=True,
                       aliases=["tr"])
-    async def translate(self, ctx, language : str="en", *, string : str=""):
+    async def translate(self, ctx, language: str = "en", *, string: str = ""):
         language = language.lower().strip()
             
         if (language not in LANGUAGES.keys()):
@@ -168,7 +169,7 @@ class Utility:
                       brief="searches for info on a game",
                       pass_context=True,
                       enabled=False) # rate limited
-    async def gameinfo(self, ctx, *, query : str):
+    async def gameinfo(self, ctx, *, query: str):
         headers = {"User-Agent": "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/43.0.2357.134 Safari/537.36"}
         url = "https://www.google.com/search?q={}".format(quote(query))  # escape query for url
         
@@ -261,7 +262,7 @@ class Utility:
                  pass_context=True,
                  aliases=["sinfo"])
     @commands.cooldown(1, 5, commands.BucketType.server)
-    async def serverinfo(self, ctx, *, search : str=""):
+    async def serverinfo(self, ctx, *, search: str = ""):
         embed = discord.Embed()
         embed.set_author(name=ctx.message.author.name, icon_url=ctx.message.author.avatar_url)
         embed.color = discord.Color.dark_blue()
