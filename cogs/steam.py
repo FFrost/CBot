@@ -16,7 +16,7 @@ class Steam:
         self.bot = bot
         self.steam_api_key = self.bot.CONFIG["steam_api_key"]
 
-        self.steam_url_regex = re.compile(r"((https?:\/\/)(www.)?)?(steamcommunity.com\/(?P<type>id|profiles)\/(?P<id>[A-Za-z0-9]{2,32}))")
+        self.steam_url_regex = re.compile(r"((https?:\/\/)(www.)?)?(steamcommunity.com\/(?P<type>id|profiles)\/(?P<id>[A-Za-z0-9_-]{2,32}))")
 
     async def on_message(self, message: discord.Message):
         if (not self.bot.CONFIG["EMBEDS"]["ENABLED"] or not self.bot.CONFIG["EMBEDS"]["STEAM"]):
