@@ -30,5 +30,25 @@ DEFAULT_CONFIG = {
     },
 
     # can other people use the !invite command to invite the bot to their own servers
-    "BOT_CAN_BE_INVITED": True
+    "BOT_CAN_BE_INVITED": True,
+
+    # what channel should the bot send user join/leave log messages to, leave blank to disable
+    "LOG_CHANNEL": "admin",
+
+    # should the bot insult people who at it
+    "SHOULD_INSULT": True,
+
+    # should the bot reply to '^ this'
+    "SHOULD_THIS": True,
+
+    # should the bot automatically send embeds
+    "EMBEDS": {
+        "ENABLED": True,
+
+        # steam embeds when a profile is linked
+        "STEAM": True,
+
+        # amazon embeds when a product is linked
+        "AMAZON": True
+    }
 }

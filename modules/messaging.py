@@ -127,11 +127,14 @@ class Messaging:
     # input: msg, content of message to send
     #        server, server to send message in
     async def msg_admin_channel(self, msg: str, server: discord.Server) -> None:
+        if (not self.bot.CONFIG["LOG_CHANNEL"]):
+            return
+
         try:
             if (not server):
                 return
             
-            channel = self.bot.bot_utils.find_channel("admin", server)
+            channel = discord.utils.get(server.channels, name=self.bot.CONFIG["LOG_CHANNEL"], type=discord.ChannelType.text)
             
             if (not channel):
                 return
@@ -140,6 +143,9 @@ class Messaging:
                 return
     
             await self.bot.send_message(channel, msg)
+
+        except discord.errors.HTTPException:
+            return
         
         except Exception as e:
             await self.error_alert(e)

@@ -15,6 +15,9 @@ class Amazon:
         self.amazon_url_regex = re.compile(r"(https?:\/\/)?(www\.)?(amazon)\.(com|co\.uk|ca|de|fr|co\.jp|br|at|it|es|cn|nl|in)(\.(mx|au))?\/(\S)+", re.IGNORECASE)
 
     async def on_message(self, message):
+        if (not self.bot.CONFIG["EMBEDS"]["ENABLED"] or not self.bot.CONFIG["EMBEDS"]["AMAZON"]):
+            return
+        
         try:
             if (not message.content or not message.author):
                 return
@@ -26,7 +29,7 @@ class Amazon:
                     await self.bot.send_message(message.channel, embed=embed)
 
         except Exception as e:
-            await self.bot.bot_utils.log_error_to_file(e, prefix="Steam")
+            await self.bot.bot_utils.log_error_to_file(e, prefix="Amazon")
 
     def is_amazon_url(self, url: str) -> bool:
         return (self.amazon_url_regex.match(url) is not None)

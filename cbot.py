@@ -297,24 +297,22 @@ class CBot(commands.Bot):
             if (self.user in message.mentions and not message.mention_everyone and not message.content.startswith("!")):
                 await self.bot_utils.output_log(message)
                 
-                insult = await self.misc.get_insult()
-                an = "an" if (insult[0].lower() in "aeiou") else "a"
-                await self.messaging.reply(message, "you're {an} {insult}.".format(an=an, insult=insult))
+                if (self.CONFIG["SHOULD_INSULT"]):
+                    insult = await self.misc.get_insult()
+                    an = "an" if (insult[0].lower() in "aeiou") else "a"
+                    await self.messaging.reply(message, "you're {an} {insult}.".format(an=an, insult=insult))
             
             # respond to "^ this", "this", "^", etc.
-            if (message.content.startswith("^") or message.content.lower() == "this"):
-                if (message.content == "^" or "this" in message.content.lower()):
-                    this_msg = "^"
-                    
-                    if (randint(0, 100) < 50):
-                        this_msg = "^ this"
+            if (self.CONFIG["SHOULD_THIS"]):
+                if (message.content.startswith("^") or message.content.lower() == "this"):
+                    if (message.content == "^" or "this" in message.content.lower()):
+                        this_msg = "^"
                         
-                    await self.send_message(message.channel, this_msg)
-                    return
-                
-            if (message.content.lower().startswith("same")):
-                await self.send_message(message.channel, "same")
-                return
+                        if (randint(0, 100) < 50):
+                            this_msg = "^ this"
+                            
+                        await self.send_message(message.channel, this_msg)
+                        return
                 
             # TODO: reactions will go here
             
