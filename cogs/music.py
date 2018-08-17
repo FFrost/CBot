@@ -90,7 +90,7 @@ class VoiceState:
                   
             current_info = self.current.get_info()
             
-            if (current_info["extractor"] == "youtube:search"):
+            if (current_info["extractor"].startswith("youtube")):
                 embed = utils.create_youtube_embed(current_info, self.current.author)
             elif (current_info["extractor"] == "soundcloud"):
                 embed = utils.create_soundcloud_embed(current_info, self.current.author)

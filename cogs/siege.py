@@ -12,7 +12,7 @@ class Siege:
         self.bot = bot
 
         self.SIEGE_CACHE = {}
-        self.bot.loop.create_task(self.remove_siege_cache())
+        self.remove_siege_cache_task = self.bot.loop.create_task(self.remove_siege_cache())
 
         self.base_url = "https://api.r6stats.com/api/v1/"
 
@@ -20,6 +20,9 @@ class Siege:
                     "xone": "Xbox One",
                     "ps4": "PS4"
                     }
+
+    def __unload(self):
+        self.remove_siege_cache_task.cancel()
 
     @commands.command(description="finds Rainbow Six Siege stats for a user",
                       brief="finds Rainbow Six Siege stats for a user",

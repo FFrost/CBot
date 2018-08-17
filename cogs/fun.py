@@ -35,7 +35,7 @@ class Fun:
         
         self.SEARCH_CACHE = OrderedDict()
         
-        self.bot.loop.create_task(self.remove_inactive_image_searches())
+        self.remove_inactive_image_searches_task = self.bot.loop.create_task(self.remove_inactive_image_searches())
         
         self.magic8ball_choices = ["It is certain", "It is decidedly so",
                                    "Without a doubt", "Yes definitely",
@@ -48,6 +48,9 @@ class Fun:
                                    "My sources say no", "Outlook not so good",
                                    "Very doubtful"
                                    ]
+
+    def __unload(self):
+        self.remove_inactive_image_searches_task.cancel()
 
     # find images in message or attachments and pass to liquify function
     @commands.command(description="liquidizes an image",
