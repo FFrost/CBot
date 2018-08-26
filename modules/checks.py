@@ -9,15 +9,6 @@ owner_id = None
 def is_owner(ctx: commands.Context) -> bool:
     return (ctx.message.author.id == owner_id)
 
-# if the channel is private or the user has "manage messages" permissions
-def can_manage_messages(ctx: commands.Context) -> bool:
-    if (ctx.message.channel.is_private):
-        return True
-    elif (ctx.message.author.permissions_in(ctx.message.channel).manage_messages):
-        return True
-    
-    return False
-
 # if the message author is in a voice channel
 # TODO: permission check if we can join the channel
 def is_in_voice_channel(ctx: commands.Context) -> bool:

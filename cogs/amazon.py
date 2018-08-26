@@ -15,7 +15,7 @@ class Amazon:
         self.amazon_url_regex = re.compile(r"(https?:\/\/)?(www\.)?(amazon)\.(com|co\.uk|ca|de|fr|co\.jp|br|at|it|es|cn|nl|in)(\.(mx|au))?\/(\S)+", re.IGNORECASE)
 
     async def on_message(self, message):
-        if (not self.bot.CONFIG["EMBEDS"]["ENABLED"] or not self.bot.CONFIG["EMBEDS"]["AMAZON"]):
+        if (not self.bot.CONFIG["embeds"]["enabled"] or not self.bot.CONFIG["embeds"]["amazon"]):
             return
         
         try:

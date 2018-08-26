@@ -480,7 +480,7 @@ class Fun:
         
         last_time = cached_msg["time"]
         
-        if (time.time() < last_time + self.bot.CONFIG["IMAGESEARCH_COOLDOWN_BETWEEN_UPDATES"]):
+        if (time.time() < last_time + self.bot.CONFIG["image_search"]["cooldown_between_updates"]):
             return
         
         images = cached_msg["images"]
@@ -580,7 +580,7 @@ class Fun:
                 search_cache_copy = self.SEARCH_CACHE.copy()
                 
                 for message_id, cache in search_cache_copy.items():
-                    if (time.time() > cache["time"] + self.bot.CONFIG["IMAGESEARCH_TIME_TO_WAIT"]):
+                    if (time.time() > cache["time"] + self.bot.CONFIG["image_search"]["time_to_wait"]):
                         try:
                             msg = await self.bot.get_message(cache["channel"], message_id)
                             
@@ -594,7 +594,7 @@ class Fun:
             except Exception as e:
                 self.bot.bot_utils.log_error_to_file(e)
             
-            #await asyncio.sleep(self.bot.CONFIG["IMAGESEARCH_TIME_TO_WAIT"] // 2)
+            #await asyncio.sleep(self.bot.CONFIG["image_search"]["time_to_wait"] // 2)
             await asyncio.sleep(20)
                         
     async def on_reaction_add(self, reaction, user):
@@ -820,7 +820,7 @@ class Fun:
     @commands.cooldown(1, 10, commands.BucketType.user)
     async def what(self, ctx):
         if (not ctx.invoked_subcommand):
-            await self.bot.messaging.reply("Invalid command")
+            await self.bot.messaging.reply(ctx.message, "Invalid command")
        
 def setup(bot):
     bot.add_cog(Fun(bot))

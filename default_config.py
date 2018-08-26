@@ -5,50 +5,63 @@ DEFAULT_CONFIG = {
     # api key for steam (https://steamcommunity.com/dev/apikey)
     "steam_api_key": "",
 
-    # time in seconds to wait before removing inactive image searches
-    "IMAGESEARCH_TIME_TO_WAIT": 60,
+    # image search options
+    "image_search": {
+        # time in seconds to wait before removing inactive image searches
+        "time_to_wait": 60,
 
-    # cooldown in seconds in between editing the image search embed when scrolling between pages
-    "IMAGESEARCH_COOLDOWN_BETWEEN_UPDATES": 1,
+        # cooldown in seconds in between editing the image search embed when scrolling between pages
+        "cooldown_between_updates": 1,
+    },
 
     # max number of messages to purge at once
-    "MAX_PURGE": 20,
-
-    # how long to keep siege stats cached in seconds
-    "SIEGE_CACHE_TIME": 120,
+    "max_purge": 20,
 
     # youtube-dl options
-    "YOUTUBEDL": {
+    "youtube-dl": {
         # enable the youtube-dl command to let users download mp3s using the bot
-        "ENABLED": True,
+        "enabled": True,
 
         # max video length in seconds, any video longer than this will be ignored
-        "MAX_VIDEO_LENGTH": 1800,
+        "max_video_length": 1800,
 
         # where to temporarily store the downloaded mp3s
-        "DOWNLOAD_DIRECTORY": "/tmp/cbot"
+        "download_directory": "/tmp/cbot"
     },
 
     # can other people use the !invite command to invite the bot to their own servers
-    "BOT_CAN_BE_INVITED": True,
+    "bot_can_be_invited": True,
 
     # what channel should the bot send user join/leave log messages to, leave blank to disable
-    "LOG_CHANNEL": "admin",
+    "log_channel": "admin",
 
     # should the bot insult people who at it
-    "SHOULD_INSULT": True,
+    "should_insult": True,
 
     # should the bot reply to '^ this'
-    "SHOULD_THIS": True,
+    "should_this": True,
 
     # should the bot automatically send embeds
-    "EMBEDS": {
-        "ENABLED": True,
+    "embeds": {
+        "enabled": True,
 
         # steam embeds when a profile is linked
-        "STEAM": True,
+        "steam": True,
 
         # amazon embeds when a product is linked
-        "AMAZON": True
+        "amazon": True
+    },
+
+    # siege cog options
+    "siege": {
+        # how long to keep siege stats cached in seconds
+        "cache_time": 120,
+
+        # email and password for uplay account, used to get ticket
+        "email": "",
+        "password": "",
+
+        # base64 encoded string "email:password" used for ubisoft api
+        "ticket": ""
     }
 }

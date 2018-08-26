@@ -19,7 +19,7 @@ class Steam:
         self.steam_url_regex = re.compile(r"((https?:\/\/)(www.)?)?(steamcommunity.com\/(?P<type>id|profiles)\/(?P<id>[A-Za-z0-9_-]{2,32}))")
 
     async def on_message(self, message: discord.Message):
-        if (not self.bot.CONFIG["EMBEDS"]["ENABLED"] or not self.bot.CONFIG["EMBEDS"]["STEAM"]):
+        if (not self.bot.CONFIG["embeds"]["enabled"] or not self.bot.CONFIG["embeds"]["steam"]):
             return
         
         try:

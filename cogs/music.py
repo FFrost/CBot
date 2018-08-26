@@ -117,7 +117,7 @@ class Music:
     def __init__(self, bot):
         self.bot = bot
 
-        self.ytdl.enabled = self.bot.CONFIG["YOUTUBEDL"]["ENABLED"]
+        self.ytdl.enabled = self.bot.CONFIG["youtube-dl"]["enabled"]
         
         # load opus library for voice
         if (not discord.opus.is_loaded()):
@@ -325,7 +325,7 @@ class Music:
             return
 
         # get the download path
-        download_path = self.bot.CONFIG["YOUTUBEDL"]["DOWNLOAD_DIRECTORY"]
+        download_path = self.bot.CONFIG["youtube-dl"]["download_directory"]
 
         if (download_path[-1] != "/" and download_path[-1] != "\\"):
             download_path += "/"
@@ -369,9 +369,9 @@ class Music:
             await self.bot.send_message(ctx.message.channel, "Downloading...", embed=embed)
             await self.bot.send_typing(ctx.message.channel)
 
-            if (info["duration"] > self.bot.CONFIG["YOUTUBEDL"]["MAX_VIDEO_LENGTH"]):
+            if (info["duration"] > self.bot.CONFIG["youtube-dl"]["max_video_length"]):
                 duration = time.strftime("%H:%M:%S", time.gmtime(info["duration"]))
-                max_duration = time.strftime("%H:%M:%S", time.gmtime(self.bot.CONFIG["YOUTUBEDL"]["MAX_VIDEO_LENGTH"]))
+                max_duration = time.strftime("%H:%M:%S", time.gmtime(self.bot.CONFIG["youtube-dl"]["max_video_length"]))
 
                 await self.bot.messaging.reply(ctx.message, f"Video is too long ({duration}), max duration: {max_duration}")
                 return

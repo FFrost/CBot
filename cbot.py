@@ -6,6 +6,7 @@ from modules import bot_utils, utils, enums, messaging, misc, checks
 
 import logging, os, traceback, glob, yaml, sys, atexit, psutil, importlib
 from random import randint
+from datetime import datetime
 
 # set up logger
 logger = logging.getLogger("discord")
@@ -206,7 +207,7 @@ class CBot(commands.Bot):
             return None
 
     def cleanup_youtubedl_directory(self):
-        path = self.CONFIG["YOUTUBEDL"]["DOWNLOAD_DIRECTORY"]
+        path = self.CONFIG["youtube-dl"]["download_directory"]
 
         if (not path):
             return
@@ -224,6 +225,9 @@ class CBot(commands.Bot):
             os.remove(f)
     
     async def on_ready(self):
+        if (not hasattr(self, "uptime")):
+            self.uptime = datetime.now()
+
         print("Logged in as {name}#{disc} [{uid}]".format(name=self.user.name, disc=self.user.discriminator, uid=self.user.id))
         
         await self.change_presence(game=discord.Game(name="!help for info"))
@@ -269,6 +273,9 @@ class CBot(commands.Bot):
         elif (isinstance(error, commands.CheckFailure)):
             await self.messaging.reply(ctx.message, "You don't have permissions for this command")
             return
+        elif (isinstance(error, commands.NoPrivateMessage)):
+            await self.messaging.reply(ctx.message, "This command can't be used in private messages")
+            return
             
         await self.messaging.reply(ctx, error)
     
@@ -297,13 +304,13 @@ class CBot(commands.Bot):
             if (self.user in message.mentions and not message.mention_everyone and not message.content.startswith("!")):
                 await self.bot_utils.output_log(message)
                 
-                if (self.CONFIG["SHOULD_INSULT"]):
+                if (self.CONFIG["should_insult"]):
                     insult = await self.misc.get_insult()
                     an = "an" if (insult[0].lower() in "aeiou") else "a"
                     await self.messaging.reply(message, "you're {an} {insult}.".format(an=an, insult=insult))
             
             # respond to "^ this", "this", "^", etc.
-            if (self.CONFIG["SHOULD_THIS"]):
+            if (self.CONFIG["should_this"]):
                 if (message.content.startswith("^") or message.content.lower() == "this"):
                     if (message.content == "^" or "this" in message.content.lower()):
                         this_msg = "^"

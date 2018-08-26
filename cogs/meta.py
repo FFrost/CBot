@@ -65,7 +65,8 @@ class Meta:
     
     @cmd.command(description="stops the bot",
                  brief="stops the bot",
-                 pass_context=True)
+                 pass_context=True,
+                 aliases=["logout"])
     async def stop(self, ctx):
         await self.bot.messaging.reply(ctx.message, "Shutting down...")
         await self.bot.logout()
@@ -230,7 +231,7 @@ Unloaded cogs:
             await self.bot.send_message(ctx.message.author, "This command can only be used in a private message")
             return
 
-        if (not self.bot.CONFIG["BOT_CAN_BE_INVITED"] and ctx.message.author.id != checks.owner_id):
+        if (not self.bot.CONFIG["bot_can_be_invited"] and ctx.message.author.id != checks.owner_id):
             await self.bot.say("Sorry, the owner has disabled invitations")
             return
 
@@ -354,7 +355,9 @@ Manage Messages **(2FA)**, Read Messages, Send Messages, Embed Links, Attach Fil
         embed.add_field(name="Users", value=f"{len([member for member in self.bot.get_all_members()])}")
         embed.add_field(name="CPU", value=f"{cbot_process.cpu_percent()}%")
         embed.add_field(name="Memory used", value=f"{humanize.naturalsize(cbot_process.memory_info().rss)}")
-        embed.add_field(name="Uptime", value=f"{humanize.naturaldelta(datetime.fromtimestamp(os.path.getmtime(self.bot.PID_FILEPATH)))}")
+
+        if (hasattr(self.bot, "uptime")):
+            embed.add_field(name="Uptime", value=f"{humanize.naturaldelta(self.bot.uptime)}")
 
         await self.bot.say(embed=embed)
 

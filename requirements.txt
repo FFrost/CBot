@@ -3,6 +3,7 @@ async-timeout==2.0.1
 discord.py==0.16.12
 googletrans==2.2.0
 humanize==0.5.1
+iso8601==0.1.12
 lxml==4.1.1
 psutil==5.4.3
 PyYAML==3.12
