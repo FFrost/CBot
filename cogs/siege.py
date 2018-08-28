@@ -111,13 +111,13 @@ class UbisoftAPI:
 
         self._rateLimitCooldown = 120
 
-    async def _post(self, url: str, payload: dict, headers: dict = None) -> dict:
+    async def _post(self, url: str, payload: dict, headers: dict = None, is_login: bool = False) -> dict:
         if (hasattr(self, "rateLimitedTime")):
             if (self.rateLimitedTime > time.time()):
                 print(f"Rate limited for {self.rateLimitedTime - time.time():.2f} more seconds")
                 return None
 
-        if (self._has_expired()):
+        if (self._has_expired() and not is_login):
             await self.login(relog=True)
         
         async with self._session.post(url, json=payload, headers=(headers if headers is not None else payload)) as r:
@@ -176,7 +176,7 @@ class UbisoftAPI:
         if (relog):
             self._headers.update({"Authorization": self._initialAuth})
 
-        data = await self._post("https://uplayconnect.ubi.com/ubiservices/v2/profiles/sessions", self._headers)
+        data = await self._post("https://uplayconnect.ubi.com/ubiservices/v2/profiles/sessions", self._headers, is_login=relog)
 
         if ("errorCode" in data):
             if (data["errorCode"] == 1100): # rate limited
@@ -216,6 +216,8 @@ class UbisoftAPI:
             print(e)
             await asyncio.sleep(self.rateLimitedTime)
             return await self.retry(retriesRemaining - 1)
+
+        return False
 
     async def getProfile(self, userID: str) -> dict:
         data = await self._get(f"https://public-ubiservices.ubi.com/v2/profiles?userId={userID}")
