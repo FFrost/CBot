@@ -424,21 +424,30 @@ class Fun:
             
             if (extracted_image):
                 images.append(extracted_image)
-        
-        length = len(images)
-        
-        if (length < 1):
+
+        if (len(images) < 1):
             await self.bot.messaging.reply(ctx, "No results found for `{}`".format(query))
             return
 
-        first_image = await self.validate_image(images[0])
-        
-        embed = utils.create_image_embed(ctx.message.author, title="Search results", footer="Page 1/{}".format(length), image=first_image)
-        
-        img_msg = await self.bot.send_message(channel, embed=embed)
+        images_copy = images.copy()
+
+        for image in images_copy[:1]:
+            try:
+                valid_image = await self.validate_image(image)
+                embed = utils.create_image_embed(ctx.message.author, title="Search results", footer="Page 1/{}".format(len(images)), image=valid_image)
+                img_msg = await self.bot.send_message(channel, embed=embed)
     
-        await self.bot.messaging.add_img_reactions(img_msg)
-                
+                await self.bot.messaging.add_img_reactions(img_msg)
+            except discord.HTTPException:
+                images.remove(image)
+                continue
+            else:
+                break
+
+        if (len(images) < 1):
+            await self.bot.messaging.reply(ctx, "No results found for `{}`".format(query))
+            return
+
         # add the tree to the cache
         self.SEARCH_CACHE[img_msg.id] = {"images": images, "index": 0, "time": time.time(), "command_msg": ctx.message, "channel": channel}
 
