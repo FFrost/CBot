@@ -327,9 +327,11 @@ class Fun:
         
     @commands.command(description="random number generator, supports hexadecimal and floats",
                       brief="random number generator, supports hex/floats",
-                      pass_context=True)
+                      pass_context=True,
+                      name="random",
+                      aliases=["rand"])
     @commands.cooldown(2, 5, commands.BucketType.channel)
-    async def random(self, ctx, low: str, high: str):
+    async def _random(self, ctx, low: str, high: str):
         message = ctx.message
                 
         base = 10
@@ -824,12 +826,18 @@ class Fun:
         await self.bot.move_member(user, old_channel)
 
     @commands.group(description="ask the bot something",
-                      brief="ask the bot something",
-                      pass_context=True)
+                    brief="ask the bot something",
+                    pass_context=True)
     @commands.cooldown(1, 10, commands.BucketType.user)
     async def what(self, ctx):
         if (not ctx.invoked_subcommand):
             await self.bot.messaging.reply(ctx.message, "Invalid command")
+
+    @commands.command(description="chooses for you",
+                      brief="chooses for you",
+                      pass_context=True)
+    async def choose(self, ctx, *options):
+        await self.bot.say(random.choice(options))
        
 def setup(bot):
     bot.add_cog(Fun(bot))

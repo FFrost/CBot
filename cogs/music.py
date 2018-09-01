@@ -314,7 +314,8 @@ class Music:
     # TODO: create task for download
     @commands.command(description="downloads a video as an mp3 file",
                       brief="downloads a video as an mp3 file",
-                      pass_context=True)
+                      pass_context=True,
+                      enabled=False)
     @commands.cooldown(1, 60, commands.BucketType.user)
     async def ytdl(self, ctx, *, query: str = ""):
         if (not query):
