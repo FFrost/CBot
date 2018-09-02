@@ -361,5 +361,19 @@ Manage Messages **(2FA)**, Read Messages, Send Messages, Embed Links, Attach Fil
 
         await self.bot.say(embed=embed)
 
+    @commands.command(description="invoke a command and delete the message",
+                      brief="invoke a command and delete the message",
+                      pass_context=True,
+                      aliases=["cmd_del", "cd"])
+    async def cmd_delete(self, ctx, command: str):
+        command_obj = self.bot.commands.get(command)
+
+        if (not command_obj):
+            await self.bot.messaging.reply(ctx.message, f"Command `{command}` not found")
+            return
+
+        await self.bot.bot_utils.delete_message(ctx.message)
+        await command_obj.invoke(ctx)
+
 def setup(bot):
     bot.add_cog(Meta(bot))

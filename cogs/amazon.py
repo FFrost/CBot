@@ -22,8 +22,10 @@ class Amazon:
             if (not message.content or not message.author):
                 return
 
-            if (self.is_amazon_url(message.content)):
-                embed = await self.create_amazon_embed(message.author, message.content)
+            url = self.has_amazon_url(message.content)
+
+            if (url):
+                embed = await self.create_amazon_embed(message.author, url)
 
                 if (embed):
                     await self.bot.send_message(message.channel, embed=embed)
@@ -31,8 +33,13 @@ class Amazon:
         except Exception as e:
             await self.bot.bot_utils.log_error_to_file(e, prefix="Amazon")
 
-    def is_amazon_url(self, url: str) -> bool:
-        return (self.amazon_url_regex.match(url) is not None)
+    def has_amazon_url(self, content: str) -> Optional[str]:
+        try:
+            return (self.amazon_url_regex.search(content).group(0))
+        except Exception:
+            return None
+
+        return None
 
     async def get_item_page(self, url: str) -> Optional[str]:
         try:

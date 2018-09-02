@@ -194,13 +194,13 @@ class UbisoftAPI:
                 })
 
             self._expiration = self._parse_expiration(data["expiration"])
-
+        except KeyError:
+            raise LoginFailure("Recieved unexpected response")
+        else:
             self._rateLimitCooldown = 120 # set back to default on successful login
 
             if (not hasattr(self, "_operatorData")):
                 await self._loadOperatorData()
-        except KeyError:
-            raise LoginFailure("Recieved unexpected response")
 
     async def retry(self, retriesRemaining: int = 5) -> bool:
         if (retriesRemaining <= 0):
