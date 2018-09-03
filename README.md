@@ -29,7 +29,8 @@ For general questions, feel free to contact me on Discord: Frost#0261
 
 ## Inviting the bot to your server
 
-0. If you can message the bot, using the `!invite` command is the easiest way to invite the bot to a server. Otherwise, follow the rest of the steps.
+If you can message the bot, using the `!invite` command is the easiest way to invite the bot to a server. Otherwise, follow the rest of the steps.
+
 1. Find the bot's client ID. There are several ways to do this:
 	* The easiest way is to go back to the [Discord applications page](https://discordapp.com/developers/applications) and select your bot application
 		* Under the `General Information` tab, find the `Client ID`
