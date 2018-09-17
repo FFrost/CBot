@@ -1,6 +1,8 @@
 import discord
 from discord.ext import commands
 
+from modules import utils
+
 import asyncio
 import aiohttp
 import datetime
@@ -11,16 +13,19 @@ from typing import List, Optional, Tuple, Dict
 from datetime import datetime, timezone
 from math import ceil
 
-class NoLoginInfo(Exception):
+class UbisoftAPIError(Exception):
     pass
 
-class LoginFailure(Exception):
+class NoLoginInfo(UbisoftAPIError):
     pass
 
-class UnauthorizedError(Exception):
+class LoginFailure(UbisoftAPIError):
     pass
 
-class RateLimited(Exception):
+class UnauthorizedError(UbisoftAPIError):
+    pass
+
+class RateLimited(UbisoftAPIError):
     pass
 
 class UbisoftAPI:
@@ -94,7 +99,7 @@ class UbisoftAPI:
             "rankedpvp_matchwlratio",
             "rankedpvp_matchwon",
             "rankedpvp_timeplayed",
-            ]
+        ]
 
         self._operatorStatsList = [
             "operatorpvp_kills",
@@ -126,9 +131,8 @@ class UbisoftAPI:
             except Exception:
                 return None
             
-            if (r.status != 200):
-                if (r.status == 401):
-                    raise UnauthorizedError(data.get("message", "POST Unauthorized error"))
+            if (r.status == 401):
+                raise UnauthorizedError(data.get("message", "POST Unauthorized error"))
             
             return data
 
@@ -152,9 +156,8 @@ class UbisoftAPI:
             except Exception:
                 return None
             
-            if (r.status != 200):
-                if (r.status == 401):
-                    raise UnauthorizedError(data.get("message", "GET Unauthorized error"))
+            if (r.status == 401):
+                raise UnauthorizedError(data.get("message", "GET Unauthorized error"))
             
             return data
 
@@ -256,7 +259,7 @@ class UbisoftAPI:
 
         try:
             return data["players"][userID]
-        except (KeyError, TypeError):
+        except KeyError:
             return None
 
         return None
@@ -322,40 +325,39 @@ class UbisoftAPI:
         url = "https://ubistatic-a.akamaihd.net/0058/prod/assets/data/operators.3a2655c8.json"
         data = await self._get(url)
 
-        try:
-            data["recruit_sas"] = {
-                "id": "Recruit (SAS)",
-                "index": "1:1",
-                "category": "atk_def"
-            }
+        if (not data or not isinstance(data, dict)):
+            return None
 
-            data["recruit_fbi"] = {
-                "id": "Recruit (FBI)",
-                "index": "1:2",
-                "category": "atk_def"
-            }
+        data["recruit_sas"] = {
+            "id": "Recruit (SAS)",
+            "index": "1:1",
+            "category": "atk_def"
+        }
 
-            data["recruit_gign"] = {
-                "id": "Recruit (GIGN)",
-                "index": "1:3",
-                "category": "atk_def"
-            }
+        data["recruit_fbi"] = {
+            "id": "Recruit (FBI)",
+            "index": "1:2",
+            "category": "atk_def"
+        }
 
-            data["recruit_spetsnaz"] = {
-                "id": "Recruit (Spetsnaz)",
-                "index": "1:4",
-                "category": "atk_def"
-            }
+        data["recruit_gign"] = {
+            "id": "Recruit (GIGN)",
+            "index": "1:3",
+            "category": "atk_def"
+        }
 
-            data["recruit_gsg"] = {
-                "id": "Recruit (GSG 9)",
-                "index": "1:5",
-                "category": "atk_def"
-            }
-            
-        except (KeyError, TypeError):
-            pass
+        data["recruit_spetsnaz"] = {
+            "id": "Recruit (Spetsnaz)",
+            "index": "1:4",
+            "category": "atk_def"
+        }
 
+        data["recruit_gsg"] = {
+            "id": "Recruit (GSG 9)",
+            "index": "1:5",
+            "category": "atk_def"
+        }
+        
         self._operatorData = data
         return data
 
@@ -469,65 +471,85 @@ class Siege:
         embed.title = profile["nameOnPlatform"]
         embed.set_footer(text=f"{self.ubi._platforms[profile['platformType']]['name']} | {statsType.capitalize()} stats | UserID: {profile['userId']}")
 
-        if (statsType == "ranked"):
-            embed.add_field(name=":medal: Win/Loss Ratio", value=f"{stats['rankedpvp_matchwon:infinite'] / (stats['rankedpvp_matchlost:infinite'] + stats['rankedpvp_matchwon:infinite']):.2%}")
-            embed.add_field(name=":trophy: Wins", value=f"{stats['rankedpvp_matchwon:infinite']:,}")
-            embed.add_field(name=":second_place: Losses", value=f"{stats['rankedpvp_matchlost:infinite']:,}")
-            embed.add_field(name=":skull_crossbones: K/D Ratio", value=f"{stats['rankedpvp_kills:infinite'] / stats['rankedpvp_death:infinite']:.2f}")
-            embed.add_field(name=":gun: Kills", value=f"{stats['rankedpvp_kills:infinite']:,}")
-            embed.add_field(name=":skull: Deaths", value=f"{stats['rankedpvp_death:infinite']:,}")
-            embed.add_field(name="MMR", value=f"{ceil(rankedData['mmr'])}")
-            embed.add_field(name="Max MMR", value=f"{ceil(rankedData['max_mmr'])}")
-            embed.add_field(name="Rank", value=f"{self.ubi.getRankName(ceil(rankedData['mmr']))}")
-            embed.add_field(name="Max Rank", value=f"{self.ubi.getRankName(ceil(rankedData['max_mmr']))}")
-            embed.add_field(name=":video_game: Matches Played", value=f"{stats['rankedpvp_matchplayed:infinite']:,}")
-            embed.add_field(name=":stopwatch: Playtime", value=f"{stats['rankedpvp_timeplayed:infinite'] / 3600:,.0f} hours")
-        elif (statsType == "casual"):
-            embed.add_field(name=":medal: Win/Loss Ratio", value=f"{stats['casualpvp_matchwon:infinite'] / (stats['casualpvp_matchlost:infinite'] + stats['casualpvp_matchwon:infinite']):.2%}")
-            embed.add_field(name=":trophy: Wins", value=f"{stats['casualpvp_matchwon:infinite']:,}")
-            embed.add_field(name=":second_place: Losses", value=f"{stats['casualpvp_matchlost:infinite']:,}")
-            embed.add_field(name=":skull_crossbones: K/D Ratio", value=f"{stats['casualpvp_kills:infinite'] / stats['casualpvp_death:infinite']:.2f}")
-            embed.add_field(name=":gun: Kills", value=f"{stats['casualpvp_kills:infinite']:,}")
-            embed.add_field(name=":skull: Deaths", value=f"{stats['casualpvp_death:infinite']:,}")
-            embed.add_field(name=":video_game: Matches Played", value=f"{stats['casualpvp_matchplayed:infinite']:,}")
-            embed.add_field(name=":stopwatch: Playtime", value=f"{stats['casualpvp_timeplayed:infinite'] / 3600:,.0f} hours")
-        elif (statsType == "overall"):
-            embed.add_field(name=":gun: Accuracy", value=f"{stats['generalpvp_bullethit:infinite'] / stats['generalpvp_bulletfired:infinite']:.2%}")
-            embed.add_field(name=":skull_crossbones: Headshot %", value=f"{stats['generalpvp_headshot:infinite'] / stats['generalpvp_bulletfired:infinite']:.2%}")
-            embed.add_field(name="Penetration Kills", value=f"{stats['generalpvp_penetrationkills:infinite']:,}")
-            embed.add_field(name=":skull: Suicides", value=f"{stats['generalpvp_suicide:infinite']:,}")
-            embed.add_field(name=":syringe: Revives", value=f"{stats['generalpvp_revive:infinite']:,}")
-            embed.add_field(name=":handshake: Assists", value=f"{stats['generalpvp_killassists:infinite']:,}")
-            embed.add_field(name=":knife: Melee Kills", value=f"{stats['generalpvp_meleekills:infinite']:,}")
-            embed.add_field(name=":military_medal: Level", value=f"{level:,}")
-            embed.add_field(name=":video_game: Total Playtime", value=f"{stats['generalpvp_timeplayed:infinite'] // 3600:,.0f} hours")
-        elif (statsType == "operator"):
-            opData = self.ubi.sortOperatorData(operatorData)
+        try:
+            if (statsType == "ranked"):
+                wl_ratio = utils.safe_div(stats.get('rankedpvp_matchwon:infinite', 0),
+                    (stats.get('rankedpvp_matchlost:infinite', 0) + stats.get('rankedpvp_matchwon:infinite', 0)))
 
-            mostPlayedAttacker, mostPlayedDefender = self.ubi.findAtkAndDefOperators(opData["timeplayed"])
+                embed.add_field(name=":medal: Win/Loss Ratio", value=f"{wl_ratio:.2%}")
+                embed.add_field(name=":trophy: Wins", value=f"{stats.get('rankedpvp_matchwon:infinite', 0):,}")
+                embed.add_field(name=":second_place: Losses", value=f"{stats.get('rankedpvp_matchlost:infinite', 0):,}")
 
-            if (not mostPlayedAttacker):
-                mostPlayedAttacker = (["1:1"], 0)
-            
-            if (not mostPlayedDefender):
-                mostPlayedDefender = (["1:2"], 0)
+                kd_ratio = utils.safe_div(stats.get('rankedpvp_kills:infinite', 0), stats.get('rankedpvp_death:infinite', 0))
 
-            mostKills = opData["kills"][0]
-            mostDeaths = opData["death"][0]
-            mostHeadshots = opData["headshot"][0]
-            mostMeleeKills = opData["meleekills"][0]
-            mostRoundsWon = opData["roundwon"][0]
-            mostRoundsLost = opData["roundlost"][0]
+                embed.add_field(name=":skull_crossbones: K/D Ratio", value=f"{kd_ratio:.2f}")
+                embed.add_field(name=":gun: Kills", value=f"{stats.get('rankedpvp_kills:infinite', 0):,}")
+                embed.add_field(name=":skull: Deaths", value=f"{stats.get('rankedpvp_death:infinite', 0):,}")
+                embed.add_field(name="MMR", value=f"{ceil(rankedData['mmr'])}")
+                embed.add_field(name="Max MMR", value=f"{ceil(rankedData['max_mmr'])}")
+                embed.add_field(name="Rank", value=f"{self.ubi.getRankName(ceil(rankedData['mmr']))}")
+                embed.add_field(name="Max Rank", value=f"{self.ubi.getRankName(ceil(rankedData['max_mmr']))}")
+                embed.add_field(name=":video_game: Matches Played", value=f"{stats.get('rankedpvp_matchplayed:infinite', 0):,}")
+                embed.add_field(name=":stopwatch: Playtime", value=f"{stats.get('rankedpvp_timeplayed:infinite', 0) / 3600:,.0f} hours")
+            elif (statsType == "casual"):
+                wl_ratio = utils.safe_div(stats.get('casualpvp_matchwon:infinite', 0),
+                    (stats.get('casualpvp_matchlost:infinite', 1) + stats.get('casualpvp_matchwon:infinite', 0)))
+                
+                embed.add_field(name=":medal: Win/Loss Ratio", value=f"{wl_ratio:.2%}")
+                embed.add_field(name=":trophy: Wins", value=f"{stats.get('casualpvp_matchwon:infinite', 0):,}")
+                embed.add_field(name=":second_place: Losses", value=f"{stats.get('casualpvp_matchlost:infinite', 0):,}")
 
-            embed.add_field(name="Most Played Attacker", value=f"{self.ubi.getOperatorName(mostPlayedAttacker[0])} ({mostPlayedAttacker[1] / 3600:,.0f} hours)")
-            embed.add_field(name="Most Played Defender", value=f"{self.ubi.getOperatorName(mostPlayedDefender[0])} ({mostPlayedDefender[1] / 3600:,.0f} hours)")
-            embed.add_field(name="\N{ZERO WIDTH SPACE}", value="\N{ZERO WIDTH SPACE}")
-            embed.add_field(name="Most Kills", value=f"{self.ubi.getOperatorName(mostKills[0])} ({mostKills[1]:,})")
-            embed.add_field(name="Most Deaths", value=f"{self.ubi.getOperatorName(mostDeaths[0])} ({mostDeaths[1]:,})")
-            embed.add_field(name="Most Headshots", value=f"{self.ubi.getOperatorName(mostHeadshots[0])} ({mostHeadshots[1]:,})")
-            embed.add_field(name="Most Melee Kills", value=f"{self.ubi.getOperatorName(mostMeleeKills[0])} ({mostMeleeKills[1]:,})")
-            embed.add_field(name="Most Rounds Won", value=f"{self.ubi.getOperatorName(mostRoundsWon[0])} ({mostRoundsWon[1]:,})")
-            embed.add_field(name="Most Rounds Lost", value=f"{self.ubi.getOperatorName(mostRoundsLost[0])} ({mostRoundsLost[1]:,})")
+                kd_ratio = utils.safe_div(stats.get('casualpvp_kills:infinite', 0), stats.get('casualpvp_death:infinite', 0))
+
+                embed.add_field(name=":skull_crossbones: K/D Ratio", value=f"{kd_ratio:.2f}")
+                embed.add_field(name=":gun: Kills", value=f"{stats.get('casualpvp_kills:infinite', 0):,}")
+                embed.add_field(name=":skull: Deaths", value=f"{stats.get('casualpvp_death:infinite', 0):,}")
+                embed.add_field(name=":video_game: Matches Played", value=f"{stats.get('casualpvp_matchplayed:infinite', 0):,}")
+                embed.add_field(name=":stopwatch: Playtime", value=f"{stats.get('casualpvp_timeplayed:infinite', 0) / 3600:,.0f} hours")
+            elif (statsType == "overall"):
+                accuracy = utils.safe_div(stats.get('generalpvp_bullethit:infinite', 0), stats.get('generalpvp_bulletfired:infinite', 0))
+
+                embed.add_field(name=":gun: Accuracy", value=f"{accuracy:.2%}")
+
+                headshot_ratio = utils.safe_div(stats.get('generalpvp_headshot:infinite', 0), stats.get('generalpvp_bulletfired:infinite', 0))
+
+                embed.add_field(name=":skull_crossbones: Headshot %", value=f"{headshot_ratio:.2%}")
+                embed.add_field(name="Penetration Kills", value=f"{stats.get('generalpvp_penetrationkills:infinite', 0):,}")
+                embed.add_field(name=":skull: Suicides", value=f"{stats.get('generalpvp_suicide:infinite', 0):,}")
+                embed.add_field(name=":syringe: Revives", value=f"{stats.get('generalpvp_revive:infinite', 0):,}")
+                embed.add_field(name=":handshake: Assists", value=f"{stats.get('generalpvp_killassists:infinite', 0):,}")
+                embed.add_field(name=":knife: Melee Kills", value=f"{stats.get('generalpvp_meleekills:infinite', 0):,}")
+                embed.add_field(name=":military_medal: Level", value=f"{level:,}")
+                embed.add_field(name=":video_game: Total Playtime", value=f"{stats.get('generalpvp_timeplayed:infinite', 0) // 3600:,.0f} hours")
+            elif (statsType == "operator"):
+                opData = self.ubi.sortOperatorData(operatorData)
+
+                mostPlayedAttacker, mostPlayedDefender = self.ubi.findAtkAndDefOperators(opData["timeplayed"])
+
+                if (not mostPlayedAttacker):
+                    mostPlayedAttacker = (["1:1"], 0)
+                
+                if (not mostPlayedDefender):
+                    mostPlayedDefender = (["1:1"], 0)
+
+                mostKills = opData["kills"][0]
+                mostDeaths = opData["death"][0]
+                mostHeadshots = opData["headshot"][0]
+                mostMeleeKills = opData["meleekills"][0]
+                mostRoundsWon = opData["roundwon"][0]
+                mostRoundsLost = opData["roundlost"][0]
+
+                embed.add_field(name="Most Played Attacker", value=f"{self.ubi.getOperatorName(mostPlayedAttacker[0])} ({mostPlayedAttacker[1] / 3600:,.0f} hours)")
+                embed.add_field(name="Most Played Defender", value=f"{self.ubi.getOperatorName(mostPlayedDefender[0])} ({mostPlayedDefender[1] / 3600:,.0f} hours)")
+                embed.add_field(name="\N{ZERO WIDTH SPACE}", value="\N{ZERO WIDTH SPACE}")
+                embed.add_field(name="Most Kills", value=f"{self.ubi.getOperatorName(mostKills[0])} ({mostKills[1]:,})")
+                embed.add_field(name="Most Deaths", value=f"{self.ubi.getOperatorName(mostDeaths[0])} ({mostDeaths[1]:,})")
+                embed.add_field(name="Most Headshots", value=f"{self.ubi.getOperatorName(mostHeadshots[0])} ({mostHeadshots[1]:,})")
+                embed.add_field(name="Most Melee Kills", value=f"{self.ubi.getOperatorName(mostMeleeKills[0])} ({mostMeleeKills[1]:,})")
+                embed.add_field(name="Most Rounds Won", value=f"{self.ubi.getOperatorName(mostRoundsWon[0])} ({mostRoundsWon[1]:,})")
+                embed.add_field(name="Most Rounds Lost", value=f"{self.ubi.getOperatorName(mostRoundsLost[0])} ({mostRoundsLost[1]:,})")
+        except KeyError:
+            pass
 
         return embed
 

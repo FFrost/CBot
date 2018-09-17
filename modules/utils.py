@@ -274,3 +274,10 @@ def list_of_pairs_to_dict(obj: list) -> dict:
         ret[data["key"]] = data["value"]
 
     return ret
+
+# thanks to https://stackoverflow.com/a/27317596
+def safe_div(x, y):
+    if y == 0:
+        return 0
+    
+    return x / y
