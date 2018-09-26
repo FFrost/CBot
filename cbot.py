@@ -24,6 +24,11 @@ class CBot(commands.Bot):
         
         self.bot_restart_arg = "-restarted"
         self.bot_manager_arg = "-manager"
+
+        self.REQUIRED_PERMISSIONS = ["add_reactions", "attach_files", "embed_links", "read_message_history",
+                                    "read_messages", "send_messages"]
+        self.VOICE_PERMISSIONS = ["connect", "speak"]
+        self.OPTIONAL_PERMISSIONS = ["manage_messages", "move_members"]
         
         self.token = ""
         self.dev_id = ""
@@ -276,6 +281,9 @@ class CBot(commands.Bot):
         elif (isinstance(error, commands.NoPrivateMessage)):
             await self.messaging.reply(ctx.message, "This command can't be used in private messages")
             return
+        elif (hasattr(error, "original") and isinstance(error.original, discord.errors.Forbidden)):
+            await self.messaging.reply(ctx.message, f"Forbidden action: `{error.original.text}`")
+            return
             
         await self.messaging.reply(ctx, error)
     
@@ -317,7 +325,8 @@ class CBot(commands.Bot):
                         
                         if (randint(0, 100) < 50):
                             this_msg = "^ this"
-                            
+                        
+                        await self.bot_utils.output_log(message)
                         await self.send_message(message.channel, this_msg)
                         return
                 
@@ -325,7 +334,13 @@ class CBot(commands.Bot):
             
             # process commands
             await self.process_commands(message)
-            
+
+        except discord.errors.Forbidden as e:
+            if (e.code == 50013): # missing permissions
+                return
+
+            await self.messaging.error_alert(e)
+
         except Exception as e:
             await self.messaging.error_alert(e)
     
@@ -360,6 +375,24 @@ class CBot(commands.Bot):
             await self.messaging.private_message(self.dev_id, "{time} CBot joined server {name}#{id}".format(time=utils.get_cur_time(),
                                                                                                              name=server.name,
                                                                                                              id=server.id))
+
+            perms = dict(server.me.server_permissions)
+            all_perms = self.REQUIRED_PERMISSIONS + self.VOICE_PERMISSIONS + self.OPTIONAL_PERMISSIONS
+            perms_we_dont_have = []
+
+            for perm in all_perms:
+                if (not perms[perm]):
+                    perms_we_dont_have.append(perm)
+
+            msg = f"Hi, thanks for adding me to your server `{server.name}`. The minimum permissions I need to function are `{', '.join(self.REQUIRED_PERMISSIONS).replace('_', ' ')}`.\n" \
+                  f"For voice support, I need `{', '.join(self.VOICE_PERMISSIONS).replace('_', ' ')}` in the voice channel you want me to join.\n" \
+                  f"For additional commands, I need `{', '.join(self.OPTIONAL_PERMISSIONS).replace('_', ' ')}`\n"
+
+            msg += (f"I currently don't have `{', '.join(perms_we_dont_have).replace('_', ' ')}` permissions."
+                    if (len(perms_we_dont_have) > 0) else
+                    "I have all the permissions I need. Thanks!")
+
+            await self.send_message(server.owner, msg)
         
         except Exception as e:
             await self.messaging.error_alert(e)
