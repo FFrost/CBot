@@ -640,6 +640,7 @@ class Img:
         utils.remove_file_safe(path)
         utils.remove_file_safe(edited_file_path)
 
+    # TODO: rotate each frame in a gif
     @commands.command(description="rotates an image",
                       brief="rotates an image",
                       pass_context=True)
@@ -655,15 +656,16 @@ class Img:
         if (not path):
             return
 
-        im = Image.open(path)
-        im = im.rotate(degrees, expand=True)
-        im.save(path)
+        try:
+            im = Image.open(path)
+            im = im.rotate(degrees, expand=True)
+            im.save(path)
 
-        await self.bot.send_file(ctx.message.channel, path)
-
-        await asyncio.sleep(1)
-
-        utils.remove_file_safe(path)
+            await self.bot.send_file(ctx.message.channel, path)
+        except Exception as e:
+            await self.bot.messaging.reply(ctx.message, f"An error occured processing the image: `{e}`")
+        finally:
+            utils.remove_file_safe(path)
 
 def setup(bot):
     bot.add_cog(Img(bot))
