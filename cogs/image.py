@@ -640,5 +640,30 @@ class Img:
         utils.remove_file_safe(path)
         utils.remove_file_safe(edited_file_path)
 
+    @commands.command(description="rotates an image",
+                      brief="rotates an image",
+                      pass_context=True)
+    @commands.cooldown(2, 5, commands.BucketType.channel)
+    async def rotate(self, ctx, degrees: int = 90, image: str = ""):
+        await self.bot.send_typing(ctx.message.channel)
+
+        if (not image):
+            path = await self.find_and_download_image(ctx.message)
+        else:
+            path = await self.download_image(image)
+
+        if (not path):
+            return
+
+        im = Image.open(path)
+        im = im.rotate(degrees, expand=True)
+        im.save(path)
+
+        await self.bot.send_file(ctx.message.channel, path)
+
+        await asyncio.sleep(1)
+
+        utils.remove_file_safe(path)
+
 def setup(bot):
     bot.add_cog(Img(bot))
