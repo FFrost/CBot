@@ -13,7 +13,7 @@ import aiohttp
 from lxml import html
 from urllib.parse import quote
 from collections import OrderedDict
-from PIL import Image
+from PIL import Image as Img
 from typing import Optional, Union
 
 liquid_command_enabled = True
@@ -25,7 +25,7 @@ except Exception as e:
     print(f"{e}\nDisabling liquid command.")
     liquid_command_enabled = False
 
-class Img:
+class Image:
     def __init__(self, bot):
         self.bot = bot
 
@@ -108,7 +108,7 @@ class Img:
     #        path, path to the original downloaded file
     #        image, edited image file currently open
     #        url, the url of the original image that was downloaded
-    async def save_and_upload(self, message: discord.Message, path: str, image: Image, url: str) -> None:
+    async def save_and_upload(self, message: discord.Message, path: str, image: Img, url: str) -> None:
         file_path = os.path.splitext(path)[0]
         edited_file_path = file_path + "_edited.png"
         
@@ -547,7 +547,7 @@ class Img:
             await self.image_error_message(message, enums.ImageCodes.BAD_URL, url)
             return
         
-        img = Image.open(path) # filename
+        img = Img.open(path) # filename
         
         if (img.size >= (3000, 3000)):
             utils.remove_file_safe(path)
@@ -564,8 +564,8 @@ class Img:
         new_size = (old_size[0] // pixel_size, old_size[1] // pixel_size)
         
         if (new_size > (0, 0)):
-            img = img.resize(new_size, Image.NEAREST)
-            img = img.resize(old_size, Image.NEAREST)
+            img = img.resize(new_size, Img.NEAREST)
+            img = img.resize(old_size, Img.NEAREST)
         else:
             utils.remove_file_safe(path)
             await self.bot.messaging.reply(message, "Pixel size too large")
@@ -606,7 +606,7 @@ class Img:
         await self.bot.send_typing(ctx.message.channel)
 
         # process it
-        img = Image.open(path)
+        img = Img.open(path)
 
         if (img.size >= (3000, 3000)):
             utils.remove_file_safe(path)
@@ -654,10 +654,11 @@ class Img:
             path = await self.download_image(image)
 
         if (not path):
+            await self.bot.messaging.reply(ctx.message, "No image found to rotate")
             return
 
         try:
-            im = Image.open(path)
+            im = Img.open(path)
             im = im.rotate(degrees, expand=True)
             im.save(path)
 
@@ -668,4 +669,4 @@ class Img:
             utils.remove_file_safe(path)
 
 def setup(bot):
-    bot.add_cog(Img(bot))
+    bot.add_cog(Image(bot))

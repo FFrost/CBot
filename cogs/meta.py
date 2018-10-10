@@ -353,7 +353,7 @@ Manage Messages **(2FA)**, Read Messages, Send Messages, Embed Links, Attach Fil
         embed.add_field(name="Created at", value=f"{utils.format_time(self.bot.user.created_at)}")
         embed.add_field(name="Servers", value=f"{len(self.bot.servers)}")
         embed.add_field(name="Users", value=f"{len([member for member in self.bot.get_all_members()])}")
-        embed.add_field(name="CPU", value=f"{cbot_process.cpu_percent()}%")
+        embed.add_field(name="CPU used", value=f"{cbot_process.cpu_percent(0.1)}%")
         embed.add_field(name="Memory used", value=f"{humanize.naturalsize(cbot_process.memory_info().rss)}")
 
         if (hasattr(self.bot, "uptime")):

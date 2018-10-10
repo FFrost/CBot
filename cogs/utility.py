@@ -160,7 +160,12 @@ class Utility:
                 await self.bot.messaging.reply(ctx.message, "Failed to find text to translate")
                 return
         
-        result = self.translator.translate(string, dest=language)
+        try:
+            result = self.translator.translate(string, dest=language)
+        except Exception:
+            await self.bot.messaging.reply(ctx.message, "Failed to translate text")
+            return
+        
         src = LANGUAGES[result.src.lower()]
         dest = LANGUAGES[result.dest.lower()]
         msg = "{src} to {dest}: {text}".format(src=src, dest=dest, text=result.text)
@@ -174,7 +179,7 @@ class Utility:
         headers = {"User-Agent": "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/43.0.2357.134 Safari/537.36"}
         url = "https://www.google.com/search?q={}".format(quote(query))  # escape query for url
         
-        conn = aiohttp.TCPConnector(verify_ssl=False)  # for https
+        conn = aiohttp.TCPConnector(verify_ssl=False) # for https
         async with aiohttp.ClientSession(connector=conn) as session:
             async with session.get(url, headers=headers) as r: 
                 if (r.status != 200):
@@ -277,7 +282,7 @@ class Utility:
                 embed.add_field(name="Owner", value="{}#{}".format(channel.owner.name, channel.owner.discriminator))
             
             embed.add_field(name="ID", value=channel.id)
-            embed.add_field(name="Number of members", value=len(channel.recipients))
+            embed.add_field(name="Users", value=len(channel.recipients))
             embed.add_field(name="Created at", value=channel.created_at)
             
             await self.bot.send_message(ctx.message.channel, embed=embed)

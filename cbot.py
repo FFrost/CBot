@@ -384,9 +384,10 @@ class CBot(commands.Bot):
                 if (not perms[perm]):
                     perms_we_dont_have.append(perm)
 
-            msg = f"Hi, thanks for adding me to your server `{server.name}`. The minimum permissions I need to function are `{', '.join(self.REQUIRED_PERMISSIONS).replace('_', ' ')}`.\n" \
-                  f"For voice support, I need `{', '.join(self.VOICE_PERMISSIONS).replace('_', ' ')}` in the voice channel you want me to join.\n" \
-                  f"For additional commands, I need `{', '.join(self.OPTIONAL_PERMISSIONS).replace('_', ' ')}`\n"
+            msg = f"Hi, thanks for adding me to your server `{server.name}`. The minimum permissions I need to function are " \
+                  f"{', '.join([f'`{p}`' for p in self.REQUIRED_PERMISSIONS]).replace('_', ' ')}.\n" \
+                  f"For voice support, I need {', '.join([f'`{p}`' for p in self.VOICE_PERMISSIONS]).replace('_', ' ')} in the voice channel you want me to join.\n" \
+                  f"For additional commands, I need {', '.join([f'`{p}`' for p in self.OPTIONAL_PERMISSIONS]).replace('_', ' ')}\n"
 
             msg += (f"I currently don't have `{', '.join(perms_we_dont_have).replace('_', ' ')}` permissions."
                     if (len(perms_we_dont_have) > 0) else
