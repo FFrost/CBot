@@ -6,6 +6,7 @@ import time
 import re
 import asyncio
 import aiohttp
+from youtube_dl import utils as ytutils
 from typing import Optional, Union
 
 """
@@ -235,25 +236,33 @@ def remove_file_safe(filename: str) -> None:
 # format youtube_dl error to inform user of what occured
 # input: e, the error
 # output: formatted error removing "YouTube said: " or original error
-def extract_yt_error(e: str) -> str:
-    e = str(e)    
-    err_to_look_for = "YouTube said:"
-    
-    index = e.find(err_to_look_for)
-    
-    if (index < 0):
-        return e
-    
-    index += len(err_to_look_for) + 1 # space
-    
-    ret = e[index:]
+def extract_yt_error(e: ytutils.YoutubeDLError) -> str:
+    if (isinstance(e, ytutils.UnsupportedError)):
+        return "Unsupported URL"
+    elif (isinstance(e, ytutils.RegexNotFoundError)):
+        return "Regex not found"
+    elif (isinstance(e, ytutils.GeoRestrictedError)):
+        return "Geographic restriction, video is not available"
+    elif (isinstance(e, ytutils.ExtractorError)):
+        return "Info extractor error"
+    elif (isinstance(e, ytutils.DownloadError)):
+        return "Error downloading the video"
+    elif (isinstance(e, ytutils.SameFileError)):
+        return "Can't download the multiple files to the same file"
+    elif (isinstance(e, ytutils.PostProcessingError)):
+        return "Post processing exception"
+    elif (isinstance(e, ytutils.MaxDownloadsReached)):
+        return "Max download limit has been reached"
+    elif (isinstance(e, ytutils.UnavailableVideoError)):
+        return "Video is unavailable in the requested format"
+    elif (isinstance(e, ytutils.ContentTooShortError)):
+        return "File is too small compared to what the server said, connection was probably interrupted"
+    elif (isinstance(e, ytutils.XAttrMetadataError)):
+        return "XAttrMetadata error"
+    elif (isinstance(e, ytutils.XAttrUnavailableError)):
+        return "XAttrUnavailable error"
 
-    index = e.find(";")
-
-    if (index < 0):
-        return ret
-
-    return ret[:index]
+    return "General YoutubeDL error"
 
 # limits the length of a string and appends "..." if the string is longer than the length
 # if the string is

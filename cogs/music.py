@@ -252,8 +252,8 @@ class Music:
         
         try:
             player = await voice_state.voice_client.create_ytdl_player(query, ytdl_options=opts, after=voice_state.toggle_next)
-        except youtube_dl.utils.DownloadError as e:
-            await self.bot.messaging.reply(ctx.message, "A YouTube error occured: {}".format(utils.extract_yt_error(e)))
+        except youtube_dl.utils.YoutubeDLError as e:
+            await self.bot.messaging.reply(ctx.message, "A YouTubeDL error occured: {}".format(utils.extract_yt_error(e)))
         except Exception as e:
             await self.bot.messaging.reply(ctx.message, "An error occured: {}".format(e))
         else:
