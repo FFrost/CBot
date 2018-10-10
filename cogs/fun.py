@@ -89,7 +89,7 @@ class Fun:
             hex_result = hex_result.replace("X", "x")
                     
             result = hex_result
-        else:    
+        else:
             result = r
                 
         await self.bot.messaging.reply(ctx, "rolled a {}".format(result))
@@ -120,7 +120,7 @@ class Fun:
         url = "https://images.google.com/searchbyimage?image_url={}&encoded_image=&image_content=&filename=&hl=en".format(quote(query))
         
         async with aiohttp.ClientSession() as session:
-            async with session.get(url, headers=headers) as r:              
+            async with session.get(url, headers=headers) as r:
                 if (r.status != 200):
                     await self.bot.messaging.reply(ctx, "Query for `{query}` failed with status code `{code} ({string})` (maybe try again)".format(
                         query=query,
@@ -192,7 +192,7 @@ class Fun:
             try:
                 await self.bot.move_member(user, random.choice(channels))
             
-            except Exception:
+            except discord.errors.DiscordException:
                 pass
 
         await self.bot.move_member(user, old_channel)

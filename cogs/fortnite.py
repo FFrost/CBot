@@ -55,7 +55,7 @@ class Fortnite:
             try:
                 rank = stats_data["stats"]["p9"]["trnRating"]["rank"]
 
-            except Exception:
+            except KeyError:
                 pass
 
             else:

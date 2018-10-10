@@ -43,7 +43,7 @@ class BotUtils:
     
     # finds a user by full or partial name or id
     # input: name, keyword to search usernames for
-    # output: found user or None if no users were found  
+    # output: found user or None if no users were found
     async def find(self, name: str) -> Optional[discord.User]:
         if (not name):
             return None

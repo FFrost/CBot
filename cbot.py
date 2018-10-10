@@ -144,7 +144,7 @@ class CBot(commands.Bot):
             self.save_token()
         else:
             try:
-                with open(self.TOKEN_PATH, "r") as f:  
+                with open(self.TOKEN_PATH, "r") as f:
                     config = yaml.load(f)
                     
                     self.token = config["token"]

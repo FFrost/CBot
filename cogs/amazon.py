@@ -2,7 +2,6 @@ import discord
 
 from modules import utils
 
-import asyncio
 import aiohttp
 import re
 from lxml import html
@@ -76,8 +75,8 @@ class Amazon:
             try:
                 description.append(p.text_content().strip())
 
-            except Exception:
-                continue
+            except AttributeError:
+                pass
 
         if (not description):
             return None

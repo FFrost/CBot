@@ -134,7 +134,7 @@ class Utility:
         try: # if a user runs another purge command within 5 seconds, the temp message won't exist
             await self.bot.bot_utils.delete_message(temp)
         
-        except Exception:
+        except discord.errors.DiscordException:
             pass
     
     @commands.command(description="translates text into another language\n" + \

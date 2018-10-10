@@ -29,11 +29,6 @@ class Messaging:
                     msg: str,
                     channel: discord.Channel = None
                     ) -> discord.Message:
-        try:
-            msg = str(msg)
-        
-        except Exception:
-            pass
         
         # find the destination of the reply
         if (isinstance(dest, discord.User)):
