@@ -81,6 +81,9 @@ class Amazon:
         if (not description):
             return None
 
+        if (description[0].startswith("Make sure this fits")):
+            description.pop(0)
+
         return "\n".join("- {}".format(d) for d in description)
 
     async def create_amazon_embed(self, user: discord.User, url: str) -> discord.Embed:
