@@ -65,7 +65,7 @@ class BotUtils:
     # input: channel, channel to search for embeds
     #        embed_type, type of embed to search for, video or image
     # output: url of the embed or None if not found
-    async def find_last_embed(self, channel: discord.Channel, embed_type: str) -> Optional[str]:
+    async def find_last_embed(self, channel: discord.Channel) -> Optional[str]:
         async for message in self.bot.logs_from(channel):
             embed = utils.find_image_embed(message)
     
@@ -114,6 +114,8 @@ class BotUtils:
                         if ("provider" in keys and "name" in embed["provider"].keys() and embed["provider"]["name"] == "YouTube"):
                             if ("url" in keys and utils.youtube_url_validation(embed["url"])):
                                 return embed["url"]
+                    elif ("url" in keys and utils.youtube_url_validation(embed["url"])):
+                        return embed["url"]
 
     # finds the last message sent before the command message
     # input: message, the message to search before
