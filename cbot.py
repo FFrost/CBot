@@ -307,6 +307,10 @@ class CBot(commands.Bot):
             if (message.author == self.user):
                 #await self.bot_utils.output_log(message)
                 return
+
+            # ignore other bots
+            if (message.author.bot):
+                return
             
             # insult anyone who @s us
             if (self.user in message.mentions and not message.mention_everyone and not message.content.startswith("!")):

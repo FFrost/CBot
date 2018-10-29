@@ -166,7 +166,7 @@ class Fun:
                     pass_context=True,
                     hidden=True)
     @commands.check(checks.is_owner)
-    async def annoy(self, ctx, user: discord.User, amount: int = 10):
+    async def annoy(self, ctx, user: discord.User, amount: int = 5):
         await self.bot.bot_utils.delete_message(ctx.message)
 
         for _i in range(amount):
