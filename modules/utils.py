@@ -290,3 +290,21 @@ def safe_div(x, y):
         return 0
     
     return x / y
+
+def format_code_brackets(str_list: list) -> str:
+    return ", ".join([f"`{s}`" for s in str_list])
+
+def get_uptime(uptime: datetime.datetime) -> str:
+    delta = datetime.datetime.utcnow() - uptime
+    hours, r = divmod(int(delta.total_seconds()), 3600)
+    minutes, seconds = divmod(r, 60)
+    days, hours = divmod(hours, 24)
+
+    if (days > 0):
+        return f"{days} days, {hours} hours, {minutes} minutes, {seconds} seconds"
+    elif (hours > 0):
+        return f"{hours} hours, {minutes} minutes, {seconds} seconds"
+    elif (minutes > 0):
+        return f"{minutes} minutes, {seconds} seconds"
+
+    return f"{seconds} seconds"

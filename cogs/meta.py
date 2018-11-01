@@ -83,9 +83,11 @@ class Meta:
         await self.bot.change_presence(game=discord.Game(name=status))
         await self.bot.messaging.reply(ctx.message, "Set status to `{}`".format(status))
         
-    @cmd.command(description="what servers the bot is in",
+    # TODO: convert to paginator
+    @commands.command(description="what servers the bot is in",
                  brief="what servers the bot is in",
                  pass_context=True)
+    @commands.check(checks.is_owner)
     async def where(self, ctx):
         msg = "\n```"
         
@@ -345,19 +347,22 @@ Manage Messages **(2FA)**, Read Messages, Send Messages, Embed Links, Attach Fil
         if (self.bot.user.display_name != self.bot.user.name):
             embed.add_field(name="Nickname", value=f"")
 
-        cbot_process = psutil.Process(os.getpid())
-
         if (ctx.message.server is not None):
             embed.add_field(name="Joined the server at", value=f"{utils.format_time(ctx.message.server.me.joined_at)}",)
         
         embed.add_field(name="Created at", value=f"{utils.format_time(self.bot.user.created_at)}")
         embed.add_field(name="Servers", value=f"{len(self.bot.servers)}")
         embed.add_field(name="Users", value=f"{len([member for member in self.bot.get_all_members()])}")
+
+        cbot_process = psutil.Process(os.getpid())
         embed.add_field(name="CPU used", value=f"{cbot_process.cpu_percent(0.1)}%")
         embed.add_field(name="Memory used", value=f"{humanize.naturalsize(cbot_process.memory_info().rss)}")
 
         if (hasattr(self.bot, "uptime")):
-            embed.add_field(name="Uptime", value=f"{humanize.naturaldelta(self.bot.uptime)}")
+            #embed.add_field(name="Uptime", value=f"{humanize.naturaldelta(self.bot.uptime)}")
+            embed.add_field(name="Uptime", value=utils.get_uptime(self.bot.uptime))
+
+        embed.set_footer(text=f"Requested at {utils.format_time(datetime.now())}")
 
         await self.bot.say(embed=embed)
 
