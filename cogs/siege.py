@@ -59,7 +59,7 @@ class UbisoftAPI:
             }
         }
 
-        self._regions = ["emea", "ncsa", "apac"]
+        self._regions = {"europe": "emea", "america": "ncsa", "asia": "apac"}
 
         self._statsTypes = ["ranked", "casual", "overall", "operator"]
 
@@ -109,6 +109,53 @@ class UbisoftAPI:
             "operatorpvp_meleekills",
             "operatorpvp_headshot",
             "operatorpvp_timeplayed"
+        ]
+
+        self._ranks = [
+            "Unranked",
+            "Copper IV",
+            "Copper III",
+            "Copper II",
+            "Copper I",
+            "Bronze IV",
+            "Bronze III",
+            "Bronze II",
+            "Bronze I",
+            "Silver IV",
+            "Silver III",
+            "Silver II",
+            "Silver I",
+            "Gold IV",
+            "Gold III",
+            "Gold II",
+            "Gold I",
+            "Platinum III",
+            "Platinum II",
+            "Platinum I",
+            "Diamond"
+        ]
+
+        self._rankImages = [
+            "https://ubistatic-a.akamaihd.net/0058/prod/assets/styles/images/hd-rank4.5105339d.svg",
+            "https://ubistatic-a.akamaihd.net/0058/prod/assets/styles/images/hd-rank3.f204dd6e.svg",
+            "https://ubistatic-a.akamaihd.net/0058/prod/assets/styles/images/hd-rank2.f2bc8224.svg",
+            "https://ubistatic-a.akamaihd.net/0058/prod/assets/styles/images/hd-rank1.79a2af3a.svg",
+            "https://ubistatic-a.akamaihd.net/0058/prod/assets/styles/images/hd-rank8.d08a99eb.svg",
+            "https://ubistatic-a.akamaihd.net/0058/prod/assets/styles/images/hd-rank7.ba63ea85.svg",
+            "https://ubistatic-a.akamaihd.net/0058/prod/assets/styles/images/hd-rank6.fc40a107.svg",
+            "https://ubistatic-a.akamaihd.net/0058/prod/assets/styles/images/hd-rank5.5b0b90e9.svg",
+            "https://ubistatic-a.akamaihd.net/0058/prod/assets/styles/images/hd-rank12.c432740e.svg",
+            "https://ubistatic-a.akamaihd.net/0058/prod/assets/styles/images/hd-rank11.2fffcd0a.svg",
+            "https://ubistatic-a.akamaihd.net/0058/prod/assets/styles/images/hd-rank10.cce1c8c4.svg",
+            "https://ubistatic-a.akamaihd.net/0058/prod/assets/styles/images/hd-rank9.4196c329.svg",
+            "https://ubistatic-a.akamaihd.net/0058/prod/assets/styles/images/hd-rank16.9950a890.svg",
+            "https://ubistatic-a.akamaihd.net/0058/prod/assets/styles/images/hd-rank15.e8ddab14.svg",
+            "https://ubistatic-a.akamaihd.net/0058/prod/assets/styles/images/hd-rank14.1e94c7f0.svg",
+            "https://ubistatic-a.akamaihd.net/0058/prod/assets/styles/images/hd-rank13.42fb03b4.svg",
+            "https://ubistatic-a.akamaihd.net/0058/prod/assets/styles/images/hd-rank19.5cc86715.svg",
+            "https://ubistatic-a.akamaihd.net/0058/prod/assets/styles/images/hd-rank18.0942a2f2.svg",
+            "https://ubistatic-a.akamaihd.net/0058/prod/assets/styles/images/hd-rank17.27fbc796.svg",
+            "https://ubistatic-a.akamaihd.net/0058/prod/assets/styles/images/hd-rank20.da30b73c.svg"
         ]
 
         self.loop = loop
@@ -277,49 +324,11 @@ class UbisoftAPI:
 
         return None
 
-    def getRankName(self, mmr: int) -> str:
-        if (mmr <= 1399):
-            return "Copper IV"
-        elif (1399 < mmr <= 1499):
-            return "Copper III"
-        elif (1499 < mmr <= 1599):
-            return "Copper II"
-        elif (1599 < mmr <= 1699):
-            return "Copper I"
-        elif (1699 < mmr <= 1799):
-            return "Bronze IV"
-        elif (1799 < mmr <= 1899):
-            return "Bronze III"
-        elif (1899 < mmr <= 1999):
-            return "Bronze II"
-        elif (1999 < mmr <= 2099):
-            return "Bronze I"
-        elif (2099 < mmr <= 2199):
-            return "Silver IV"
-        elif (2199 < mmr <= 2299):
-            return "Silver III"
-        elif (2299 < mmr <= 2399):
-            return "Silver II"
-        elif (2399 < mmr <= 2499):
-            return "Silver I"
-        elif (2499 < mmr <= 2699):
-            return "Gold IV"
-        elif (2699 < mmr <= 2899):
-            return "Gold III"
-        elif (2899 < mmr <= 3099):
-            return "Gold II"
-        elif (3099 < mmr <= 3299):
-            return "Gold I"
-        elif (3299 < mmr <= 3699):
-            return "Platinum III"
-        elif (3699 < mmr <= 4099):
-            return "Platinum II"
-        elif (4099 < mmr <= 4499):
-            return "Platinum I"
-        elif (4499 < mmr):
-            return "Diamond"
+    def getRankName(self, rank: int) -> str:
+        if (0 <= rank < len(self._ranks)):
+            return self._ranks[rank]
 
-        return "Unknown"
+        return "Unranked"
 
     async def _loadOperatorData(self) -> Optional[dict]:
         url = "https://ubistatic-a.akamaihd.net/0058/prod/assets/data/operators.3a2655c8.json"
@@ -465,14 +474,20 @@ class Siege:
         self.bot.loop.create_task(self.ubi._session.close())
         self.remove_siege_cache_task.cancel()
 
-    def create_siege_embed(self, user: discord.User, profile: dict, statsType: str, stats: dict, rankedData: dict, level: int, operatorData: dict) -> discord.Embed:
+    def create_siege_embed(self, user: discord.User, region: str, profile: dict, statsType: str, stats: dict, rankedData: dict, level: int, operatorData: dict) -> discord.Embed:
         embed = discord.Embed(color=discord.Color.blue())
         embed.set_author(name=user.name, icon_url=user.avatar_url)
         embed.title = profile["nameOnPlatform"]
-        embed.set_footer(text=f"{self.ubi._platforms[profile['platformType']]['name']} | {statsType.capitalize()} stats | UserID: {profile['userId']}")
+        embed.set_footer(text=f"{self.ubi._platforms[profile['platformType']]['name']} | {statsType.capitalize()} stats | {region.capitalize()} | UserID: {profile['userId']}")
 
         try:
             if (statsType == "ranked"):
+                rank_num = rankedData.get("rank", 0)
+
+                if (0 < rank_num < len(self.ubi._rankImages)):
+                    thumb_url = self.ubi._rankImages[rank_num]
+                    #embed.set_thumbnail(url=thumb_url) # TODO: discord doesn't embed .svg
+
                 wl_ratio = utils.safe_div(stats.get('rankedpvp_matchwon:infinite', 0),
                     (stats.get('rankedpvp_matchlost:infinite', 0) + stats.get('rankedpvp_matchwon:infinite', 0)))
 
@@ -485,10 +500,17 @@ class Siege:
                 embed.add_field(name=":skull_crossbones: K/D Ratio", value=f"{kd_ratio:.2f}")
                 embed.add_field(name=":gun: Kills", value=f"{stats.get('rankedpvp_kills:infinite', 0):,}")
                 embed.add_field(name=":skull: Deaths", value=f"{stats.get('rankedpvp_death:infinite', 0):,}")
-                embed.add_field(name="MMR", value=f"{ceil(rankedData['mmr'])}")
-                embed.add_field(name="Max MMR", value=f"{ceil(rankedData['max_mmr'])}")
-                embed.add_field(name="Rank", value=f"{self.ubi.getRankName(ceil(rankedData['mmr']))}")
-                embed.add_field(name="Max Rank", value=f"{self.ubi.getRankName(ceil(rankedData['max_mmr']))}")
+
+                highest_rank = rankedData.get("max_rank", 0)
+
+                if (highest_rank > 0):
+                    embed.add_field(name="MMR", value=f"{ceil(rankedData['mmr'])}")
+                    embed.add_field(name="Rank", value=f"{self.ubi.getRankName(rank_num)}")
+                    embed.add_field(name="Highest MMR", value=f"{ceil(rankedData['max_mmr'])}")
+                    embed.add_field(name="Highest Rank", value=f"{self.ubi.getRankName(highest_rank)}")
+                else:
+                    embed.add_field(name="Rank", value="Unranked")
+                
                 embed.add_field(name=":video_game: Matches Played", value=f"{stats.get('rankedpvp_matchplayed:infinite', 0):,}")
                 embed.add_field(name=":stopwatch: Playtime", value=f"{stats.get('rankedpvp_timeplayed:infinite', 0) / 3600:,.0f} hours")
             elif (statsType == "casual"):
@@ -558,20 +580,24 @@ class Siege:
                       pass_context=True,
                       aliases=["r6s", "r6stats"])
     @commands.cooldown(1, 5, commands.BucketType.user)
-    async def siege(self, ctx, username: str, statsType: str = "ranked", platform: str = "uplay", region: str = "ncsa"):
+    async def siege(self, ctx, username: str, statsType: str = "ranked", platform: str = "uplay", region: str = "america"):
         await self.bot.send_typing(ctx.message.channel)
 
         if (statsType not in self.ubi._statsTypes):
-            await self.bot.messaging.reply(ctx.message, f"Invalid platform, options are: `{', '.join(self.ubi._statsTypes)}`")
+            await self.bot.messaging.reply(ctx.message, f"Invalid stats option, options are: {utils.format_code_brackets(self.ubi._statsTypes)}")
             return
 
         if (platform.lower() not in self.ubi._platforms.keys()):
-            await self.bot.messaging.reply(ctx.message, f"Invalid platform, options are: `{', '.join(self.ubi._platforms.keys())}`")
+            await self.bot.messaging.reply(ctx.message, f"Invalid platform, options are: {utils.format_code_brackets(self.ubi._platforms.keys())}")
             return
 
-        if (region.lower() not in self.ubi._regions):
-            await self.bot.messaging.reply(ctx.message, f"Invalid platform, options are: `{', '.join(self.ubi._regions)}`")
+        region = region.lower()
+
+        if (region not in self.ubi._regions):
+            await self.bot.messaging.reply(ctx.message, f"Invalid region, options are: {utils.format_code_brackets(self.ubi._regions.keys())}")
             return
+
+        region_code = self.ubi._regions.get(region)
 
         if (hasattr(self.ubi, "rateLimitedTime")):
             if (self.ubi.rateLimitedTime > time.time()):
@@ -583,11 +609,11 @@ class Siege:
             profile = data["profile"]
             level = data["level"]
 
-            if (region in data):
-                rankedData = data[region]
+            if (region_code in data):
+                rankedData = data[region_code]
             else:
                 try:
-                    rankedData = await self.ubi.getRankData(profile, region)
+                    rankedData = await self.ubi.getRankData(profile, region_code)
                 except (UnauthorizedError, LoginFailure) as e:
                     await self.bot.messaging.reply(ctx.message, f"An error occured getting stats for player `{username}` on `{platform}`: {e}")
                     return
@@ -609,7 +635,7 @@ class Siege:
 
                 level = await self.ubi.getLevel(profile)
 
-                rankedData = await self.ubi.getRankData(profile, region)
+                rankedData = await self.ubi.getRankData(profile, region_code)
 
                 statsData = await self.ubi.getStatsData(profile)
 
@@ -622,14 +648,14 @@ class Siege:
             await self.bot.messaging.reply(ctx.message, f"Failed to find stats for `{username}` on `{platform}`")
             return
 
-        embed = self.create_siege_embed(ctx.message.author, profile, statsType, statsData, rankedData, level, operatorData)
+        embed = self.create_siege_embed(ctx.message.author, region, profile, statsType, statsData, rankedData, level, operatorData)
         await self.bot.say(embed=embed)
 
         self.SIEGE_CACHE[username] = {
             platform: {
                 "profile": profile,
                 "level": level,
-                region: rankedData,
+                region_code: rankedData,
                 "statsData": statsData,
                 "operatorData": operatorData
             },
