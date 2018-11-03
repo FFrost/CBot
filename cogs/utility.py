@@ -19,31 +19,30 @@ class Utility:
         self.bot = bot
         self.translator = Translator()
         
-    @commands.command(description="info about a Discord user", brief="info about a Discord user", pass_context=True)
-    @commands.cooldown(1, 5, commands.BucketType.user)
-    async def info(self, ctx, *, name: str = ""):
-        embed = discord.Embed()
-
-        if (ctx.message.mentions):
-            user = ctx.message.mentions[0]
-        elif (name):
-            user = await self.bot.bot_utils.find(name)
-                    
-            if (not user):
-                await self.bot.messaging.reply(ctx, "Failed to find user `{}`".format(name))
-                return
-                    
-        else:
+    @commands.command(description="info about a user",
+                      brief="info about a user",
+                      pass_context=True)
+    @commands.cooldown(2, 5, commands.BucketType.user)
+    async def info(self, ctx, user: discord.User = None):
+        if (not user):
             user = ctx.message.author
 
-        if (not isinstance(user, discord.Member)):
+        if (ctx.message.channel.is_private):
+            user = ctx.message.author
+
+        is_member = isinstance(user, discord.Member)
+
+        if (not is_member and hasattr(user, "member")):
             member = user.member
+            is_member = True
         else:
             member = user
 
+        embed = discord.Embed()
+
         embed.set_author(name=ctx.message.author.name, icon_url=ctx.message.author.avatar_url)
 
-        if (member.color):
+        if (is_member and member.color):
             embed.color = member.color
         else:
             embed.color = discord.Color.green()
@@ -51,17 +50,17 @@ class Utility:
         embed.add_field(name="User", value="{}#{}".format(user.name, user.discriminator))
         embed.add_field(name="ID", value=user.id)
 
-        if (member.game):
+        if (is_member and member.game):
             embed.add_field(name="Playing", value=member.game)
 
         created_at = datetime.strptime(str(user.created_at), "%Y-%m-%d %H:%M:%S.%f")
 
         embed.add_field(name="Created at", value=utils.format_time(created_at))
 
-        if (member.joined_at):
+        if (is_member and member.joined_at):
             embed.add_field(name="Joined the server at", value=utils.format_time(member.joined_at))
 
-        if (member.top_role):
+        if (is_member and member.top_role):
             embed.add_field(name="Highest role", value=member.top_role)
 
         if (user.display_name != user.name):
@@ -70,29 +69,24 @@ class Utility:
         if (user.bot):
             embed.add_field(name="Bot", value=":white_check_mark:")
 
-        embed.set_image(url=user.avatar_url)
+        embed.set_thumbnail(url=user.avatar_url)
+
+        if (is_member and member.server):
+            embed.set_footer(text=f"Server: {utils.cap_string_and_ellipsis(member.server.name, 64, 1)}")
     
         await self.bot.send_message(ctx.message.channel, embed=embed)
         
     @commands.command(description="get a user's avatar", brief="get a user's avatar", pass_context=True)
     @commands.cooldown(2, 5, commands.BucketType.user)
-    async def avatar(self, ctx, *, name: str = ""):
-        if (ctx.message.mentions):
-            users = ctx.message.mentions
-        elif (name):
-            user = await self.bot.bot_utils.find(name)
-            
-            if (not user):
-                await self.bot.messaging.reply(ctx, "Failed to find user `{}`".format(name))
-                return
-            else:
-                users = [user]
-        else:
-            users = [ctx.message.author]
+    async def avatar(self, ctx, user: discord.User = None):
+        if (not user):
+            user = ctx.message.author
         
-        for user in users:
-            embed = utils.create_image_embed(user, image=user.avatar_url)
-            await self.bot.send_message(ctx.message.channel, embed=embed)
+        embed = discord.Embed(color=discord.Colour.blue())
+        embed.set_author(name=ctx.message.author.name, icon_url=ctx.message.author.avatar_url)
+        embed.set_image(url=user.avatar_url)
+
+        await self.bot.send_message(ctx.message.channel, embed=embed)
         
     @commands.command(description="deletes the last X messages",
                       brief="deletes the last X messages",
@@ -269,9 +263,8 @@ class Utility:
                  aliases=["sinfo"])
     @commands.cooldown(1, 5, commands.BucketType.server)
     async def serverinfo(self, ctx, *, search: str = ""):
-        embed = discord.Embed()
+        embed = discord.Embed(color=discord.Color.dark_blue())
         embed.set_author(name=ctx.message.author.name, icon_url=ctx.message.author.avatar_url)
-        embed.color = discord.Color.dark_blue()
 
         if (ctx.message.channel.is_private and not search):
             channel = ctx.message.channel
