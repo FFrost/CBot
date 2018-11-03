@@ -4,8 +4,6 @@ import os
 import datetime
 import time
 import re
-import asyncio
-import aiohttp
 from youtube_dl import utils as ytutils
 from typing import Optional, Union
 
@@ -31,14 +29,15 @@ def format_time(datetime_obj: datetime.datetime) -> str:
 def format_log_message(message: discord.Message) -> str:
     content = message.clean_content
     server_name = ("[{}]".format(message.server.name)) if message.server else ""
-    
+
     return "{time}{space}{server} [{channel}] {name}: {message}".format(time=get_cur_time(),
-                                                                    space=(" " if server_name else ""),
-                                                                    server=server_name,
-                                                                    channel=message.channel,
-                                                                    name=message.author,
-                                                                    message=content)
-    
+                                                                        space=(" "if server_name
+                                                                               else ""),
+                                                                        server=server_name,
+                                                                        channel=message.channel,
+                                                                        name=message.author,
+                                                                        message=content)
+
 # find last attachment in message
 # input: message, message to search for attachments
 # output: url of the attachment or None if not found
@@ -80,12 +79,12 @@ def format_member_name(user: discord.User) -> str:
 def create_image_embed(user: discord.Member,
                        title: str = "",
                        description: str = "",
-                       footer: str ="",
-                       image: str ="",
-                       thumbnail: str ="",
+                       footer: str = "",
+                       image: str = "",
+                       thumbnail: str = "",
                        color: discord.Color = discord.Color.blue()
                        ) -> discord.Embed:
-    embed = discord.Embed()
+    embed = discord.Embed(color=color)
     
     embed.title = title
     
@@ -96,9 +95,7 @@ def create_image_embed(user: discord.Member,
         embed.set_footer(text=footer)
     
     embed.set_author(name=user.name, icon_url=user.avatar_url)
-    
-    embed.color = color
-    
+
     if (image):
         embed.set_image(url=image)
         
@@ -189,7 +186,7 @@ def create_soundcloud_embed(info: dict, user: discord.User = None) -> discord.Em
 #        user, user who requested the search
 # output: the generated embed
 def create_game_info_embed(info: dict, user: discord.User = None) -> discord.Embed:
-    embed = discord.Embed()
+    embed = discord.Embed(color=discord.Colour.green())
     
     embed.title = info["title"]
     embed.description = info["body"]
@@ -197,8 +194,6 @@ def create_game_info_embed(info: dict, user: discord.User = None) -> discord.Emb
     
     if (user):
         embed.set_author(name=user.name, icon_url=user.avatar_url)
-    
-    embed.color = discord.Colour.green()
     
     embed.set_thumbnail(url=info["image"])
     
@@ -294,6 +289,12 @@ def safe_div(x, y):
 def format_code_brackets(str_list: list) -> str:
     return ", ".join([f"`{s}`" for s in str_list])
 
+def pluralize(num: int, s: str) -> str:
+    if (num == 1):
+        return f"{num} {s}"
+    
+    return f"{num} {s}s"
+
 def get_uptime(uptime: datetime.datetime) -> str:
     delta = datetime.datetime.utcnow() - uptime
     hours, r = divmod(int(delta.total_seconds()), 3600)
@@ -301,10 +302,10 @@ def get_uptime(uptime: datetime.datetime) -> str:
     days, hours = divmod(hours, 24)
 
     if (days > 0):
-        return f"{days} days, {hours} hours, {minutes} minutes, {seconds} seconds"
+        return f"{pluralize(days, 'day')}, {pluralize(hours, 'hour')}, {pluralize(minutes, 'minute')}, {pluralize(seconds, 'second')}"
     elif (hours > 0):
-        return f"{hours} hours, {minutes} minutes, {seconds} seconds"
+        return f"{pluralize(hours, 'hour')}, {pluralize(minutes, 'minute')}, {pluralize(seconds, 'second')}"
     elif (minutes > 0):
-        return f"{minutes} minutes, {seconds} seconds"
+        return f"{pluralize(minutes, 'minute')}, {pluralize(seconds, 'second')}"
 
-    return f"{seconds} seconds"
+    return pluralize(seconds, 'second')

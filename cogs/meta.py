@@ -359,7 +359,6 @@ Manage Messages **(2FA)**, Read Messages, Send Messages, Embed Links, Attach Fil
         embed.add_field(name="Memory used", value=f"{humanize.naturalsize(cbot_process.memory_info().rss)}")
 
         if (hasattr(self.bot, "uptime")):
-            #embed.add_field(name="Uptime", value=f"{humanize.naturaldelta(self.bot.uptime)}")
             embed.add_field(name="Uptime", value=utils.get_uptime(self.bot.uptime))
 
         embed.set_footer(text=f"Requested at {utils.format_time(datetime.now())}")
