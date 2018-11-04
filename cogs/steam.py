@@ -17,6 +17,7 @@ class Steam:
         self.steam_api_key = self.bot.CONFIG["steam_api_key"]
 
         self.steam_url_regex = re.compile(r"((https?:\/\/)(www.)?)?(steamcommunity.com\/(?P<type>id|profiles)\/(?P<id>[A-Za-z0-9_-]{2,32}))")
+        self.steam_workshop_regex = re.compile(r"((https?:\/\/)(www.)?)?(steamcommunity.com\/sharedfiles\/filedetails\/\?id=([0-9]{10}))")
 
     async def on_message(self, message: discord.Message):
         if (not self.bot.CONFIG["embeds"]["enabled"] or not self.bot.CONFIG["embeds"]["steam"]):
@@ -26,14 +27,90 @@ class Steam:
             if (not message.content or not message.author):
                 return
 
-            if (self.steam_api_key and self.is_steam_url(message.content.lower())):
-                embed = await self.create_steam_embed(message.author, message.content.lower())
+            content = message.content.lower()
+
+            # steam profiles
+            if (self.steam_api_key and self.is_steam_url(content)):
+                embed = await self.create_steam_embed(message.author, content)
+
+                if (embed):
+                    await self.bot.send_message(message.channel, embed=embed)
+
+            # workshop item
+            if (self.steam_workshop_regex.match(content) is not None):
+                workshop_id = self.steam_workshop_regex.search(content).group(5)
+
+                if (not workshop_id):
+                    return
+
+                embed = await self.create_workshop_embed(message.author, workshop_id)
 
                 if (embed):
                     await self.bot.send_message(message.channel, embed=embed)
 
         except Exception as e:
             self.bot.bot_utils.log_error_to_file(e, prefix="Steam")
+
+    async def create_workshop_embed(self, author: discord.User, workshop_id: str) -> discord.Embed:
+        data = await self.get_workshop_details(workshop_id)
+
+        if (not data):
+            return None
+
+        embed = discord.Embed(color=discord.Colour.blue())
+
+        try:
+            embed.title = data.get("title", "Untitled")
+
+            embed.description = utils.cap_string_and_ellipsis(data.get("description", ""))
+
+            embed.url = f"https://steamcommunity.com/sharedfiles/filedetails/?id={workshop_id}"
+
+            embed.set_thumbnail(url=data["preview_url"]) # TODO: discord doesn't want to embed steam images
+
+            embed.add_field(name=":star: Subscriptions", value=f"{data.get('subscriptions', 0):,}")
+            embed.add_field(name=":heart: Favorites", value=f"{data.get('favorited', 0):,}")
+            embed.add_field(name=":movie_camera: Views", value=f"{data.get('views', 0):,}")
+
+            upload_time = datetime.fromtimestamp(data.get("time_created"))
+            embed.add_field(name=":calendar_spiral: Uploaded", value=utils.format_time(upload_time))
+
+            update_time = datetime.fromtimestamp(data.get("time_updated"))
+
+            if (update_time != upload_time):
+                embed.add_field(name=":pencil: Updated", value=utils.format_time(update_time))
+            
+        except KeyError:
+            return None
+
+        return embed
+
+    async def get_workshop_details(self, workshop_id: str) -> dict:
+        url = f"https://api.steampowered.com/ISteamRemoteStorage/GetPublishedFileDetails/v1/"
+
+        data = {
+            "itemcount": 1,
+            "publishedfileids[0]": workshop_id
+        }
+
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.post(url, data=data) as r:
+                    if (r.status != 200):
+                        return None
+                    
+                    summary = await r.json()
+                    
+                    if (summary is None):
+                        return None
+
+                    try:
+                        return summary["response"]["publishedfiledetails"][0]
+
+                    except KeyError:
+                        return None
+        except Exception:
+            return None
 
     @commands.command(description="game recommendations from your steam profile",
                   brief="game recommendations from your steam profile",
@@ -414,13 +491,11 @@ class Steam:
         account_age = await self.get_account_age(id64)
 
         # create the embed
-        embed = discord.Embed()
+        embed = discord.Embed(color=discord.Color.blue())
 
         embed.title = username
             
         embed.set_author(name=user.name, icon_url=user.avatar_url)
-        
-        embed.color = discord.Color.blue()
 
         embed.url = f"https://steamcommunity.com/profiles/{id64}"
 
