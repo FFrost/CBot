@@ -144,11 +144,11 @@ def create_youtube_embed(info: dict, user: discord.User = None) -> discord.Embed
     if (user):
         embed.set_author(name=user.name, icon_url=user.avatar_url)
     
-    embed.add_field(name=":thumbsup:", value="{:,} likes".format(info["like_count"]))
-    embed.add_field(name=":thumbsdown:", value="{:,} dislikes".format(info["dislike_count"]))
-    embed.add_field(name=":movie_camera:", value="{:,} views".format(info["view_count"]))
-    embed.add_field(name=":watch:", value=time.strftime("%H:%M:%S", time.gmtime(info["duration"])))
-    embed.add_field(name=":desktop:", value=info["uploader"])
+    embed.add_field(name=":thumbsup:", value="{:,} likes".format(info.get('like_count', 0) or 0))
+    embed.add_field(name=":thumbsdown:", value="{:,} dislikes".format(info.get('dislike_count', 0) or 0))    
+    embed.add_field(name=":movie_camera:", value="{:,} views".format(info.get('view_count', 0) or 0))
+    embed.add_field(name=":watch:", value=time.strftime("%H:%M:%S", time.gmtime(info.get('duration', 0) or 0)))
+    embed.add_field(name=":desktop:", value=info.get("uploader", "Unknown"))
     embed.add_field(name=":calendar_spiral:", value=datetime.datetime.strptime(info["upload_date"], "%Y%m%d").strftime("%b %-d, %Y"))
 
     return embed
