@@ -13,7 +13,7 @@ from typing import Union, List
 class Messaging:
     def __init__(self, bot):
         self.bot = bot
-        
+
         # emojis for browsing image searches
         self.EMOJI_CHARS = OrderedDict()
         self.EMOJI_CHARS["arrow_backward"] = "\N{BLACK LEFT-POINTING TRIANGLE}"
@@ -231,12 +231,11 @@ class Messaging:
                     if (custom_emoji.name in emojis and custom_emoji.server == message.server):
                         await self.bot.add_reaction(message, custom_emoji)
                 
-                for e in emojis:                
+                for e in emojis:
                     # react with normal emojis and ignore custom ones
-                    # TODO: do we really need this try/except?
                     try:
                         await self.bot.add_reaction(message, e)
-                    except Exception:
+                    except discord.errors.DiscordException:
                         pass
         
         except Exception as e:

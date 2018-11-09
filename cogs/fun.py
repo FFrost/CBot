@@ -5,7 +5,6 @@ from modules import utils, checks
 
 import re
 import random
-import asyncio
 import aiohttp
 from random import randint, uniform
 from lxml import html
@@ -15,7 +14,7 @@ from http.client import responses
 class Fun:
     def __init__(self, bot):
         self.bot = bot
-        
+
         self.magic8ball_choices = ["It is certain", "It is decidedly so",
                                    "Without a doubt", "Yes definitely",
                                    "You may rely on it", "As I see it, yes",
@@ -27,7 +26,7 @@ class Fun:
                                    "My sources say no", "Outlook not so good",
                                    "Very doubtful"
                                    ]
-        
+
     @commands.command(description="random number generator, supports hexadecimal and floats",
                       brief="random number generator, supports hex/floats",
                       pass_context=True,
@@ -106,7 +105,7 @@ class Fun:
         
         await self.bot.send_typing(message.channel)
         
-        if (not query):        
+        if (not query):
             if (message.attachments):
                 query = message.attachments[0]["url"]
             else:

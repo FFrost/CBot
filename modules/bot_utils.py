@@ -3,23 +3,21 @@ from discord.ext import commands
 
 from modules import utils
 
-import asyncio
 from typing import Optional, List
 
-"""
-this file is for utility functions that require access to discord
-"""
+# this file is for utility functions that require access to discord
 
 class BotUtils:
     def __init__(self, bot):
         self.bot = bot
-    
+
     # writes to a file
     # input: filename, filename to write to
     #        mode, what mode to open the file in, r, w, or a
     #        string, what should be written
     #        add_time, if should the current time be prepended
-    def write_to_file(self, filename: str, mode: str, string: str, add_time: bool = False) -> None:
+    @staticmethod
+    def write_to_file(filename: str, mode: str, string: str, add_time: bool = False) -> None:
         if (add_time):
             string = f"[{utils.get_cur_time()}] {string}"
         
@@ -106,11 +104,11 @@ class BotUtils:
     # output: url of youtube embed or None if no youtube video embeds were found
     async def find_last_youtube_embed(self, message: discord.Message) -> Optional[str]:
         async for message in self.bot.logs_from(message.channel, before=message, limit=50):
-            if (message.embeds):            
+            if (message.embeds):
                 for embed in message.embeds:
                     keys = embed.keys()
                     
-                    if ("video" in keys or ("type" in keys and embed["type"] == "video")):  
+                    if ("video" in keys or ("type" in keys and embed["type"] == "video")):
                         if ("provider" in keys and "name" in embed["provider"].keys() and embed["provider"]["name"] == "YouTube"):
                             if ("url" in keys and utils.youtube_url_validation(embed["url"])):
                                 return embed["url"]

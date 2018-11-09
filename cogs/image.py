@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
 
-from modules import enums, utils, checks
+from modules import enums, utils
 
 import os
 import time
@@ -30,7 +30,7 @@ class Image:
         self.bot = bot
 
         self.SEARCH_CACHE = OrderedDict()
-        
+
         self.remove_inactive_image_searches_task = self.bot.loop.create_task(self.remove_inactive_image_searches())
 
     def __unload(self):
@@ -46,13 +46,13 @@ class Image:
         try:
             message = ctx.message
             
-            if (not url):        
+            if (not url):
                 if (message.attachments):
                     url = message.attachments[0]["url"]
                 else:
                     last_img = await self.bot.bot_utils.find_last_image(message)
                     
-                    if (last_img): 
+                    if (last_img):
                         url = last_img
                     
             if (not url):
@@ -270,7 +270,7 @@ class Image:
             img.liquid_rescale(width=int(img.width * 1.5), height=int(img.height * 1.5), delta_x=2)
             
             # before saving, check the size of the output file
-            # note - dex: on windows, this seems to be 'size' instead of 'size on disk'... 
+            # note - dex: on windows, this seems to be 'size' instead of 'size on disk'...
             #             not sure if that matters when it comes to discord's max filesize
             img_blob = img.make_blob()
             
@@ -322,7 +322,7 @@ class Image:
         url = "https://www.google.com/search?q={}&tbm=isch&gs_l=img&safe=on".format(quote(query)) # escape query for url
         
         async with aiohttp.ClientSession() as session:
-            async with session.get(url, headers=headers) as r:              
+            async with session.get(url, headers=headers) as r:
                 if (r.status != 200):
                     await self.bot.messaging.reply(ctx, "Query for `{}` failed (maybe try again)".format(query))
                     return
@@ -374,7 +374,8 @@ class Image:
     # gets an image url from a dict
     # input: image_dict, dictionary in string form containing info from google image search
     # output: url of the image if valid or None if invalid
-    def extract_image_url(self, image_dict: str) -> Optional[str]:
+    @staticmethod
+    def extract_image_url(image_dict: str) -> Optional[str]:
         try:
             image_dict = json.loads(image_dict)
             
@@ -542,7 +543,7 @@ class Image:
         
         if (isinstance(path, enums.ImageCodes)):
             await self.image_error_message(message, path, url)
-            return  
+            return
         elif (not path):
             await self.image_error_message(message, enums.ImageCodes.BAD_URL, url)
             return

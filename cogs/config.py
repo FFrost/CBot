@@ -1,10 +1,8 @@
-import discord
 from discord.ext import commands
 
 from modules import checks
 
 import json
-import yaml
 
 class Config:
     def __init__(self, bot):
@@ -31,7 +29,7 @@ class Config:
 
         except Exception as e:
             await self.bot.messaging.reply(ctx.message, f"Failed to reload config: `{e}`")
-        
+
         else:
             await self.bot.messaging.reply(ctx.message, "Reloaded config")
 

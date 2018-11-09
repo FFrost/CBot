@@ -36,7 +36,7 @@ class UbisoftAPI:
             self._initialAuth = self._generateTicket(kwargs.get("email"), kwargs.get("password"))
         else:
             raise NoLoginInfo("No ticket or email/password combo provided")
-        
+
         self._UBI_APP_ID = "39baebad-39e5-4552-8c25-2c9b919064e2"
 
         self._headers = {
@@ -158,16 +158,17 @@ class UbisoftAPI:
             "https://ubistatic-a.akamaihd.net/0058/prod/assets/styles/images/hd-rank20.da30b73c.svg"
         ]
 
+        self.rateLimitedTime: float = 0
+
         self.loop = loop
         self._session = aiohttp.ClientSession(loop=loop)
 
         self._rateLimitCooldown = 120
 
     async def _post(self, url: str, payload: dict, headers: dict = None, is_login: bool = False) -> dict:
-        if (hasattr(self, "rateLimitedTime")):
-            if (self.rateLimitedTime > time.time()):
-                print(f"Rate limited for {self.rateLimitedTime - time.time():.2f} more seconds")
-                return None
+        if (self.rateLimitedTime > time.time()):
+            print(f"Rate limited for {self.rateLimitedTime - time.time():.2f} more seconds")
+            return None
 
         if (self._has_expired() and not is_login):
             await self.login(relog=True)
@@ -186,10 +187,9 @@ class UbisoftAPI:
         return None
 
     async def _get(self, url: str, payload: dict = None, headers: dict = None) -> dict:
-        if (hasattr(self, "rateLimitedTime")):
-            if (self.rateLimitedTime > time.time()):
-                print(f"Rate limited for {self.rateLimitedTime - time.time():.2f} more seconds")
-                return None
+        if (self.rateLimitedTime > time.time()):
+            print(f"Rate limited for {self.rateLimitedTime - time.time():.2f} more seconds")
+            return None
 
         if (payload is None):
             payload = self._headers
@@ -210,7 +210,8 @@ class UbisoftAPI:
 
         return None
 
-    def _parse_expiration(self, expiration: str) -> datetime:
+    @staticmethod
+    def _parse_expiration(expiration: str) -> datetime:
         return iso8601.parse_date(expiration)
 
     def _has_expired(self) -> bool:
@@ -219,7 +220,8 @@ class UbisoftAPI:
         
         return (datetime.now(timezone.utc) > self._expiration)
 
-    def _generateTicket(self, email: str, password: str) -> str:
+    @staticmethod
+    def _generateTicket(email: str, password: str) -> str:
         return f"Basic {base64.b64encode(bytes(f'{email}:{password}'.encode('ascii'))).decode('ascii')}"
 
     async def login(self, relog: bool = False) -> None:
@@ -389,7 +391,8 @@ class UbisoftAPI:
 
         return None
 
-    def sortOperatorData(self, data: dict) -> dict:
+    @staticmethod
+    def sortOperatorData(data: dict) -> dict:
         ret = {
             "death": [],
             "headshot": [],
@@ -486,7 +489,7 @@ class Siege:
 
                 if (0 < rank_num < len(self.ubi._rankImages)):
                     thumb_url = self.ubi._rankImages[rank_num]
-                    #embed.set_thumbnail(url=thumb_url) # TODO: discord doesn't embed .svg
+                    embed.set_thumbnail(url=thumb_url) # TODO: discord doesn't embed .svg
 
                 wl_ratio = utils.safe_div(stats.get('rankedpvp_matchwon:infinite', 0),
                     (stats.get('rankedpvp_matchlost:infinite', 0) + stats.get('rankedpvp_matchwon:infinite', 0)))
@@ -599,10 +602,9 @@ class Siege:
 
         region_code = self.ubi._regions.get(region)
 
-        if (hasattr(self.ubi, "rateLimitedTime")):
-            if (self.ubi.rateLimitedTime > time.time()):
-                await self.bot.messaging.reply(ctx.message, f"Can't fetch stats, rate limited by Ubisoft for {self.ubi.rateLimitedTime - time.time():.2f} more seconds")
-                return
+        if (self.ubi.rateLimitedTime > time.time()):
+            await self.bot.messaging.reply(ctx.message, f"Can't fetch stats, rate limited by Ubisoft for {self.ubi.rateLimitedTime - time.time():.2f} more seconds")
+            return
 
         if (username in self.SIEGE_CACHE and platform in self.SIEGE_CACHE[username]):
             data = self.SIEGE_CACHE[username][platform]

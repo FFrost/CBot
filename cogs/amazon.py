@@ -16,7 +16,7 @@ class Amazon:
     async def on_message(self, message):
         if (not self.bot.CONFIG["embeds"]["enabled"] or not self.bot.CONFIG["embeds"]["amazon"]):
             return
-        
+
         try:
             if (not message.content or not message.author):
                 return
@@ -27,7 +27,10 @@ class Amazon:
                 embed = await self.create_amazon_embed(message.author, url)
 
                 if (embed):
-                    await self.bot.send_message(message.channel, embed=embed)
+                    try:
+                        await self.bot.send_message(message.channel, embed=embed)
+                    except discord.errors.HTTPException:
+                        pass
 
         except Exception as e:
             await self.bot.bot_utils.log_error_to_file(e, prefix="Amazon")
@@ -52,7 +55,8 @@ class Amazon:
         except Exception:
             return None
 
-    def get_element(self, tree: html.HtmlElement, expression: str) -> Optional[str]:
+    @staticmethod
+    def get_element(tree: html.HtmlElement, expression: str) -> Optional[str]:
         path = tree.xpath(expression)
 
         if (not path):
@@ -63,7 +67,8 @@ class Amazon:
 
         return path.strip()
 
-    def get_description_list(self, tree: html.HtmlElement) -> Optional[str]:
+    @staticmethod
+    def get_description_list(tree: html.HtmlElement) -> Optional[str]:
         path = tree.xpath("//div[@id='feature-bullets']/ul/li")
 
         if (path is None or not isinstance(path, list) or len(path) < 1):
@@ -97,11 +102,9 @@ class Amazon:
         if (tree is None):
             return None
 
-        embed = discord.Embed()
+        embed = discord.Embed(color=discord.Color.dark_orange())
 
         embed.set_author(name=user.name, icon_url=user.avatar_url)
-        
-        embed.color = discord.Color.dark_orange()
 
         title = self.get_element(tree, "//span[@id='productTitle']/text()")
 

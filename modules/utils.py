@@ -7,10 +7,8 @@ import re
 from youtube_dl import utils as ytutils
 from typing import Optional, Union
 
-"""
-this file is for utility functions that do NOT require access to discord,
-e.g. general utility functions
-"""
+# this file is for utility functions that do NOT require access to discord,
+# e.g. general utility functions
 
 # format current time
 def get_cur_time() -> str:
@@ -31,7 +29,7 @@ def format_log_message(message: discord.Message) -> str:
     server_name = ("[{}]".format(message.server.name)) if message.server else ""
 
     return "{time}{space}{server} [{channel}] {name}: {message}".format(time=get_cur_time(),
-                                                                        space=(" "if server_name
+                                                                        space=(" " if server_name
                                                                                else ""),
                                                                         server=server_name,
                                                                         channel=message.channel,
@@ -46,14 +44,14 @@ def find_attachment(message: discord.Message) -> Optional[str]:
         for attach in message.attachments:
             if (attach):
                 return attach["url"]
-                
+
     return None
 
 # find last embed in message
 # input: message, message to search for image embeds
 # output: url of the embed or None if not found
 def find_image_embed(message: discord.Message) -> Optional[str]:
-    if (message.embeds):            
+    if (message.embeds):
         for embed in message.embeds:
             if (embed):
                 if ("type" in embed and embed["type"] == "image"):
@@ -145,7 +143,7 @@ def create_youtube_embed(info: dict, user: discord.User = None) -> discord.Embed
         embed.set_author(name=user.name, icon_url=user.avatar_url)
     
     embed.add_field(name=":thumbsup:", value="{:,} likes".format(info.get('like_count', 0) or 0))
-    embed.add_field(name=":thumbsdown:", value="{:,} dislikes".format(info.get('dislike_count', 0) or 0))    
+    embed.add_field(name=":thumbsdown:", value="{:,} dislikes".format(info.get('dislike_count', 0) or 0))
     embed.add_field(name=":movie_camera:", value="{:,} views".format(info.get('view_count', 0) or 0))
     embed.add_field(name=":watch:", value=time.strftime("%H:%M:%S", time.gmtime(info.get('duration', 0) or 0)))
     embed.add_field(name=":desktop:", value=info.get("uploader", "Unknown"))

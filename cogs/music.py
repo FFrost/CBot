@@ -9,7 +9,6 @@ import time
 import youtube_dl
 import os
 from lxml import html
-from urllib.parse import quote
 from typing import Optional, Tuple
 
 # mostly stolen from PyVox (https://github.com/Hiroyu/_PyVox) and Rapptz's playlist example (https://github.com/Rapptz/discord.py/blob/async/examples/playlist.py)
@@ -19,7 +18,7 @@ class VoiceEntry:
         self.author = message.author
         self.channel = message.channel
         self.player = player
-        
+
     def get_info(self):
         return self.player.yt.extract_info(self.player.url, download=False)
 
@@ -233,7 +232,7 @@ class Music:
         elif (voice_state is not None and voice_client_in_server is None):
             ctx.invoke(self.stop)
             voice_state = VoiceState(self.bot)
-            voice_state.voice_client = await self.bot.join_voice_channel(voice_channel) 
+            voice_state.voice_client = await self.bot.join_voice_channel(voice_channel)
         
         if (not voice_state.voice_client):
             voice_state.voice_client = voice_client_in_server

@@ -21,7 +21,7 @@ class Fortnite:
         
         try:
             async with aiohttp.ClientSession() as session:
-                async with session.get(url, headers=headers) as r:              
+                async with session.get(url, headers=headers) as r:
                     if (r.status != 200):
                         return r.status
 
@@ -30,8 +30,9 @@ class Fortnite:
         except Exception:
             return None
 
-    def create_fortnite_stats_embed(self, user: discord.User, stats_data: dict, stats: str, title: str = "") -> discord.Embed:
-        embed = discord.Embed()
+    @staticmethod
+    def create_fortnite_stats_embed(user: discord.User, stats_data: dict, stats: str, title: str = "") -> discord.Embed:
+        embed = discord.Embed(colpr=discord.Color.dark_green())
         
         embed.title = title
         
@@ -40,8 +41,6 @@ class Fortnite:
                                                                                             stats=stats[0].upper() + stats[1:]))
         
         embed.set_author(name=user.name, icon_url=user.avatar_url)
-        
-        embed.color = discord.Color.dark_green()
 
         if (stats == "lifetime"):
             data = utils.list_of_pairs_to_dict(stats_data["lifeTimeStats"])

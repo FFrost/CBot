@@ -2,7 +2,7 @@ import discord
 from discord.ext import commands
 
 import default_config
-from modules import bot_utils, utils, enums, messaging, misc, checks
+from modules import bot_utils, utils, messaging, misc, checks
 
 import logging, os, traceback, glob, yaml, sys, atexit, psutil, importlib
 from random import randint
@@ -19,7 +19,7 @@ class CBot(commands.Bot):
         super().__init__(command_prefix="!",
                          description="CBot 2.0 by Frost#0261",
                          pm_help=True)
-        
+
         self.source_url = "https://github.com/FFrost/CBot"
         
         self.bot_restart_arg = "-restarted"
@@ -145,7 +145,7 @@ class CBot(commands.Bot):
         else:
             try:
                 with open(self.TOKEN_PATH, "r") as f:
-                    config = yaml.load(f)
+                    config = yaml.safe_load(f)
                     
                     self.token = config["token"]
                     self.dev_id = config["dev_id"]
@@ -200,8 +200,8 @@ class CBot(commands.Bot):
     # gets the config from disk
     def get_config(self):
         try:
-            with open(self.CONFIG_PATH, "r") as f:  
-                return yaml.load(f)
+            with open(self.CONFIG_PATH, "r") as f:
+                return yaml.safe_load(f)
 
         except yaml.scanner.ScannerError as e:
             print("Config file could not be loaded (scanner error), make sure config.yml is formatted properly: {}".format(e))
@@ -261,7 +261,7 @@ class CBot(commands.Bot):
         self.bot_utils.log_error_to_file(trace)
         await self.messaging.error_alert(e=trace)
     
-    async def on_command_error(self, error, ctx): 
+    async def on_command_error(self, error, ctx):
         # TODO: handle what we need to
         """
         commands.UserInputError, commands.CommandNotFound, commands.MissingRequiredArgument,
@@ -389,15 +389,18 @@ class CBot(commands.Bot):
                     perms_we_dont_have.append(perm)
 
             msg = f"Hi, thanks for adding me to your server `{server.name}`. The minimum permissions I need to function are " \
-                  f"{', '.join([f'`{p}`' for p in self.REQUIRED_PERMISSIONS]).replace('_', ' ')}.\n" \
-                  f"For voice support, I need {', '.join([f'`{p}`' for p in self.VOICE_PERMISSIONS]).replace('_', ' ')} in the voice channel you want me to join.\n" \
-                  f"For additional commands, I need {', '.join([f'`{p}`' for p in self.OPTIONAL_PERMISSIONS]).replace('_', ' ')}\n"
+                  f"{utils.format_code_brackets(self.REQUIRED_PERMISSIONS).replace('_', ' ')}.\n" \
+                  f"For voice support, I need {utils.format_code_brackets(self.VOICE_PERMISSIONS).replace('_', ' ')} in the voice channel you want me to join.\n" \
+                  f"For additional commands, I need {utils.format_code_brackets(self.OPTIONAL_PERMISSIONS).replace('_', ' ')}\n"
 
-            msg += (f"I currently don't have `{', '.join(perms_we_dont_have).replace('_', ' ')}` permissions."
+            msg += (f"I currently don't have {utils.format_code_brackets(perms_we_dont_have).replace('_', ' ')} permissions."
                     if (len(perms_we_dont_have) > 0) else
                     "I have all the permissions I need. Thanks!")
 
-            await self.send_message(server.owner, msg)
+            try:
+                await self.send_message(server.owner, msg)
+            except discord.errors.Forbidden:
+                pass
         
         except Exception as e:
             await self.messaging.error_alert(e)

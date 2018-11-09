@@ -3,7 +3,6 @@ from discord.ext import commands
 
 from modules import utils
 
-import asyncio
 import aiohttp
 import re
 import random
@@ -22,7 +21,7 @@ class Steam:
     async def on_message(self, message: discord.Message):
         if (not self.bot.CONFIG["embeds"]["enabled"] or not self.bot.CONFIG["embeds"]["steam"]):
             return
-        
+
         try:
             if (not message.content or not message.author):
                 return
@@ -183,7 +182,8 @@ class Steam:
         except Exception:
             return None
 
-    def is_profile_public(self, profile_summary: dict) -> bool:
+    @staticmethod
+    def is_profile_public(profile_summary: dict) -> bool:
         if (profile_summary is None):
             return False
         
@@ -310,7 +310,7 @@ class Steam:
     async def get_num_bans(self, id64: str) -> int:
         try:
             async with aiohttp.ClientSession() as session:
-                async with session.get(f"http://api.steampowered.com/ISteamUser/GetPlayerBans/v1/?key={self.steam_api_key}&steamids={id64}") as r: 
+                async with session.get(f"http://api.steampowered.com/ISteamUser/GetPlayerBans/v1/?key={self.steam_api_key}&steamids={id64}") as r:
                     if (r.status != 200):
                         return 0
                     
@@ -336,9 +336,10 @@ class Steam:
             return 0
 
     # thanks to https://stackoverflow.com/a/36472887
-    def steamid64_to_32(self, id64: str) -> str:
+    @staticmethod
+    def steamid64_to_32(id64: str) -> str:
         y = int(id64) - 76561197960265728
-        x = y % 2 
+        x = y % 2
         return "STEAM_0:{}:{}".format(x, (y - x) // 2)
 
     async def get_account_age(self, id64: str) -> Optional[int]:

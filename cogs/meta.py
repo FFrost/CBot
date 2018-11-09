@@ -5,7 +5,6 @@ from modules import checks, utils
 import inspect
 import os
 import sys
-import subprocess
 import psutil
 import importlib
 import io
@@ -30,7 +29,7 @@ class Meta:
         if (not command):
             await self.bot.messaging.reply(ctx.message, self.bot.source_url)
             return
-        
+
         obj = self.bot.get_command(command.replace(".", " "))
         
         if (not obj):
@@ -242,9 +241,8 @@ Unloaded cogs:
 
         url = f"https://discordapp.com/oauth2/authorize?client_id={self.bot.user.id}&scope=bot"
 
-        embed = discord.Embed()
+        embed = discord.Embed(color=discord.Color.blue())
         embed.set_author(name=ctx.message.author.name, icon_url=ctx.message.author.avatar_url)
-        embed.color = discord.Color.blue()
 
         embed.description = """There are several options for inviting the bot:
 
@@ -269,7 +267,8 @@ Manage Messages **(2FA)**, Read Messages, Send Messages, Embed Links, Attach Fil
         await self.bot.send_message(ctx.message.author, embed=embed)
 
     # eval command stolen from ItWasAllIntended - https://gist.github.com/ItWasAllIntended/905500623d772d1a153049715e3e68b7
-    def cleanup_code(self, content: str) -> str:
+    @staticmethod
+    def cleanup_code(content: str) -> str:
         """Automatically removes code blocks from the code."""
         # Remove ```py\n```
         if content.startswith('```') and content.endswith('```'):
@@ -303,7 +302,7 @@ Manage Messages **(2FA)**, Read Messages, Send Messages, Embed Links, Attach Fil
         except Exception as e:
             try:
                 await self.bot.add_reaction(ctx.message, "\N{NEGATIVE SQUARED CROSS MARK}")
-            except:
+            except discord.errors.DiscordException:
                 pass
 
             return await self.bot.say(f'```py\n{e.__class__.__name__}: {e}\n```')
@@ -318,7 +317,7 @@ Manage Messages **(2FA)**, Read Messages, Send Messages, Embed Links, Attach Fil
 
             try:
                 await self.bot.add_reaction(ctx.message, "\N{NEGATIVE SQUARED CROSS MARK}")
-            except:
+            except discord.errors.DiscordException:
                 pass
         else:
             value = stdout.getvalue()

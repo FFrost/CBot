@@ -5,7 +5,7 @@ class NoVoiceChannel(commands.CommandError):
     pass
 
 owner_id = None
-    
+
 def is_owner(ctx: commands.Context) -> bool:
     return (ctx.message.author.id == owner_id)
 

@@ -3,11 +3,8 @@ from discord.ext import commands
 
 from modules import checks, utils
 
-import json
 import asyncio
 import aiohttp
-import requests
-import time
 from lxml import html
 from urllib.parse import quote
 from http.client import responses
@@ -18,7 +15,7 @@ class Utility:
     def __init__(self, bot):
         self.bot = bot
         self.translator = Translator()
-        
+
     @commands.command(description="info about a user",
                       brief="info about a user",
                       pass_context=True)
@@ -175,7 +172,7 @@ class Utility:
         
         conn = aiohttp.TCPConnector(verify_ssl=False) # for https
         async with aiohttp.ClientSession(connector=conn) as session:
-            async with session.get(url, headers=headers) as r: 
+            async with session.get(url, headers=headers) as r:
                 if (r.status != 200):
                     await self.bot.messaging.reply(ctx, "Query for `{query}` failed with status code `{code} ({string})` (maybe try again)".format(
                                 query=query,
@@ -189,10 +186,8 @@ class Utility:
         
         tree = html.fromstring(text)
         
-        """
-        header
-        """
-        
+        # header
+
         header = tree.xpath("//div[@class='_fdf _odf']/div[@class='_Q1n']/div")
         
         if (not header or len(header) < 2):
@@ -204,10 +199,8 @@ class Utility:
         data["title"] = header[0].text_content()
         data["description"] = header[1].text_content()
         
-        """
-        game info
-        """
-                
+        # game info
+
         info = tree.xpath("//div[@class='_RBg']/div[@class='mod']")
         
         if (not info or len(info) < 1):
@@ -229,9 +222,7 @@ class Utility:
             if (content):
                 data["content"].append(content)
         
-        """
-        wikipedia link
-        """
+        # wikipedia link
         
         wiki_link = tree.xpath("//a[@class='q _KCd _tWc fl']/@href")
         
@@ -242,9 +233,7 @@ class Utility:
         
         data["wiki"] = wiki_link
         
-        """
-        game image
-        """
+        # game image
         
         game_img = tree.xpath("//a[@jsaction='fire.ivg_o']/@href")[0]
         

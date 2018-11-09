@@ -4,7 +4,7 @@ from lxml import html
 class Misc:
     def __init__(self, bot):
         self.bot = bot
-        
+
     # get insults from insult generator
     # output: string; the insult if found or "fucker"
     async def get_insult(self) -> str:
@@ -15,7 +15,7 @@ class Misc:
                     if (r.status != 200):
                         return "fucker"
                     
-                    tree = html.fromstring(await r.text())            
+                    tree = html.fromstring(await r.text())
                     p = tree.xpath("//div[@class='insult-text']/text()")
                     
                     if (isinstance(p, list)):
