@@ -335,12 +335,29 @@ class Steam:
         except Exception:
             return 0
 
-    # thanks to https://stackoverflow.com/a/36472887
+    # reference: https://developer.valvesoftware.com/wiki/SteamID#As_Represented_in_Computer_Programs
     @staticmethod
-    def steamid64_to_32(id64: str) -> str:
-        y = int(id64) - 76561197960265728
-        x = y % 2
-        return "STEAM_0:{}:{}".format(x, (y - x) // 2)
+    def steamid64_to_32(id64: int) -> str:
+        bytes = f"{id64:b}".zfill(64) # pad to 64
+
+        index = 0
+        
+        universe = bytes[index : index + 8]
+        index += 8
+
+        account_type = bytes[index : index + 4]
+        index += 4
+
+        instance = bytes[index : index + 20]
+        index += 20
+
+        account_num = bytes[index : index + 31]
+        index += 31
+
+        Y = bytes[index]
+
+        # format the id
+        return f"STEAM_{int(str(universe), 2)}:{Y}:{int(str(account_num), 2)}"
 
     async def get_account_age(self, id64: str) -> Optional[int]:
         try:
@@ -417,7 +434,7 @@ class Steam:
             return None
 
         # get 32-bit steamid
-        id32 = self.steamid64_to_32(id64)
+        id32 = self.steamid64_to_32(int(id64))
 
         # get profile summary
         profile_summary = await self.get_profile_summary(id64) # profile name gives us "avatarfull" (url to avatar) and "personaname" (username)
