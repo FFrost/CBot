@@ -33,7 +33,7 @@ class Amazon:
                         pass
 
         except Exception as e:
-            await self.bot.bot_utils.log_error_to_file(e, prefix="Amazon")
+            self.bot.bot_utils.log_error_to_file(e, prefix="Amazon")
 
     def has_amazon_url(self, content: str) -> Optional[str]:
         try:
@@ -106,7 +106,7 @@ class Amazon:
 
         embed.set_author(name=user.name, icon_url=user.avatar_url)
 
-        title = self.get_element(tree, "//span[@id='productTitle']/text()")
+        title = tree.get_element_by_id("productTitle").text_content()
 
         if (title is None):
             title = "Unknown item"
@@ -131,10 +131,27 @@ class Amazon:
 
         if (price is not None):
             embed.add_field(name=":dollar: Price", value=price)
+        else:
+            price = tree.get_element_by_id("priceblock_dealprice").text_content()
+
+            if (price is not None):
+                price_element = tree.get_element_by_id("price")
+
+                if (price_element):
+                    original_price = price_element.find_class("a-text-strike")
+
+                    if (original_price):
+                        if (isinstance(original_price, list)):
+                            original_price = original_price[0]
+
+                        original_price = original_price.text_content().strip()
+                        embed.add_field(name=":dollar: Price", value=f"~~{original_price}~~")
+                
+                embed.add_field(name=":money_mouth: Price with deal", value=price)
 
         rating = self.get_element(tree, "//span[@id='acrPopover']/@title")
 
-        num_reviews = self.get_element(tree, "//span[@id='acrCustomerReviewText']/text()")
+        num_reviews = tree.get_element_by_id("acrCustomerReviewText").text_content()
 
         if (rating is not None):
             embed.add_field(name=":star: Rating", value=rating)

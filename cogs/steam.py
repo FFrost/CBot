@@ -338,23 +338,23 @@ class Steam:
     # reference: https://developer.valvesoftware.com/wiki/SteamID#As_Represented_in_Computer_Programs
     @staticmethod
     def steamid64_to_32(id64: int) -> str:
-        bytes = f"{id64:b}".zfill(64) # pad to 64
+        id_bytes = f"{id64:b}".zfill(64) # pad to 64
 
         index = 0
         
-        universe = bytes[index : index + 8]
+        universe = id_bytes[index : index + 8]
         index += 8
 
-        account_type = bytes[index : index + 4]
+        #account_type = id_bytes[index : index + 4] # unused
         index += 4
 
-        instance = bytes[index : index + 20]
+        #instance = id_bytes[index : index + 20] # unused
         index += 20
 
-        account_num = bytes[index : index + 31]
+        account_num = id_bytes[index : index + 31]
         index += 31
 
-        Y = bytes[index]
+        Y = id_bytes[index]
 
         # format the id
         return f"STEAM_{int(str(universe), 2)}:{Y}:{int(str(account_num), 2)}"
