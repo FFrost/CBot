@@ -24,9 +24,6 @@ class Utility:
         if (not user):
             user = ctx.message.author
 
-        if (ctx.message.channel.is_private):
-            user = ctx.message.author
-
         is_member = isinstance(user, discord.Member)
 
         if (not is_member and hasattr(user, "member")):

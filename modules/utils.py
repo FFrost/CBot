@@ -307,3 +307,13 @@ def get_uptime(uptime: datetime.datetime) -> str:
         return f"{pluralize(minutes, 'minute')}, {pluralize(seconds, 'second')}"
 
     return pluralize(seconds, 'second')
+
+# thanks to https://stackoverflow.com/a/13688108/7663216
+def nested_set(dic, keys: list, value):
+    for key in keys[:-1]:
+        dic = dic.setdefault(key, {})
+
+    old_value = dic[keys[-1]]
+    dic[keys[-1]] = value
+
+    return old_value
