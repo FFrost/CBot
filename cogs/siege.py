@@ -333,7 +333,12 @@ class UbisoftAPI:
 
     async def _loadOperatorData(self) -> Optional[dict]:
         url = "https://game-rainbow6.ubi.com/assets/data/operators.bbbf29a090.json"
-        data = await self._get(url)
+
+        async with self._session.get(url) as r:
+            try:
+                data = await r.json()
+            except Exception:
+                return None
 
         if (not data or not isinstance(data, dict)):
             return None
