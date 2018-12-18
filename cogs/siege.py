@@ -5,7 +5,6 @@ from modules import utils
 
 import asyncio
 import aiohttp
-import datetime
 import time
 import base64
 import iso8601
@@ -333,7 +332,7 @@ class UbisoftAPI:
         return "Unranked"
 
     async def _loadOperatorData(self) -> Optional[dict]:
-        url = "https://ubistatic-a.akamaihd.net/0058/prod/assets/data/operators.3a2655c8.json"
+        url = "https://game-rainbow6.ubi.com/assets/data/operators.bbbf29a090.json"
         data = await self._get(url)
 
         if (not data or not isinstance(data, dict)):
