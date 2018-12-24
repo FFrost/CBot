@@ -129,8 +129,11 @@ class Amazon:
 
         price = self.get_element(tree, "//span[@id='priceblock_ourprice']/text()")
 
-        if (price is not None):
+        if (price):
             embed.add_field(name=":dollar: Price", value=price)
+        elif (self.get_element(tree, "//span[@class='buyingPrice']/text()")):
+            price = self.get_element(tree, "//span[@class='buyingPrice']/text()")
+            embed.add_field(name=":dollar: Price", value=f"${price}")
         else:
             price = tree.get_element_by_id("priceblock_dealprice").text_content()
 
