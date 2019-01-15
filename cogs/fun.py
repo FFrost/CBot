@@ -208,6 +208,9 @@ class Fun:
                       brief="chooses for you",
                       pass_context=True)
     async def choose(self, ctx, *options):
+        if (not options):
+            return
+        
         await self.bot.say(random.choice(options))
        
 def setup(bot):

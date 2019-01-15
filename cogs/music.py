@@ -308,6 +308,10 @@ class Music:
     @commands.cooldown(1, 4, commands.BucketType.server)
     async def skip(self, ctx):
         voice_state = self.voice_states.get(ctx.message.server.id)
+
+        if (not voice_state):
+            return
+        
         voice_state.skip()
 
     # TODO: create task for download

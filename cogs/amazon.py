@@ -128,12 +128,12 @@ class Amazon:
         embed.description = description
 
         price = self.get_element(tree, "//span[@id='priceblock_ourprice']/text()")
+        buying_price = self.get_element(tree, "//span[@class='buyingPrice']/text()")
 
         if (price):
             embed.add_field(name=":dollar: Price", value=price)
-        elif (self.get_element(tree, "//span[@class='buyingPrice']/text()")):
-            price = self.get_element(tree, "//span[@class='buyingPrice']/text()")
-            embed.add_field(name=":dollar: Price", value=f"${price}")
+        elif (buying_price):
+            embed.add_field(name=":dollar: Price", value=f"${buying_price}")
         else:
             price = tree.get_element_by_id("priceblock_dealprice").text_content()
 

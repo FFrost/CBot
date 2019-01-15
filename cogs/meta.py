@@ -43,8 +43,8 @@ class Meta:
             await self.bot.messaging.reply(ctx.message, "Can't get source code of built-in commands")
             return
         
-        location = os.path.relpath(src.co_filename).replace("\\", "/").replace("cbot/", "")
-            
+        location = obj.callback.__module__.replace(".", "/") + ".py"
+        
         url = "{source_url}/blob/master/{location}#L{firstlineno}-L{end}".format(source_url=self.bot.source_url,
                                                          location=location,
                                                          firstlineno=firstlineno,

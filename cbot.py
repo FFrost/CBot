@@ -365,11 +365,13 @@ class CBot(commands.Bot):
         try:
             if (member == self.user):
                 return
+
+            msg = f"{utils.get_cur_time()} {utils.format_member_name(member)} [{member.id}] left"
+
+            if (randint(0, 5) == 0):
+                msg = f"{utils.get_cur_time()} :crab: {utils.format_member_name(member)} [{member.id}] is gone :crab:"
             
-            await self.messaging.msg_admin_channel("{time} {name} [{uid}] left".format(time=utils.get_cur_time(),
-                                                                                       name=utils.format_member_name(member),
-                                                                                       uid=member.id),
-                                                                                       member.server)
+            await self.messaging.msg_admin_channel(msg, member.server)
         
         except Exception as e:
             await self.messaging.error_alert(e)
