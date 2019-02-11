@@ -317,3 +317,15 @@ def nested_set(dic, keys: list, value):
     dic[keys[-1]] = value
 
     return old_value
+
+def safe_list_get(l: list, index: int) -> Optional[any]:
+    if (not l):
+        return None
+
+    if (len(l) == 0):
+        return None
+    
+    try:
+        return l[index]
+    except KeyError:
+        return None

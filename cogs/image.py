@@ -354,7 +354,7 @@ class Image:
         for image in images_copy[:1]:
             try:
                 valid_image = await self.validate_image(image)
-                embed = utils.create_image_embed(ctx.message.author, title="Search results", footer="Page 1/{}".format(len(images)), image=valid_image)
+                embed = utils.create_image_embed(ctx.message.author, title=f"Search results for {query}", footer="Page 1/{}".format(len(images)), image=valid_image)
                 img_msg = await self.bot.send_message(channel, embed=embed)
     
                 await self.bot.messaging.add_img_reactions(img_msg)
@@ -483,6 +483,9 @@ class Image:
         if (message.author == self.bot.user):
             if (message.embeds):
                 embed = message.embeds[0]
+
+                if ("author" not in embed or "name" not in embed["author"]):
+                    return
                         
                 if (embed["author"]["name"] == user.name):
                     emoji = reaction.emoji
@@ -577,7 +580,7 @@ class Image:
     @commands.command(description="pixelates an image",
                       brief="pixelates an image",
                       pass_context=True,
-                      aliases=["pix"])
+                      aliases=["pix", "pixel", "px"])
     @commands.cooldown(2, 5, commands.BucketType.channel)
     async def pixelate(self, ctx, pixel_size: int = 5, *, url: str = "") -> None:
         if (pixel_size < 1):

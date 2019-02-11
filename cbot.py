@@ -36,7 +36,7 @@ class CBot(commands.Bot):
         self.REAL_PATH = os.path.dirname(self.REAL_FILE)
         self.TOKEN_PATH = f"{self.REAL_PATH}/cbot.yml"
 
-        self.ERROR_FILEPATH = f"{self.REAL_PATH}/cbot_errors.txt"
+        self.ERROR_FILEPATH = f"{self.REAL_PATH}/error.log"
 
         # check if cbot exited properly on last run
         self.PID_FILEPATH = "/tmp/cbot.pid"
@@ -333,6 +333,14 @@ class CBot(commands.Bot):
                         await self.bot_utils.output_log(message)
                         await self.send_message(message.channel, this_msg)
                         return
+
+            if (message.content.lower() == "f"):
+                await self.send_message(message.channel, "F")
+                return
+
+            if ("thanks for the invite" in message.content.lower()):
+                await self.messaging.reply(message, "shut the fuck up")
+                return
                 
             # TODO: reactions will go here
             
