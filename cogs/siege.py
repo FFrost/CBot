@@ -28,7 +28,7 @@ class RateLimited(UbisoftAPIError):
     pass
 
 class UbisoftAPI:
-    def __init__(self, loop, *args, **kwargs):
+    def __init__(self, session, *args, **kwargs):
         if (kwargs.get("ticket")):
             self._initialAuth = f"Basic {kwargs.get('ticket')}"
         elif ("email" in kwargs and "password" in kwargs):
@@ -164,8 +164,7 @@ class UbisoftAPI:
 
         self.rateLimitedTime: float = 0
 
-        self.loop = loop
-        self._session = aiohttp.ClientSession(loop=loop)
+        self._session = session
 
         self._rateLimitCooldown = 120
 
@@ -471,7 +470,7 @@ class Siege:
             if (not email and not password and not ticket):
                 raise NoLoginInfo
 
-            self.ubi = UbisoftAPI(self.bot.loop, email=email, password=password, ticket=ticket)
+            self.ubi = UbisoftAPI(self.bot.session, email=email, password=password, ticket=ticket)
             self._login_task = self.bot.loop.run_until_complete(self.ubi.login())
         except NoLoginInfo:
             print("No Ubisoft login info provided for Siege stats command, disabling command")
@@ -625,7 +624,7 @@ class Siege:
     @commands.command(description="finds Rainbow Six: Siege stats for a user",
                       brief="finds Rainbow Six: Siege stats for a user",
                       pass_context=True,
-                      aliases=["r6s", "r6stats"])
+                      aliases=["sg", "r6", "r6s", "r6stats"])
     @commands.cooldown(2, 5, commands.BucketType.user)
     async def siege(self, ctx, username: str, region: str = "america", platform: str = "uplay"):
         await self.bot.send_typing(ctx.message.channel)

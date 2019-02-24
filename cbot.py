@@ -4,7 +4,16 @@ from discord.ext import commands
 import default_config
 from modules import bot_utils, utils, messaging, misc, checks
 
-import logging, os, traceback, glob, yaml, sys, atexit, psutil, importlib
+import logging
+import os
+import traceback
+import glob
+import yaml
+import sys
+import atexit
+import psutil
+import importlib
+import aiohttp
 from random import randint
 from datetime import datetime
 
@@ -68,6 +77,8 @@ class CBot(commands.Bot):
         self.cleanup_youtubedl_directory()
 
         checks.owner_id = self.dev_id
+
+        self.session = aiohttp.ClientSession(loop=self.loop)
         
         print("Loading modules...")
         
@@ -310,36 +321,6 @@ class CBot(commands.Bot):
 
             # ignore other bots
             if (message.author.bot):
-                return
-            
-            # insult anyone who @s us
-            if (self.user in message.mentions and not message.mention_everyone and not message.content.startswith("!")):
-                await self.bot_utils.output_log(message)
-                
-                if (self.CONFIG["should_insult"]):
-                    insult = await self.misc.get_insult()
-                    an = "an" if (insult[0].lower() in "aeiou") else "a"
-                    await self.messaging.reply(message, "you're {an} {insult}.".format(an=an, insult=insult))
-            
-            # respond to "^ this", "this", "^", etc.
-            if (self.CONFIG["should_this"]):
-                if (message.content.startswith("^") or message.content.lower() == "this"):
-                    if (message.content == "^" or "this" in message.content.lower()):
-                        this_msg = "^"
-                        
-                        if (randint(0, 100) < 50):
-                            this_msg = "^ this"
-                        
-                        await self.bot_utils.output_log(message)
-                        await self.send_message(message.channel, this_msg)
-                        return
-
-            if (message.content.lower() == "f"):
-                await self.send_message(message.channel, "F")
-                return
-
-            if ("thanks for the invite" in message.content.lower()):
-                await self.messaging.reply(message, "shut the fuck up")
                 return
                 
             # TODO: reactions will go here
