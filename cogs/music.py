@@ -14,10 +14,11 @@ from typing import Optional, Tuple
 # mostly stolen from PyVox (https://github.com/Hiroyu/_PyVox) and Rapptz's playlist example (https://github.com/Rapptz/discord.py/blob/async/examples/playlist.py)
 
 class VoiceEntry:
-    def __init__(self, message: discord.Message, player: discord.voice_client.StreamPlayer):
+    def __init__(self, message: discord.Message, player: discord.voice_client.StreamPlayer, query: str):
         self.author = message.author
         self.channel = message.channel
         self.player = player
+        self.query = query
 
     def get_info(self):
         return self.player.yt.extract_info(self.player.url, download=False)
@@ -83,10 +84,20 @@ class VoiceState:
     async def audio_player_task(self):
         while True:
             self.play_next_song.clear()
-            self.current = await self.queue.get()
+            self.current = await self.queue.get() # VoiceEntry
+            
+            self.current.player = await self.voice_client.create_ytdl_player(self.current.query,
+                ytdl_options={
+                    "default_search": "auto",
+                    "quiet": True,
+                    "noplaylist": True,
+                    "no_color": True
+                },
+                before_options="-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5", # TEST
+                after=self.toggle_next)
             
             embed = None
-                  
+
             current_info = self.current.get_info()
             
             if (current_info["extractor"].startswith("youtube")):
@@ -256,7 +267,7 @@ class Music:
         except Exception as e:
             await self.bot.messaging.reply(ctx.message, "An error occured: {}".format(e))
         else:
-            entry = VoiceEntry(ctx.message, player)
+            entry = VoiceEntry(ctx.message, player, query)
             
             if (not voice_state.queue.empty() or voice_state.is_playing()):
                 await self.bot.messaging.reply(ctx.message, "Queued " + str(entry))
@@ -314,17 +325,58 @@ class Music:
         
         voice_state.skip()
 
+    @commands.command(description="shows the queued songs",
+                      brief="shows the queued songs",
+                      pass_context=True,
+                      no_pm=True)
+    @commands.cooldown(1, 4, commands.BucketType.server)
+    async def queue(self, ctx):
+        await self.bot.send_typing(ctx.message.channel)
+        
+        voice_state = self.voice_states.get(ctx.message.server.id)
+
+        if (not voice_state):
+            await self.bot.messaging.reply(ctx.message, "Not playing any music")
+            return
+        
+        safe_queue = list(voice_state.queue._queue)
+
+        if (not safe_queue):
+            await self.bot.messaging.reply(ctx.message, "No songs queued")
+            return
+
+        queue_str = "```\n"
+
+        for i, entry in enumerate(safe_queue):
+            queue_str += f"#{i + 1} - {str(entry)}\n"
+
+        queue_str += "```"
+        
+        await self.bot.say(queue_str)
+
+    @commands.command(description="removes a song from the queue",
+                      show="removes a song from the queue",
+                      pass_context=True,
+                      no_pm=True,
+                      enabled=False)
+    @commands.check(checks.is_in_voice_channel)
+    @commands.cooldown(1, 2, commands.BucketType.server)
+    async def remove(self, ctx, index: int):
+        # TODO
+        pass
+
     # TODO: create task for download
     @commands.command(description="downloads a video as an mp3 file",
                       brief="downloads a video as an mp3 file",
-                      pass_context=True,
-                      enabled=False)
+                      pass_context=True)
     @commands.cooldown(1, 60, commands.BucketType.user)
-    async def ytdl(self, ctx, *, query: str = ""):
-        if (not query):
-            query = await self.bot.bot_utils.find_last_youtube_embed(ctx.message)
+    async def ytdl(self, ctx, *, url: str = ""):
+        await self.bot.send_typing(ctx.message.channel)
 
-        if (not query):
+        if (not url):
+            url = await self.bot.bot_utils.find_last_youtube_embed(ctx.message)
+
+        if (not url):
             await self.bot.messaging.reply(ctx.message, "No video specified")
             return
 
@@ -352,7 +404,7 @@ class Music:
             "outtmpl": f"{download_path}%(title)s - %(id)s.%(ext)s",
             "extractaudio": True,
             "audioformat": "mp3",
-            "format": "mp3/bestaudio",
+            "format": "mp3[filesize<8M]/bestaudio[filesize<8M]",
             "postprocessors": [{
                 "key": "FFmpegExtractAudio",
                 "preferredcodec": "mp3",
@@ -362,11 +414,11 @@ class Music:
 
         with youtube_dl.YoutubeDL(ytdl_opts) as ydl:
             try:
-                info = ydl.extract_info(query, download=False, process=False)
+                info = ydl.extract_info(url, download=False, process=False)
 
             except Exception as e:
                 error = utils.extract_yt_error(e)
-                await self.bot.messaging.reply(ctx.message, f"Failed to find `{query}`: `{error}`")
+                await self.bot.messaging.reply(ctx.message, f"Failed to find `{url}`: `{error}`")
                 return
 
             embed = utils.create_youtube_embed(info, ctx.message.author)
@@ -380,7 +432,11 @@ class Music:
                 await self.bot.messaging.reply(ctx.message, f"Video is too long ({duration}), max duration: {max_duration}")
                 return
 
-            ydl.download([query])
+            try:
+                ydl.download([url])
+            except youtube_dl.DownloadError as e:
+                await self.bot.messaging.reply(ctx.message, f"Failed to find `{url}`: `{e}` (file may be too large)")
+                return
 
             filename = ydl.prepare_filename(info)
             

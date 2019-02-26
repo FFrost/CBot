@@ -9,6 +9,7 @@ class Messages:
     def __init__(self, bot):
         self.bot = bot
 
+        # TODO: del author_id from dict when time expires, need task to do this every X seconds
         self.times = {}
         self.cooldown = 2
 
@@ -53,7 +54,7 @@ class Messages:
                     
                     if (randint(0, 100) < 50):
                         this_msg = "^ this"
-                    
+
                     await self.bot.bot_utils.output_log(message)
                     await self.bot.send_message(message.channel, this_msg)
                     return
