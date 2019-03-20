@@ -256,56 +256,28 @@ class Steam:
         except Exception:
             return None
 
-    async def get_game_name(self, appid: int) -> str:
+    async def get_game_name(self, appid: int) -> Optional[str]:
         try:
             async with aiohttp.ClientSession() as session:
-                async with session.get(f"http://api.steampowered.com/ISteamUserStats/GetSchemaForGame/v2/?key={self.steam_api_key}&appid={appid}") as r:
+                async with session.get(f"http://store.steampowered.com/api/appdetails?appids={appid}") as r:
                     if (r.status != 200):
-                        return await self.get_game_name_from_store(appid)
-                    
+                        return None
+
                     data = await r.json()
-            
-                    if data is not None:
-                        if ("game" not in data):
-                            return await self.get_game_name_from_store(appid)
-                        
-                        if ("gameName" not in data["game"]):
-                            return await self.get_game_name_from_store(appid)
 
-                        if (data["game"]["gameName"] == ""):
-                            return await self.get_game_name_from_store(appid)
+                    if data is None:
+                        return None
+
+                    try:
+                        if (not data[appid]["success"]):
+                            return None
                         
-                        if (data["game"]["gameName"].startswith("ValveTestApp")):
-                            return await self.get_game_name_from_store(appid)
-                        
-                        return data["game"]["gameName"]
+                        return data[appid]["data"]["name"]
+                    except KeyError:
+                        return None
 
         except Exception:
-            return await self.get_game_name_from_store(appid)
-
-    async def get_game_name_from_store(self, appid: int) -> str:
-        game_url = f"http://store.steampowered.com/app/{appid}"
-
-        try:
-            async with aiohttp.ClientSession() as session:
-                async with session.get(game_url) as r:
-                    if (r.status != 200):
-                        return "unknown"
-
-                    tree = html.fromstring(await r.text())
-
-                    path = tree.xpath("//title/text()")
-                    
-                    if (not path):
-                        return "unknown"
-                    
-                    if (isinstance(path, list)):
-                        path = path[0]
-
-                    return path.strip().replace(" on Steam", "")
-
-        except Exception:
-            return "unknown"
+            return None
 
     async def get_num_bans(self, id64: str) -> int:
         try:
