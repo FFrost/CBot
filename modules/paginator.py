@@ -21,6 +21,8 @@ class Paginator:
         # kwargs
         self.expiry_time = kwargs.get("expiry_time", 120) # time until the embed expires
         self.paging_cooldown = kwargs.get("paging_cooldown", 1) # 1 second cooldown in between paging
+        self.extra_embeds = kwargs.get("extra_embeds", {}) # extra embeds with custom emojis to display
+        self.table = kwargs.get("table", {}) # what emoji points to what extra embed
 
     # can the paginator be updated anymore
     def has_expired(self) -> bool:
@@ -57,6 +59,10 @@ class Paginator:
             self.message = await self.bot.send_message(self.ctx.message.channel, embed=embed)
             
             await self.bot.messaging.add_img_reactions(self.message)
+
+            if (self.table):
+                for emoji in self.table:
+                    await self.bot.add_reaction(self.message, emoji)
         else:
             await self.bot.edit_message(self.message, embed=embed)
 
@@ -112,6 +118,11 @@ class Paginator:
             await self.page(forward = True)
         elif (emoji == self.bot.messaging.EMOJI_CHARS["arrow_backward"]):
             await self.page(forward = False)
+        elif (emoji in self.table):
+            self.index = 0
+            self.embeds = self.extra_embeds[self.table[emoji]]
+            
+            await self.update()
 
 async def create_paginator(bot: commands.Bot, ctx: commands.Context, embeds: List[discord.Embed], *args, **kwargs) -> Paginator:
     pager = Paginator(bot, ctx, embeds, *args, **kwargs)
