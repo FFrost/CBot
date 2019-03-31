@@ -75,12 +75,13 @@ class Meta:
     async def say(self, *, msg: str):
         await self.bot.say(msg)
         
-    @cmd.command(description="changes the bot's status",
+    @commands.command(description="changes the bot's status",
                  brief="changes the bot's status",
                  pass_context=True)
+    @commands.check(checks.is_owner)
     async def status(self, ctx, *, status: str):
         await self.bot.change_presence(game=discord.Game(name=status))
-        await self.bot.messaging.reply(ctx.message, "Set status to `{}`".format(status))
+        await self.bot.messaging.reply(ctx.message, f"Set status to `{status}`")
         
     # TODO: convert to paginator
     @commands.command(description="what servers the bot is in",
@@ -360,7 +361,7 @@ Manage Messages **(2FA)**, Read Messages, Send Messages, Embed Links, Attach Fil
         if (hasattr(self.bot, "uptime")):
             embed.add_field(name="Uptime", value=utils.get_uptime(self.bot.uptime))
 
-        embed.set_footer(text=f"Requested at {utils.format_time(datetime.now())}")
+        embed.set_footer(text=f"Requested at {datetime.now().strftime('%H:%M:%S on %-m/%-d/%Y')}")
 
         await self.bot.say(embed=embed)
 

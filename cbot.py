@@ -14,6 +14,7 @@ import atexit
 import psutil
 import importlib
 import aiohttp
+import sqlite3
 from random import randint
 from datetime import datetime
 
@@ -72,6 +73,10 @@ class CBot(commands.Bot):
         self.CONFIG_PATH = self.REAL_PATH + "/config.yml"
         
         self.load_config()
+
+        # connect to database
+        self.DATABASE_FILEPATH = f"{self.REAL_PATH}/cbot_database.db"
+        self.db = sqlite3.connect(self.DATABASE_FILEPATH)
 
         # remove any leftover files in the youtubedl download directory
         self.cleanup_youtubedl_directory()
@@ -221,6 +226,17 @@ class CBot(commands.Bot):
         except Exception as e:
             print("Config file could not be loaded (general error): {}".format(e))
             return None
+
+    def save_config(self) -> bool:
+        try:
+            with open(self.CONFIG_PATH, "w") as f:
+                yaml.dump(self.CONFIG, f, default_flow_style=False)
+
+            return True
+        except Exception as e:
+            print(e)
+        
+        return False
 
     def cleanup_youtubedl_directory(self):
         path = self.CONFIG["youtube-dl"]["download_directory"]

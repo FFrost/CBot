@@ -32,9 +32,6 @@ DEFAULT_CONFIG = {
     # can other people use the !invite command to invite the bot to their own servers
     "bot_can_be_invited": True,
 
-    # what channel should the bot send user join/leave log messages to, leave blank to disable
-    "log_channel": "admin",
-
     # should the bot insult people who at it
     "should_insult": True,
 
@@ -63,5 +60,11 @@ DEFAULT_CONFIG = {
 
         # base64 encoded string "email:password" used for ubisoft api
         "ticket": ""
+    },
+
+    # admin settings
+    "admin": {
+        # what channel should the bot send administrative log messages to, leave blank to disable
+        "log_channel": "admin",
     }
 }

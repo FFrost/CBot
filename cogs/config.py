@@ -48,7 +48,7 @@ class Config:
         await self.bot.messaging.reply(ctx.message, f"```\n{data}\n```")
 
     @cfg.command(description="edits a value in the config and reloads it\n" \
-                             "to edit a subvalue (embeds -> enabled), type the key as embeds.amazon\n" \
+                             "to edit a subvalue (embeds -> enabled), type the key as embeds.enabled\n" \
                              "ex: !cfg edit embeds.enabled False",
                  brief="edits a value in the config and reloads it",
                  pass_context=True)
@@ -77,6 +77,9 @@ class Config:
 
         # reload
         ctx.invoke(self.reload)
+
+        # save to disk
+        self.bot.save_config()
 
         await self.bot.say(f"Set `{key}`: `{literal_val}` (old value: `{old_val}`)")
 
