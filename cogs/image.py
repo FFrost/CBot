@@ -490,7 +490,7 @@ class Image:
                 if (embed["author"]["name"] == user.name):
                     emoji = reaction.emoji
                     
-                    if (message.reactions and reaction in message.reactions):
+                    if (message.reactions and reaction in message.reactions and emoji in self.bot.messaging.EMOJI_CHARS.values()):
                         if (self.bot.bot_utils.get_permissions(message.channel).manage_emojis):
                             try:
                                 await self.bot.remove_reaction(message, emoji, user) # remove the reaction so the user can react again
