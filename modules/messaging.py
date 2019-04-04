@@ -127,14 +127,14 @@ class Messaging:
     # input: msg, content of message to send
     #        server, server to send message in
     async def msg_admin_channel(self, msg: str, server: discord.Server) -> None:
-        if (not self.bot.CONFIG["log_channel"]):
+        if (not self.bot.CONFIG["admin"]["log_channel"]):
             return
 
         try:
             if (not server):
                 return
             
-            channel = discord.utils.get(server.channels, name=self.bot.CONFIG["log_channel"], type=discord.ChannelType.text)
+            channel = discord.utils.get(server.channels, name=self.bot.CONFIG["admin"]["log_channel"], type=discord.ChannelType.text)
             
             if (not channel):
                 return
