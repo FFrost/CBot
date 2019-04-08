@@ -25,3 +25,14 @@ def yes_no_check(message: discord.Message) -> bool:
 
 def is_yes_or_no(message: discord.Message) -> bool:
     return (message.content.lower() in ["yes", "no"])
+
+"""
+TODO:
+    add groups that can kick while not having discord permissions (ex. specific role that
+    can use CBot to kick/ban but not kick themselves)
+"""
+def can_kick(ctx: commands.Context) -> bool:
+    return (ctx.message.author.server_permissions.kick_members)
+
+def can_ban(ctx: commands.Context) -> bool:
+    return (ctx.message.author.server_permissions.ban_members)
