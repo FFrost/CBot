@@ -8,13 +8,12 @@ import aiohttp
 from lxml import html
 from urllib.parse import quote
 from http.client import responses
-from googletrans import Translator, LANGUAGES, LANGCODES
+from googletrans import LANGUAGES, LANGCODES
 from datetime import datetime
 
 class Utility:
     def __init__(self, bot):
         self.bot = bot
-        self.translator = Translator()
 
     @commands.command(description="info about a user",
                       brief="info about a user",
@@ -149,7 +148,7 @@ class Utility:
                 return
         
         try:
-            result = self.translator.translate(string, dest=language)
+            result = self.bot.translator.translate(string, dest=language)
         except Exception:
             await self.bot.messaging.reply(ctx.message, "Failed to translate text")
             return

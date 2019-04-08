@@ -10,6 +10,9 @@ from random import randint, uniform
 from lxml import html
 from urllib.parse import quote
 from http.client import responses
+import nltk
+from nltk.corpus import wordnet
+from googletrans import LANGUAGES
 
 class Fun:
     def __init__(self, bot):
@@ -26,6 +29,8 @@ class Fun:
                                    "My sources say no", "Outlook not so good",
                                    "Very doubtful"
                                    ]
+        
+        self.mention_regex = re.compile(r"(<@[0-9]{18}>)")
 
     @commands.command(description="random number generator, supports hexadecimal and floats",
                       brief="random number generator, supports hex/floats",
@@ -212,6 +217,101 @@ class Fun:
             return
         
         await self.bot.say(random.choice(options))
-       
+
+    @commands.command(description="thesaurizes text",
+                      brief="thesaurize text",
+                      pass_context=True,
+                      aliases=["th"])
+    async def thesaurize(self, ctx, *, text: str=""):
+        await self.bot.send_typing(ctx.message.channel)
+
+        if (not text):
+            text = await self.bot.bot_utils.find_last_text(ctx.message)
+
+            if (not text):
+                await self.bot.messaging.reply(ctx.message, "Failed to find text")
+                return
+
+        # remove discord mentions
+        text = self.mention_regex.sub("", text)
+
+        tokens = nltk.word_tokenize(text)
+
+        new_text = []
+
+        for token in tokens:
+            if (len(token) <= 3): # TODO: better way of filtering out "a", "the", "its", "it's", etc
+                new_text.append(token)
+                continue
+            
+            synonyms = wordnet.synsets(token)
+
+            if (not synonyms):
+                new_text.append(token)
+                continue
+            
+            lemma_name = None
+
+            for synset in list(synonyms):
+                try:
+                    lemma_name = synset.lemma_names()[0]
+
+                    if (lemma_name == token.lower()):
+                        lemma_name = None
+                        continue
+
+                    lemma_name = lemma_name.replace("_", " ")
+                except (IndexError, AttributeError):
+                    continue
+                else:
+                    new_text.append(str(lemma_name))
+                    break
+
+            if (lemma_name is None):
+                new_text.append(token)
+
+        await self.bot.say(" ".join(new_text))
+    
+    @commands.command(description="puts text through random translations",
+                      brief="puts text through random translations",
+                      pass_context=True,
+                      aliases=["ts"])
+    async def translation_scramble(self, ctx, *, text: str=""):
+        await self.bot.send_typing(ctx.message.channel)
+
+        if (not text):
+            text = await self.bot.bot_utils.find_last_text(ctx.message)
+
+            if (not text):
+                await self.bot.messaging.reply(ctx.message, "Failed to find text")
+                return
+
+        # remove discord mentions
+        text = self.mention_regex.sub("", text)
+
+        # save original language
+        source_lang_code = self.bot.translator.detect(text).lang
+
+        times = 8
+        languages = [source_lang_code]
+        
+        for _i in range(times):
+            dest_lang_code = random.choice(list(LANGUAGES.keys()))
+
+            try:
+                result = self.bot.translator.translate(text, dest=dest_lang_code)
+                text = result.text
+                languages.append(result.dest)
+            except Exception:
+                await self.bot.messaging.reply(ctx.message, "Failed to translate text")
+                return
+
+        # translate it back to the original language
+        result = self.bot.translator.translate(text, dest=source_lang_code)
+        text = result.text
+        languages.append(source_lang_code)
+
+        await self.bot.say(f"`{times} translations: {' -> '.join([LANGUAGES[langcode].capitalize() for langcode in languages])}`\n{text}")
+
 def setup(bot):
     bot.add_cog(Fun(bot))

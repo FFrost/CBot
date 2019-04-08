@@ -17,6 +17,7 @@ import aiohttp
 import sqlite3
 from random import randint
 from datetime import datetime
+from googletrans import Translator
 
 # set up logger
 logger = logging.getLogger("discord")
@@ -119,6 +120,8 @@ class CBot(commands.Bot):
         print("CBot initialized")
 
         atexit.register(self.on_exit)
+
+        self.translator = Translator()
 
     # called when the script terminates
     def on_exit(self):
@@ -274,7 +277,7 @@ class CBot(commands.Bot):
     
     # print info about where the bot is
     async def print_bot_info(self):
-        print("Connected to:")
+        print(f"Connected to {len(self.servers)} servers:")
         
         for s in self.servers:
             if (s.unavailable): # can't retrieve info about server
