@@ -29,6 +29,8 @@ For general questions, feel free to contact me on Discord: Frost#0261
 
 ## Inviting the bot to your server
 
+When the bot is run, it will print an invite link to the command line. Opening that link in a web browser will allow you to invite the bot to any server you have `Manage Server` permissions in. If you don't have access to that, there are alternative ways to invite the bot.
+
 If you can message the bot, using the `!invite` command is the easiest way to invite the bot to a server. Otherwise, follow the rest of the steps.
 
 1. Find the bot's client ID. There are several ways to do this:

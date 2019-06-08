@@ -50,21 +50,21 @@ class BotUtils:
     
     # gets a channel by name
     # input: name, keyword to search channel names for
-    #        server,  server to search for the channel
+    #        guild,  guild to search for the channel
     # output: channel object matching search or None if no channels were found
-    def find_channel(self, name: str, server: discord.Server) -> Optional[discord.Channel]:
-        if (not server):
+    def find_channel(self, name: str, guild: discord.Guild) -> Optional[discord.abc.GuildChannel]:
+        if (not guild):
             return None
         
-        server = str(server)
-        return discord.utils.get(self.bot.get_all_channels(), server__name=server, name=name)
+        guild = str(guild)
+        return discord.utils.get(self.bot.get_all_channels(), guild__name=guild, name=name)
     
     # find last embed in channel
     # input: channel, channel to search for embeds
     #        embed_type, type of embed to search for, video or image
     # output: url of the embed or None if not found
-    async def find_last_embed(self, channel: discord.Channel) -> Optional[str]:
-        async for message in self.bot.logs_from(channel):
+    async def find_last_embed(self, channel: discord.abc.GuildChannel) -> Optional[str]:
+        async for message in channel.history():
             embed = utils.find_image_embed(message)
     
             if (embed):
@@ -75,10 +75,8 @@ class BotUtils:
     # finds last image in channel
     # input: message, message from which channel will be extracted and point to search before
     # output: url of image found or None if no images were found
-    async def find_last_image(self, message: discord.Message) -> Optional[str]:
-        channel = message.channel
-        
-        async for message in self.bot.logs_from(channel, before=message):
+    async def find_last_image(self, message: discord.Message) -> Optional[str]:        
+        async for message in message.channel.history(before=message):
             attachments = utils.find_attachment(message)
             
             if (attachments):
@@ -95,7 +93,7 @@ class BotUtils:
     # input: message, message from which channel will be used as point to search before
     # output: text of message or None if no text messages were found
     async def find_last_text(self, message: discord.Message) -> Optional[str]:
-        async for message in self.bot.logs_from(message.channel, before=message):
+        async for message in message.channel.history(before=message):
             if (message.content):
                 return message.content
             
@@ -103,38 +101,23 @@ class BotUtils:
     # input: message, message from which channel will be used as point to search before
     # output: url of youtube embed or None if no youtube video embeds were found
     async def find_last_youtube_embed(self, message: discord.Message) -> Optional[str]:
-        async for message in self.bot.logs_from(message.channel, before=message, limit=50):
+        async for message in message.channel.history(before=message, limit=50):
             if (message.embeds):
-                for embed in message.embeds:
-                    keys = embed.keys()
-                    
-                    if ("video" in keys or ("type" in keys and embed["type"] == "video")):
-                        if ("provider" in keys and "name" in embed["provider"].keys() and embed["provider"]["name"] == "YouTube"):
-                            if ("url" in keys and utils.youtube_url_validation(embed["url"])):
-                                return embed["url"]
-                    elif ("url" in keys and utils.youtube_url_validation(embed["url"])):
-                        return embed["url"]
+                for embed in message.embeds:                    
+                    if (embed.type == "video" or embed.video):
+                        if (embed.provider.name == "YouTube"):
+                            return embed.url
+                    elif (utils.youtube_url_validation(embed.url)):
+                        return embed.url
 
     # finds the last message sent before the command message
     # input: message, the message to search before
     # output: the message if found or None
     async def find_last_message(self, message: discord.Message) -> Optional[discord.Message]:
-        async for message in self.bot.logs_from(message.channel, before=message, limit=1):
+        async for message in message.channel.history(before=message, limit=1):
             return message
 
         return None
-            
-    # get bot's permissions in a channel
-    # input: channel, channel to get permissions from
-    # output: permissions in the channel
-    def get_permissions(self, channel: discord.Channel, user: discord.User = None) -> discord.Permissions:
-        if (channel.is_private):
-            return discord.Permissions.all_channel()
-        
-        if (not user or user == self.bot.user):
-            user = channel.server.me # needs member version of bot
-        
-        return user.permissions_in(channel)
     
     # deletes a message if the bot has permission to do so
     # input: message, message to delete
@@ -142,11 +125,11 @@ class BotUtils:
     async def delete_message(self, message: discord.Message) -> bool:
         channel = message.channel
                 
-        if (channel.is_private and message.author != self.bot.user):
+        if (isinstance(channel, discord.abc.PrivateChannel) and message.author != self.bot.user):
             return False
-        elif (self.get_permissions(channel, self.bot.user).manage_messages):
+        elif (channel.permissions_for(message.guild.me).manage_messages):
             try:
-                await self.bot.delete_message(message)
+                await message.delete()
                 return True
             
             except Exception:
@@ -163,7 +146,7 @@ class BotUtils:
         num_to_delete = abs(num_to_delete)
         num_deleted = 0
     
-        async for message in self.bot.logs_from(ctx.message.channel, before=ctx.message, limit=500):
+        async for message in ctx.channel.history(before=ctx.message, limit=500):
             if (num_deleted >= num_to_delete):
                 break
             
@@ -175,25 +158,25 @@ class BotUtils:
             
         return num_deleted
     
-    # find a server from the ones we are currently in
-    # input: search, string to search for, either part/all of server name or index in list of servers
-    # output: the server if found or None
-    def find_server(self, search: str) -> Optional[discord.Server]:
-        servers = list(self.bot.servers)
-        server = None
+    # find a guild from the ones we are currently in
+    # input: search, string to search for, either part/all of guild name or index in list of guilds
+    # output: the guild if found or None
+    def find_guild(self, search: str) -> Optional[discord.Guild]:
+        guilds = list(self.bot.guilds)
+        guild = None
         
         try:
             index = int(search)
             
         except ValueError: # if it's not an index, search by name
-            server = discord.utils.find(lambda s: search.lower() in s.name.lower(), servers)
+            guild = discord.utils.find(lambda s: search.lower() in s.name.lower(), guilds)
         
         else:
             index -= 1
             
-            if (index >= 0 and index < len(servers)):
-                server = servers[index]
-            else: # search in the server name
-                server = discord.utils.find(lambda s: search.lower() in s.name.lower(), servers)
+            if (index >= 0 and index < len(guilds)):
+                guild = guilds[index]
+            else: # search in the guild name
+                guild = discord.utils.find(lambda s: search.lower() in s.name.lower(), guilds)
 
-        return server
+        return guild

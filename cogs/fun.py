@@ -14,7 +14,7 @@ import nltk
 from nltk.corpus import wordnet
 from googletrans import LANGUAGES
 
-class Fun:
+class Fun(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
@@ -34,13 +34,10 @@ class Fun:
 
     @commands.command(description="random number generator, supports hexadecimal and floats",
                       brief="random number generator, supports hex/floats",
-                      pass_context=True,
                       name="random",
                       aliases=["rand"])
     @commands.cooldown(2, 5, commands.BucketType.channel)
-    async def _random(self, ctx, low: str, high: str):
-        message = ctx.message
-                
+    async def _random(self, ctx, low: str, high: str):                
         base = 10
                 
         hex_exp = "0[xX][0-9a-fA-F]+" # hex number regex (0x0 to 0xF)
@@ -53,7 +50,7 @@ class Fun:
                 if (re.search(hex_exp, n)):
                     base = 16
                 else:
-                    await self.bot.messaging.reply(message, "format: !random low high")
+                    await ctx.send(f"{ctx.author.mention} format: !random low high")
                     return
                 
         try:
@@ -69,11 +66,11 @@ class Fun:
                     high = int(high, base)
                     
         except Exception:
-            await self.bot.messaging.reply(message, "!random: low and high must be numbers")
+            await ctx.send(f"{ctx.author.mention} !random: low and high must be numbers")
             return
                 
         if (low == high):
-            await self.bot.messaging.reply(message, "rolled a {}".format(low))
+            await ctx.send(f"{ctx.author.mention} rolled a {low}")
             return
                 
         if (low > high):
@@ -96,222 +93,218 @@ class Fun:
         else:
             result = r
                 
-        await self.bot.messaging.reply(ctx, "rolled a {}".format(result))
+        await ctx.send(f"{ctx.author.mention} rolled a {result}")
         
     # TODO: reenable this if we find a workaround for rate limits
     @commands.command(description="reverse image search",
                       brief="reverse image search",
-                      pass_context=True,
                       aliases=["rev"],
-                      enabled=False)
+                      enabled=False,
+                      hidden=True)
     @commands.cooldown(1, 5, commands.BucketType.channel)
     async def reverse(self, ctx, *, query: str = ""):
         message = ctx.message
         
-        await self.bot.send_typing(message.channel)
-        
-        if (not query):
-            if (message.attachments):
-                query = message.attachments[0]["url"]
-            else:
-                query = await self.bot.bot_utils.find_last_image(message)
-                
-        if (not query):
-            await self.bot.messaging.reply(message, "No image found")
-            return
-        
-        headers = {"User-Agent": "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/43.0.2357.134 Safari/537.36"}
-        url = "https://images.google.com/searchbyimage?image_url={}&encoded_image=&image_content=&filename=&hl=en".format(quote(query))
-        
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url, headers=headers) as r:
-                if (r.status != 200):
-                    await self.bot.messaging.reply(ctx, "Query for `{query}` failed with status code `{code} ({string})` (maybe try again)".format(
-                        query=query,
-                        code=r.status,
-                        string=responses[r.status]))
-                    return
-                
-                text = await r.text()
-    
-                tree = html.fromstring(text)
-                
-                path = tree.xpath("//div[@class='_hUb']/a/text()")
-                
-                if (not path):
-                    await self.bot.messaging.reply(ctx, "Query for `{}` failed (maybe try again)".format(query))
-                    return
+        async with ctx.channel.typing():
+            if (not query):
+                if (message.attachments):
+                    query = message.attachments[0]["url"]
+                else:
+                    query = await self.bot.bot_utils.find_last_image(message)
                     
-                if (isinstance(path, list)):
-                    path = path[0].strip()
-                elif (isinstance(path, str)):
-                    path = path.strip()
+            if (not query):
+                await ctx.send(f"{ctx.author.mention} No image found")
+                return
+            
+            headers = {"User-Agent": "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/43.0.2357.134 Safari/537.36"}
+            url = "https://images.google.com/searchbyimage?image_url={}&encoded_image=&image_content=&filename=&hl=en".format(quote(query))
+            
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url, headers=headers) as r:
+                    if (r.status != 200):
+                        await ctx.send(f"{ctx.author.mention} Query for `{query}` failed with status code `{r.status} ({responses[r.status]})` (maybe try again)")
+                        return
                     
-                embed = utils.create_image_embed(message.author,
-                                                          title="Best guess for this image:",
-                                                          description=path,
-                                                          thumbnail=query,
-                                                          color=discord.Color.green())
-                
-                await self.bot.messaging.bot.send_message(message.channel, embed=embed)
+                    text = await r.text()
+        
+                    tree = html.fromstring(text)
+                    
+                    path = tree.xpath("//div[@class='_hUb']/a/text()")
+                    
+                    if (not path):
+                        await ctx.send(f"{ctx.author.mention} Query for `{query}` failed (maybe try again)")
+                        return
+                        
+                    if (isinstance(path, list)):
+                        path = path[0].strip()
+                    elif (isinstance(path, str)):
+                        path = path.strip()
+                        
+                    embed = utils.create_image_embed(message.author,
+                                                            title="Best guess for this image:",
+                                                            description=path,
+                                                            thumbnail=query,
+                                                            color=discord.Color.green())
+                    
+                    await ctx.send(embed=embed)
         
     @commands.command(description="ask the magic 8 ball something",
                       brief="ask the magic 8 ball something",
-                      pass_context=True,
                       name="8ball",
                       aliases=["8b", "8"])
     @commands.cooldown(2, 5, commands.BucketType.user)
     async def magic8ball(self, ctx):
         choice = random.choice(self.magic8ball_choices)
-        await self.bot.messaging.reply(ctx.message, choice)
+        await ctx.send(f"{ctx.author.mention} {choice}")
 
     @commands.command(description="annoys someone (owner only)",
                     brief="annoys someone (owner only)",
-                    pass_context=True,
                     hidden=True)
     @commands.check(checks.is_owner)
     async def annoy(self, ctx, user: discord.User, amount: int = 5):
-        await self.bot.bot_utils.delete_message(ctx.message)
+        await ctx.message.delete()
 
         for _i in range(amount):
-            msg = await self.bot.send_message(ctx.message.channel, "{.mention}".format(user))
-            await self.bot.bot_utils.delete_message(msg)
+            msg = await ctx.send(user.mention)
+            await msg.delete()
 
     @commands.command(description="scrambles someone out of a voice channel (owner only)",
                       brief="scrambles someone out of a voice channel (owner only)",
-                      pass_context=True,
                       hidden=True)
     @commands.check(checks.is_owner)
-    async def scramble(self, ctx, user: discord.User, amount: int = 5):
-        await self.bot.bot_utils.delete_message(ctx.message)
+    async def scramble(self, ctx, user: discord.Member, amount: int = 5):
+        await ctx.message.delete()
 
-        old_channel = user.voice_channel
+        if (not user.voice):
+            return
+
+        old_channel = user.voice.channel
 
         if (not old_channel):
             return
 
-        channels = list(filter(lambda chan: chan.type == discord.ChannelType.voice, ctx.message.server.channels))
+        channels = ctx.guild.voice_channels
 
         for _i in range(amount):
             try:
-                await self.bot.move_member(user, random.choice(channels))
+                await user.move_to(random.choice(channels))
             
             except discord.errors.DiscordException:
                 pass
 
-        await self.bot.move_member(user, old_channel)
+        await user.move_to(old_channel)
 
     @commands.group(description="ask the bot something",
-                    brief="ask the bot something",
-                    pass_context=True)
+                    brief="ask the bot something",)
     @commands.cooldown(1, 10, commands.BucketType.user)
     async def what(self, ctx):
         if (not ctx.invoked_subcommand):
-            await self.bot.messaging.reply(ctx.message, "Invalid command")
+            await ctx.send(f"{ctx.author.mention} Invalid command")
 
     @commands.command(description="chooses for you",
                       brief="chooses for you",
-                      pass_context=True)
+                      aliases=["choice"])
     async def choose(self, ctx, *options):
         if (not options):
             return
         
-        await self.bot.say(random.choice(options))
+        await ctx.send(random.choice(options))
 
     @commands.command(description="thesaurizes text",
                       brief="thesaurize text",
-                      pass_context=True,
                       aliases=["th"])
     async def thesaurize(self, ctx, *, text: str=""):
-        await self.bot.send_typing(ctx.message.channel)
-
-        if (not text):
-            text = await self.bot.bot_utils.find_last_text(ctx.message)
-
+        async with ctx.channel.typing():
             if (not text):
-                await self.bot.messaging.reply(ctx.message, "Failed to find text")
-                return
+                text = await self.bot.bot_utils.find_last_text(ctx.message)
 
-        # remove discord mentions
-        text = self.mention_regex.sub("", text)
+                if (not text):
+                    await ctx.send(f"{ctx.author.mention} Failed to find text")
+                    return
 
-        tokens = nltk.word_tokenize(text)
+            # remove discord mentions
+            text = self.mention_regex.sub("", text)
 
-        new_text = []
+            tokens = nltk.word_tokenize(text)
 
-        for token in tokens:
-            if (len(token) <= 3): # TODO: better way of filtering out "a", "the", "its", "it's", etc
-                new_text.append(token)
-                continue
-            
-            synonyms = wordnet.synsets(token)
+            new_text = []
 
-            if (not synonyms):
-                new_text.append(token)
-                continue
-            
-            lemma_name = None
-
-            for synset in list(synonyms):
-                try:
-                    lemma_name = synset.lemma_names()[0]
-
-                    if (lemma_name == token.lower()):
-                        lemma_name = None
-                        continue
-
-                    lemma_name = lemma_name.replace("_", " ")
-                except (IndexError, AttributeError):
+            for token in tokens:
+                if (len(token) <= 3): # TODO: better way of filtering out "a", "the", "its", "it's", etc
+                    new_text.append(token)
                     continue
-                else:
-                    new_text.append(str(lemma_name))
-                    break
+                
+                synonyms = wordnet.synsets(token)
 
-            if (lemma_name is None):
-                new_text.append(token)
+                if (not synonyms):
+                    new_text.append(token)
+                    continue
+                
+                lemma_name = None
 
-        await self.bot.say(" ".join(new_text))
+                for synset in list(synonyms):
+                    try:
+                        lemma_name = synset.lemma_names()[0]
+
+                        if (lemma_name == token.lower()):
+                            lemma_name = None
+                            continue
+
+                        lemma_name = lemma_name.replace("_", " ")
+                    except (IndexError, AttributeError):
+                        continue
+                    else:
+                        new_text.append(str(lemma_name))
+                        break
+
+                if (lemma_name is None):
+                    new_text.append(token)
+
+            await ctx.send(" ".join(new_text))
     
     @commands.command(description="puts text through random translations",
                       brief="puts text through random translations",
-                      pass_context=True,
                       aliases=["ts"])
     async def translation_scramble(self, ctx, *, text: str=""):
-        await self.bot.send_typing(ctx.message.channel)
-
-        if (not text):
-            text = await self.bot.bot_utils.find_last_text(ctx.message)
-
+        async with ctx.channel.typing():
             if (not text):
-                await self.bot.messaging.reply(ctx.message, "Failed to find text")
-                return
+                text = await self.bot.bot_utils.find_last_text(ctx.message)
 
-        # remove discord mentions
-        text = self.mention_regex.sub("", text)
+                if (not text):
+                    await ctx.send(f"{ctx.author.mention} Failed to find text")
+                    return
 
-        # save original language
-        source_lang_code = self.bot.translator.detect(text).lang
+            # remove discord mentions
+            text = self.mention_regex.sub("", text)
 
-        times = 8
-        languages = [source_lang_code]
-        
-        for _i in range(times):
-            dest_lang_code = random.choice(list(LANGUAGES.keys()))
+            # save original language
+            source_lang_code = self.bot.translator.detect(text).lang
 
-            try:
-                result = self.bot.translator.translate(text, dest=dest_lang_code)
-                text = result.text
-                languages.append(result.dest)
-            except Exception:
-                await self.bot.messaging.reply(ctx.message, "Failed to translate text")
-                return
+            if (source_lang_code not in list(LANGUAGES.keys())):
+                await ctx.send(f"{ctx.author.mention} Can't detect language, defaulting source language to English")
 
-        # translate it back to the original language
-        result = self.bot.translator.translate(text, dest=source_lang_code)
-        text = result.text
-        languages.append(source_lang_code)
+            source_lang_code = "en"
 
-        await self.bot.say(f"`{times} translations: {' -> '.join([LANGUAGES[langcode].capitalize() for langcode in languages])}`\n{text}")
+            times = 8
+            languages = [source_lang_code]
+            
+            for _i in range(times):
+                dest_lang_code = random.choice(list(LANGUAGES.keys()))
+
+                try:
+                    result = self.bot.translator.translate(text, dest=dest_lang_code)
+                    text = result.text
+                    languages.append(result.dest)
+                except Exception:
+                    await ctx.send(f"{ctx.author.mention} Failed to translate text")
+                    return
+
+            # translate it back to the original language
+            result = self.bot.translator.translate(text, dest=source_lang_code)
+            text = result.text
+            languages.append(source_lang_code)
+
+            await ctx.send(f"`{times} translations: {' -> '.join([LANGUAGES[langcode].capitalize() for langcode in languages])}`\n{text}")
 
 def setup(bot):
     bot.add_cog(Fun(bot))

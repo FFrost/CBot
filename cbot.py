@@ -28,8 +28,7 @@ handler.setFormatter(logging.Formatter("%(asctime)s:%(levelname)s:%(name)s: %(me
 class CBot(commands.Bot):
     def __init__(self):
         super().__init__(command_prefix="!",
-                         description="CBot 2.0 by Frost#0261",
-                         pm_help=True)
+                         description="CBot rewrite") # TODO: ownerid here, help formatter that DMs help message
 
         self.source_url = "https://github.com/FFrost/CBot"
         
@@ -42,7 +41,7 @@ class CBot(commands.Bot):
         self.OPTIONAL_PERMISSIONS = ["manage_messages", "move_members"]
         
         self.token = ""
-        self.dev_id = ""
+        self.dev_id: int = None
         self.REAL_FILE = os.path.realpath(__file__)
         self.REAL_PATH = os.path.dirname(self.REAL_FILE)
         self.TOKEN_PATH = f"{self.REAL_PATH}/cbot.yml"
@@ -60,7 +59,7 @@ class CBot(commands.Bot):
                 print("Another instance of CBot is already running, exiting...")
                 sys.exit()
             else:
-                print("CBot crashed on last run, see error log at", self.ERROR_FILEPATH)
+                print("CBot may have crashed on last run, see error log at", self.ERROR_FILEPATH)
                 os.unlink(self.PID_FILEPATH)
 
         with open(self.PID_FILEPATH, "w") as f:
@@ -137,15 +136,15 @@ class CBot(commands.Bot):
             
         self.token = token
         
-        self.dev_id = input("Enter your Discord ID ONLY if you want the bot to message you when events happen (leave blank if you don't): ")
+        self.dev_id = int(input("Enter your Discord ID ONLY if you want the bot to message you when events happen (leave blank if you don't): "))
         
         if (not self.dev_id):
             confirm = input("Are you sure you don't want to enter your Discord ID? (y/n): ").lower() == "y"
             
             if (confirm):
-                self.dev_id = ""
+                self.dev_id: int = None
             else:
-                self.dev_id = input("Enter your Discord ID: ")
+                self.dev_id = int(input("Enter your Discord ID: "))
         
         data = {
                 "token": self.token,
@@ -265,23 +264,26 @@ class CBot(commands.Bot):
 
         print("Logged in as {name}#{disc} [{uid}]".format(name=self.user.name, disc=self.user.discriminator, uid=self.user.id))
         
-        await self.change_presence(game=discord.Game(name="!help for info"))
+        await self.change_presence(activity=discord.Game(name="!help for info"))
         await self.print_bot_info()
-        
+
         print("CBot ready!")
         
         if (self.bot_restart_arg in sys.argv):
             await self.messaging.message_developer("CBot restarted successfully")
         elif (self.bot_manager_arg in sys.argv):
             await self.messaging.message_developer("CBot was restarted by the manager")
+
+        self.invite_url = f"https://discordapp.com/oauth2/authorize?client_id={self.user.id}&scope=bot"
+        print(f"Invite url: {self.invite_url}")
     
     # print info about where the bot is
     async def print_bot_info(self):
-        print(f"Connected to {len(self.servers)} servers:")
+        print(f"Connected to {len(self.guilds)} guilds:")
         
-        for s in self.servers:
-            if (s.unavailable): # can't retrieve info about server
-                print("\t{id} - server is unavailable!".format(id=s.id))
+        for s in self.guilds:
+            if (s.unavailable): # can't retrieve info about guild
+                print("\t{id} - guild is unavailable!".format(id=s.id))
             else:
                 print("\t{name} owned by {owner}#{ownerid}".format(name=s.name, owner=s.owner.name, ownerid=s.owner.discriminator))
     
@@ -291,7 +293,7 @@ class CBot(commands.Bot):
         self.bot_utils.log_error_to_file(trace)
         await self.messaging.error_alert(e=trace)
     
-    async def on_command_error(self, error, ctx):
+    async def on_command_error(self, ctx, error):
         # TODO: handle what we need to
         """
         commands.UserInputError, commands.CommandNotFound, commands.MissingRequiredArgument,
@@ -303,29 +305,29 @@ class CBot(commands.Bot):
         if (isinstance(error, commands.CommandNotFound)):
             return
         elif (isinstance(error, checks.NoVoiceChannel)):
-            await self.messaging.reply(ctx.message, "You must be in a voice channel to use this command")
+            await ctx.send(f"{ctx.author.mention} You must be in a voice channel to use this command")
             return
         elif (isinstance(error, commands.CheckFailure)):
-            await self.messaging.reply(ctx.message, "You don't have permissions for this command")
+            await ctx.send(f"{ctx.author.mention} You don't have permissions for this command")
             return
         elif (isinstance(error, commands.NoPrivateMessage)):
-            await self.messaging.reply(ctx.message, "This command can't be used in private messages")
+            await ctx.send(f"{ctx.author.mention} This command can't be used in private messages")
             return
         elif (hasattr(error, "original") and isinstance(error.original, discord.errors.Forbidden)):
-            await self.messaging.reply(ctx.message, f"Forbidden action: `{error.original.text}`")
+            await ctx.send(f"{ctx.author.mention} Forbidden action: `{error.original.text}`")
             return
             
-        await self.messaging.reply(ctx, error)
+        await ctx.send(f"{ctx.author.mention} {error}")
     
     # only output command messages
-    async def on_command(self, command, ctx):
-        if (command.name == "eval" and checks.is_owner(ctx)):
+    async def on_command(self, ctx):
+        if (ctx.command.name == "eval" and checks.is_owner(ctx)):
             return
 
         await self.bot_utils.output_log(ctx.message)
             
     # TODO: track completed commands for !stats
-    async def on_command_completion(self, command, ctx):
+    async def on_command_completion(self, ctx):
         pass
     
     async def on_message(self, message):
@@ -364,7 +366,7 @@ class CBot(commands.Bot):
             await self.messaging.msg_admin_channel("{time} {name} [{uid}] joined".format(time=utils.get_cur_time(),
                                                                                          name=utils.format_member_name(member),
                                                                                          uid=member.id),
-                                                                                         member.server)
+                                                                                         member.guild)
             
         except Exception as e:
             await self.messaging.error_alert(e)
@@ -379,18 +381,18 @@ class CBot(commands.Bot):
             if (randint(0, 5) == 0):
                 msg = f"{utils.get_cur_time()} :crab: {utils.format_member_name(member)} [{member.id}] is gone :crab:"
             
-            await self.messaging.msg_admin_channel(msg, member.server)
+            await self.messaging.msg_admin_channel(msg, member.guild)
         
         except Exception as e:
             await self.messaging.error_alert(e)
     
-    async def on_server_join(self, server):
+    async def on_guild_join(self, guild):
         try:
-            await self.messaging.private_message(self.dev_id, "{time} CBot joined server {name}#{id}".format(time=utils.get_cur_time(),
-                                                                                                             name=server.name,
-                                                                                                             id=server.id))
+            await self.messaging.message_developer("{time} CBot joined guild {name}#{id}".format(time=utils.get_cur_time(),
+                                                                                                             name=guild.name,
+                                                                                                             id=guild.id))
 
-            perms = dict(server.me.server_permissions)
+            perms = dict(guild.me.guild_permissions)
             all_perms = self.REQUIRED_PERMISSIONS + self.VOICE_PERMISSIONS + self.OPTIONAL_PERMISSIONS
             perms_we_dont_have = []
 
@@ -398,7 +400,7 @@ class CBot(commands.Bot):
                 if (not perms[perm]):
                     perms_we_dont_have.append(perm)
 
-            msg = f"Hi, thanks for adding me to your server `{server.name}`. The minimum permissions I need to function are " \
+            msg = f"Hi, thanks for adding me to your guild `{guild.name}`. The minimum permissions I need to function are " \
                   f"{utils.format_code_brackets(self.REQUIRED_PERMISSIONS).replace('_', ' ')}.\n" \
                   f"For voice support, I need {utils.format_code_brackets(self.VOICE_PERMISSIONS).replace('_', ' ')} in the voice channel you want me to join.\n" \
                   f"For additional commands, I need {utils.format_code_brackets(self.OPTIONAL_PERMISSIONS).replace('_', ' ')}\n"
@@ -408,18 +410,18 @@ class CBot(commands.Bot):
                     "I have all the permissions I need. Thanks!")
 
             try:
-                await self.send_message(server.owner, msg)
+                await guild.owner.send(msg)
             except discord.errors.Forbidden:
                 pass
         
         except Exception as e:
             await self.messaging.error_alert(e)
     
-    async def on_server_remove(self, server):
+    async def on_guild_remove(self, guild):
         try:
-            await self.messaging.private_message(self.dev_id, "{time} CBot was removed from server {name}#{id}".format(time=utils.get_cur_time(),
-                                                                                                                       name=server.name,
-                                                                                                                       id=server.id))
+            await self.messaging.message_developer("{time} CBot was removed from guild {name}#{id}".format(time=utils.get_cur_time(),
+                                                                                                                       name=guild.name,
+                                                                                                                       id=guild.id))
         
         except Exception as e:
             await self.messaging.error_alert(e)

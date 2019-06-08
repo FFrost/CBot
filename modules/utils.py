@@ -19,19 +19,21 @@ def get_date() -> str:
     return "{:%m-%d-%y}".format(datetime.datetime.now())
 
 def format_time(datetime_obj: datetime.datetime) -> str:
-    return datetime_obj.strftime("%H:%M on %-m/%-d/%Y")
+    #return datetime_obj.strftime("%H:%M on %-m/%-d/%Y")
+    # Jul 9, 2018 @ 4:43pm
+    return datetime_obj.strftime("%b %-d, %Y @ %-I:%M%p")
 
 # format message to log
 # input: message, message to format to be output
 # output: formatted string of message content
 def format_log_message(message: discord.Message) -> str:
     content = message.clean_content
-    server_name = ("[{}]".format(message.server.name)) if message.server else ""
+    guild_name = ("[{}]".format(message.guild.name)) if message.guild else ""
 
-    return "{time}{space}{server} [{channel}] {name}: {message}".format(time=get_cur_time(),
-                                                                        space=(" " if server_name
+    return "{time}{space}{guild} [{channel}] {name}: {message}".format(time=get_cur_time(),
+                                                                        space=(" " if guild_name
                                                                                else ""),
-                                                                        server=server_name,
+                                                                        guild=guild_name,
                                                                         channel=message.channel,
                                                                         name=message.author,
                                                                         message=content)
@@ -43,7 +45,7 @@ def find_attachment(message: discord.Message) -> Optional[str]:
     if (message.attachments):
         for attach in message.attachments:
             if (attach):
-                return attach["url"]
+                return attach.url
 
     return None
 
@@ -54,10 +56,10 @@ def find_image_embed(message: discord.Message) -> Optional[str]:
     if (message.embeds):
         for embed in message.embeds:
             if (embed):
-                if ("type" in embed and embed["type"] == "image"):
-                    return embed["url"]
-                elif ("image" in embed):
-                    return embed["image"]["url"]
+                if (embed.type == "image"):
+                    return embed.url
+                elif (embed.image):
+                    return embed.image.url
                     
     return None
 
@@ -135,7 +137,7 @@ def create_youtube_embed(info: dict, user: discord.User = None) -> discord.Embed
             "description": cap_string_and_ellipsis(info["description"])
            }
     
-    embed = discord.Embed().from_data(data)
+    embed = discord.Embed().from_dict(data)
     
     embed.colour = discord.Colour.red()
     
@@ -168,7 +170,7 @@ def create_soundcloud_embed(info: dict, user: discord.User = None) -> discord.Em
             "description": cap_string_and_ellipsis(info["description"])
            }
     
-    embed = discord.Embed().from_data(data)
+    embed = discord.Embed().from_dict(data)
     
     if (user):
         embed.set_author(name=user.name, icon_url=user.avatar_url)

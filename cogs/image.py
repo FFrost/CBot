@@ -10,6 +10,7 @@ import json
 import tempfile
 import asyncio
 import aiohttp
+import pytesseract
 from lxml import html
 from urllib.parse import quote
 from collections import OrderedDict
@@ -25,7 +26,7 @@ except Exception as e:
     print(f"{e}\nDisabling liquid command.")
     liquid_command_enabled = False
 
-class Image:
+class Image(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
@@ -33,13 +34,12 @@ class Image:
 
         self.remove_inactive_image_searches_task = self.bot.loop.create_task(self.remove_inactive_image_searches())
 
-    def __unload(self):
+    def cog_unload(self):
         self.remove_inactive_image_searches_task.cancel()
 
     # find images in message or attachments and pass to liquify function
     @commands.command(description="liquidizes an image",
                       brief="liquidizes an image",
-                      pass_context=True,
                       enabled=liquid_command_enabled)
     @commands.cooldown(2, 5, commands.BucketType.channel)
     async def liquid(self, ctx, url: str = ""):
@@ -48,7 +48,7 @@ class Image:
             
             if (not url):
                 if (message.attachments):
-                    url = message.attachments[0]["url"]
+                    url = message.attachments[0].url
                 else:
                     last_img = await self.bot.bot_utils.find_last_image(message)
                     
@@ -56,35 +56,36 @@ class Image:
                         url = last_img
                     
             if (not url):
-                await self.bot.messaging.reply(message, "No image found")
+                await ctx.send(f"{ctx.author.mention} No image found")
                 return
             
-            msg = await self.bot.messaging.reply(message, "Liquidizing image...")
+            msg = await ctx.send(f"{ctx.author.mention} Liquidizing image...")
             
-            await self.bot.send_typing(message.channel)
-            
-            path = await self.download_image(url)
-            
-            if (isinstance(path, enums.ImageCodes)):
-                await self.image_error_message(message, path, url)
-            else:
-                code = await self.do_magic(message.channel, path)
+            async with ctx.channel.typing():
+                path = await self.download_image(url)
                 
-                if (code != enums.ImageCodes.SUCCESS):
-                    await self.image_error_message(message, code, url)
-            
-            await self.bot.bot_utils.delete_message(msg)
+                if (isinstance(path, enums.ImageCodes)):
+                    await self.image_error_message(message, path, url)
+                else:
+                    code = await self.do_magic(ctx, path)
+                    
+                    if (code != enums.ImageCodes.SUCCESS):
+                        await self.image_error_message(message, code, url)
+                
+                await msg.delete()
             
         except Exception as e:
-            await self.bot.messaging.reply(message, "Failed to liquidize image `{}`".format(url))
+            await ctx.send(f"{ctx.author.mention} Failed to liquidize image `{url}`")
             await self.bot.messaging.error_alert(e)
             
     # finds the last image sent from a message
     # input: message, the message the user sent and where to start the search
     # output: path to the downloaded file or None if the download failed
     async def find_and_download_image(self, message: discord.Message) -> Optional[str]:
+        url = None
+
         if (message.attachments):
-            url = message.attachments[0]["url"]
+            url = message.attachments[0].url
         else:
             last_img = await self.bot.bot_utils.find_last_image(message)
             
@@ -92,14 +93,13 @@ class Image:
                 url = last_img
                 
         if (not url):
-            await self.bot.messaging.reply(message, "No image found")
-            return
+            return None
         
         path = await self.download_image(url)
             
         if (isinstance(path, enums.ImageCodes)):
             await self.image_error_message(message, path, url)
-            return
+            return None
         
         return path
         
@@ -116,8 +116,8 @@ class Image:
         image.save(edited_file_path, format="PNG")
         
         # upload liquidized image
-        if (self.bot.bot_utils.get_permissions(message.channel).attach_files):
-            await self.bot.send_file(message.channel, edited_file_path)
+        if (message.channel.permissions_for(message.author).attach_files):
+            await message.channel.send(file=discord.File(edited_file_path))
         else:
             utils.remove_file_safe(path)
             utils.remove_file_safe(edited_file_path)
@@ -137,17 +137,17 @@ class Image:
     #        url, the url that was attempted to be liquidized
     async def image_error_message(self, message: discord.Message, code: enums.ImageCodes, url: str = "") -> None:
         if (code == enums.ImageCodes.MISC_ERROR):
-            await self.bot.messaging.reply(message, "Image error")
+            await message.channel.send(f"{message.author.mention} Image error")
         elif (code == enums.ImageCodes.MAX_FILESIZE):
-            await self.bot.messaging.reply(message, "Image filesize was too large (max filesize: 10mb)")
+            await message.channel.send(f"{message.author.mention} Image filesize was too large (max filesize: 10mb)")
         elif (code == enums.ImageCodes.INVALID_FORMAT):
-            await self.bot.messaging.reply(message, "Invalid image format")
+            await message.channel.send(f"{message.author.mention} Invalid image format")
         elif (code == enums.ImageCodes.MAX_DIMENSIONS):
-            await self.bot.messaging.reply(message, "Image dimensions were too large (max dimensions: 3000x3000)")
+            await message.channel.send(f"{message.author.mention} Image dimensions were too large (max dimensions: 3000x3000)")
         elif (code == enums.ImageCodes.BAD_URL):
-            await self.bot.messaging.reply(message, "Failed to download image")
+            await message.channel.send(f"{message.author.mention} Failed to download image")
         elif (code == enums.ImageCodes.NO_PERMISSIONS):
-            await self.bot.messaging.reply(message, "Missing attach file permissions, can't upload image file")
+            await message.channel.send(f"{message.author.mention} Missing attach file permissions, can't upload image file")
     
     # download an image from a url and save it as a temp file
     # input: url, image to download
@@ -241,7 +241,7 @@ class Image:
     # input: channel, the channel to send the image in
     #        path, path to the image to liquify
     # output: return code of the operation
-    async def do_magic(self, channel: discord.Channel, path: str) -> enums.ImageCodes:
+    async def do_magic(self, ctx: commands.Context, path: str) -> enums.ImageCodes:
         try:
             # get a wand image object
             img = wand.image.Image(filename=path)
@@ -284,8 +284,8 @@ class Image:
             img.save(filename=magickd_file_path)
             
             # upload liquidized image
-            if (self.bot.bot_utils.get_permissions(channel).attach_files):
-                await self.bot.send_file(channel, magickd_file_path)
+            if (ctx.channel.permissions_for(ctx.me).attach_files):
+                await ctx.channel.send(file=discord.File(magickd_file_path))
             else:
                 utils.remove_file_safe(path)
                 utils.remove_file_safe(magickd_file_path)
@@ -311,65 +311,69 @@ class Image:
 
     @commands.command(description="first image results from Google Images",
                       brief="first image results from Google Images",
-                      pass_context=True,
-                      aliases=["image"])
+                      aliases=["image", "im"])
     @commands.cooldown(2, 5, commands.BucketType.channel)
     async def img(self, ctx, *, query: str):
         channel = ctx.message.channel
-        await self.bot.send_typing(channel)
-        
-        headers = {"User-Agent": "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/43.0.2357.134 Safari/537.36"}
-        url = "https://www.google.com/search?q={}&tbm=isch&gs_l=img&safe=on".format(quote(query)) # escape query for url
-        
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url, headers=headers) as r:
-                if (r.status != 200):
-                    await self.bot.messaging.reply(ctx, "Query for `{}` failed (maybe try again)".format(query))
-                    return
-                
-                text = await r.text()
-                
-        if ("did not match any image results" in text):
-            await self.bot.messaging.reply(ctx, "No results found for `{}`".format(query))
-            return
-    
-        tree = html.fromstring(text)
-                
-        # count the number of divs that contain images
-        path = tree.xpath("//div[@class='rg_meta notranslate']/text()")
-        images = []
-        
-        for p in path:
-            extracted_image = self.extract_image_url(p)
+        async with channel.typing():
+            headers = {"User-Agent": "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/43.0.2357.134 Safari/537.36"}
+            url = f"https://www.google.com/search?q={quote(query)}&tbm=isch&gs_l=img&safe=on" # escape query for url
             
-            if (extracted_image):
-                images.append(extracted_image)
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url, headers=headers) as r:
+                    if (r.status != 200):
+                        await ctx.send(f"{ctx.author.mention} Query for `{query}` failed (maybe try again)")
+                        return
+                    
+                    text = await r.text()
+                    
+            if ("did not match any image results" in text):
+                await ctx.send(f"{ctx.author.mention} No results found for `{query}`")
+                return
+        
+            tree = html.fromstring(text)
+                    
+            # count the number of divs that contain images
+            path = tree.xpath("//div[@class='rg_meta notranslate']/text()")
+            images = []
+            
+            for p in path:
+                extracted_image = self.extract_image_url(p)
+                
+                if (extracted_image):
+                    images.append(extracted_image)
 
-        if (len(images) < 1):
-            await self.bot.messaging.reply(ctx, "No results found for `{}`".format(query))
-            return
+            if (len(images) <= 0):
+                await ctx.send(f"{ctx.author.mention} No results found for `{query}`")
+                return
 
-        images_copy = images.copy()
+            images_copy = images.copy()
+            img_msg = None
 
-        for image in images_copy[:1]:
-            try:
-                valid_image = await self.validate_image(image)
-                embed = utils.create_image_embed(ctx.message.author, title=f"Search results for {query}", footer="Page 1/{}".format(len(images)), image=valid_image)
-                img_msg = await self.bot.send_message(channel, embed=embed)
-    
-                await self.bot.messaging.add_img_reactions(img_msg)
-            except discord.HTTPException:
-                images.remove(image)
-                continue
-            else:
-                break
+            for image in images_copy:
+                try:
+                    valid_image = await self.validate_image(image)
 
-        if (len(images) < 1):
-            await self.bot.messaging.reply(ctx, "No results found for `{}`".format(query))
-            return
+                    if (valid_image is None):
+                        images.remove(image)
+                        continue
 
-        # add the tree to the cache
-        self.SEARCH_CACHE[img_msg.id] = {"images": images, "index": 0, "time": time.time(), "command_msg": ctx.message, "channel": channel}
+                    embed = utils.create_image_embed(ctx.author, title=f"Search results for {query}", footer="Page 1/{}".format(len(images)), image=valid_image)
+                    img_msg = await channel.send(embed=embed)
+        
+                    await self.bot.messaging.add_img_reactions(img_msg)
+                except discord.HTTPException:
+                    images.remove(image)
+                    continue
+                else:
+                    break
+
+            if (len(images) <= 0 or not img_msg):
+                await ctx.send(f"{ctx.author.mention} No results found for `{query}`")
+                return
+
+            # add the tree to the cache
+            self.SEARCH_CACHE[img_msg.id] = {"images": images, "index": 0, "time": time.time(), "command_msg": ctx.message, "channel": channel}
 
     # gets an image url from a dict
     # input: image_dict, dictionary in string form containing info from google image search
@@ -426,25 +430,31 @@ class Image:
             index = 0
         
         img_url = await self.validate_image(images[index])
+
+        # if image is invalid, remove it from the list and go to the next image
+        if (img_url is None):
+            self.SEARCH_CACHE[message.id]["images"].remove(images[index])
+            await self.update_img_search(user, message, index)
+            return
                 
         embed = utils.create_image_embed(user, title="Search results", footer="Page {}/{}".format(index + 1, length), image=img_url)
         
         try:
-            msg = await self.bot.edit_message(message, embed=embed)
+            await message.edit(embed=embed)
             
         except discord.errors.DiscordException:
             return
         
         except Exception as e:
             self.bot.bot_utils.log_error_to_file(e)
-            await self.bot.messaging.reply(command_msg, "An error occured while updating the image search: `{}`".format(e))
+            await command_msg.channel.send(f"{command_msg.author.mention} An error occured while updating the image search: `{e}`")
             await self.remove_img_from_cache(message)
             
         else:
-            await self.bot.messaging.add_img_reactions(msg)
+            await self.bot.messaging.add_img_reactions(message)
         
             # update cache
-            self.SEARCH_CACHE[msg.id] = {"images": images, "index": index, "time": time.time(), "command_msg": command_msg, "channel": channel}
+            self.SEARCH_CACHE[message.id] = {"images": images, "index": index, "time": time.time(), "command_msg": command_msg, "channel": channel}
         
     # remove an image from the cache and prevent it from being scrolled
     # input: message, message to remove
@@ -455,7 +465,7 @@ class Image:
             pass
         
         try:
-            await self.bot.clear_reactions(message)
+            await message.clear_reactions()
         except Exception:
             pass
         
@@ -463,13 +473,16 @@ class Image:
     # input: message, the message to delete
     async def remove_img_search(self, message: discord.Message) -> None:
         try:
-            await self.bot.bot_utils.delete_message(self.SEARCH_CACHE[message.id]["command_msg"])
+            await self.SEARCH_CACHE[message.id]["command_msg"].delete()
+        except discord.errors.Forbidden:
+            pass
+
+        try:
             del self.SEARCH_CACHE[message.id]
-        
         except KeyError:
             pass
         
-        await self.bot.bot_utils.delete_message(message)
+        await message.delete()
         
     # handles reactions and calls appropriate functions
     # input: reaction, the reaction applied to the message
@@ -479,10 +492,13 @@ class Image:
           
         if (user == self.bot.user):
             return
+
+        if (message.id not in self.SEARCH_CACHE):
+            return
         
         if (message.author == self.bot.user):
             if (message.embeds):
-                embed = message.embeds[0]
+                embed = message.embeds[0].to_dict()
 
                 if ("author" not in embed or "name" not in embed["author"]):
                     return
@@ -491,9 +507,9 @@ class Image:
                     emoji = reaction.emoji
                     
                     if (message.reactions and reaction in message.reactions and emoji in self.bot.messaging.EMOJI_CHARS.values()):
-                        if (self.bot.bot_utils.get_permissions(message.channel).manage_emojis):
+                        if (message.channel.permissions_for(message.author).manage_emojis):
                             try:
-                                await self.bot.remove_reaction(message, emoji, user) # remove the reaction so the user can react again
+                                await message.remove_reaction(emoji, user) # remove the reaction so the user can react again
                             
                             except Exception:
                                 pass
@@ -508,14 +524,14 @@ class Image:
     async def remove_inactive_image_searches(self) -> None:
         await self.bot.wait_until_ready()
         
-        while (not self.bot.is_closed):
+        while (not self.bot.is_closed()):
             try:
                 search_cache_copy = self.SEARCH_CACHE.copy()
                 
                 for message_id, cache in search_cache_copy.items():
                     if (time.time() > cache["time"] + self.bot.CONFIG["image_search"]["time_to_wait"]):
                         try:
-                            msg = await self.bot.get_message(cache["channel"], message_id)
+                            msg = await cache["channel"].fetch_message(message_id)
                             
                         except Exception as e:
                             self.bot.bot_utils.log_error_to_file(e)
@@ -529,7 +545,8 @@ class Image:
             
             #await asyncio.sleep(self.bot.CONFIG["image_search"]["time_to_wait"] // 2)
             await asyncio.sleep(20)
-                        
+    
+    @commands.Cog.listener()
     async def on_reaction_add(self, reaction, user):
         # call image search hook
         await self.image_search_reaction_hook(reaction, user)
@@ -561,7 +578,7 @@ class Image:
         # no animated gifs
         if (img.info and ("loop" in img.info or "duration" in img.info)):
             utils.remove_file_safe(path)
-            await self.bot.messaging.reply(message, "Can't pixelate animated gifs")
+            await message.channel.send(f"{message.author.mention} Can't pixelate animated gifs")
             return
         
         old_size = img.size
@@ -572,30 +589,28 @@ class Image:
             img = img.resize(old_size, Img.NEAREST)
         else:
             utils.remove_file_safe(path)
-            await self.bot.messaging.reply(message, "Pixel size too large")
+            await message.channel.send(f"{message.author.mention} Pixel size too large")
             return
         
         await self.save_and_upload(message, path, img, url)
                 
     @commands.command(description="pixelates an image",
                       brief="pixelates an image",
-                      pass_context=True,
                       aliases=["pix", "pixel", "px"])
     @commands.cooldown(2, 5, commands.BucketType.channel)
     async def pixelate(self, ctx, pixel_size: int = 5, *, url: str = "") -> None:
         if (pixel_size < 1):
-            await self.bot.messaging.reply(ctx.message, "Pixel size must be at least 1")
+            await ctx.send(f"{ctx.author.mention} Pixel size must be at least 1")
             return
         
-        msg = await self.bot.messaging.reply(ctx.message, "Pixelating image...")
+        msg = await ctx.send(f"{ctx.author.mention} Pixelating image...")
         
         await self.do_pixel(ctx.message, pixel_size, url)
         
-        await self.bot.bot_utils.delete_message(msg)
+        await msg.delete()
 
     @commands.command(description="speeds up a gif",
                       brief="speeds up a gif",
-                      pass_context=True,
                       aliases=["gpseed"])
     @commands.cooldown(2, 5, commands.BucketType.channel)
     async def gspeed(self, ctx, image: str = ""):
@@ -605,72 +620,172 @@ class Image:
             path = await self.download_image(image)
 
         if (not path):
+            await ctx.send(f"{ctx.author.mention} No image found")
+            return
+        elif (isinstance(path, enums.ImageCodes)):
+            await self.image_error_message(ctx.message, path)
             return
 
-        await self.bot.send_typing(ctx.message.channel)
+        async with ctx.channel.typing():
+            # process it
+            img = Img.open(path)
 
-        # process it
-        img = Img.open(path)
+            if (img.size >= (3000, 3000)):
+                utils.remove_file_safe(path)
+                await self.image_error_message(ctx.message, enums.ImageCodes.MAX_DIMENSIONS)
+                return
 
-        if (img.size >= (3000, 3000)):
+            # only animated gifs
+            if (img.info and ("loop" not in img.info or "duration" not in img.info)):
+                utils.remove_file_safe(path)
+                await ctx.send(f"{ctx.author.mention} Image must be an animated gif")
+                return
+
+            duration = int(img.info.get("duration", 0))
+            img.info["duration"] = max(int(duration / 2), 1) # TODO: remember to change this on july 1st (https://github.com/python-pillow/Pillow/issues/3073#issuecomment-380620206)
+
+            file_path = os.path.splitext(path)[0]
+            edited_file_path = file_path + "_edited.gif"
+
+            img.save(edited_file_path, format="gif", save_all=True, optimize=False)
+
+            # upload liquidized image
+            if (ctx.channel.permissions_for(ctx.me).attach_files):
+                await ctx.channel.send(file=discord.File(edited_file_path))
+            else:
+                await self.image_error_message(ctx.message, enums.ImageCodes.NO_PERMISSIONS)
+            
+            # just in case
+            await asyncio.sleep(1)
+            
+            # delete leftover file(s)
             utils.remove_file_safe(path)
-            await self.image_error_message(ctx.message, enums.ImageCodes.MAX_DIMENSIONS)
-            return
-
-        # only animated gifs
-        if (img.info and ("loop" not in img.info or "duration" not in img.info)):
-            utils.remove_file_safe(path)
-            await self.bot.messaging.reply(ctx.message, "Image must be an animated gif")
-            return
-
-        duration = int(img.info.get("duration", 0))
-        img.info["duration"] = max(int(duration / 2), 1) # TODO: remember to change this on july 1st (https://github.com/python-pillow/Pillow/issues/3073#issuecomment-380620206)
-
-        file_path = os.path.splitext(path)[0]
-        edited_file_path = file_path + "_edited.gif"
-
-        img.save(edited_file_path, format="gif", save_all=True, optimize=False)
-
-        # upload liquidized image
-        if (self.bot.bot_utils.get_permissions(ctx.message.channel).attach_files):
-            await self.bot.send_file(ctx.message.channel, edited_file_path)
-        else:
-            await self.image_error_message(ctx.message, enums.ImageCodes.NO_PERMISSIONS)
-        
-        # just in case
-        await asyncio.sleep(1)
-        
-        # delete leftover file(s)
-        utils.remove_file_safe(path)
-        utils.remove_file_safe(edited_file_path)
+            utils.remove_file_safe(edited_file_path)
 
     # TODO: rotate each frame in a gif
     @commands.command(description="rotates an image",
-                      brief="rotates an image",
-                      pass_context=True)
+                      brief="rotates an image")
     @commands.cooldown(2, 5, commands.BucketType.channel)
     async def rotate(self, ctx, degrees: int = 90, image: str = ""):
-        await self.bot.send_typing(ctx.message.channel)
+        async with ctx.channel.typing():
+            if (not image):
+                path = await self.find_and_download_image(ctx.message)
+            else:
+                path = await self.download_image(image)
 
-        if (not image):
+            if (not path):
+                await ctx.send(f"{ctx.author.mention} No image found")
+                return
+
+            try:
+                im = Img.open(path)
+                im = im.rotate(degrees, expand=True)
+                im.save(path)
+
+                await ctx.channel.send(file=discord.File(path))
+            except Exception as e:
+                await ctx.send(f"{ctx.author.mention} An error occured processing the image: `{e}`")
+            finally:
+                utils.remove_file_safe(path)
+
+    @commands.command(description="converts an image to specified format",
+                      brief="converts an image to specified format")
+    @commands.cooldown(1, 5, commands.BucketType.user)
+    async def convert(self, ctx, url: str = "", extension = "jpeg"):
+        async with ctx.channel.typing():
+            if (not url):
+                path = await self.find_and_download_image(ctx.message)
+
+                if (not path):
+                    await ctx.send(f"{ctx.author.mention} No image found")
+                    return
+            else:
+                path = await self.download_image(url)
+
+                if (isinstance(path, enums.ImageCodes)):
+                    await self.image_error_message(ctx.message, path, url)
+                    return
+
+            formats = ["jpeg", "png"]
+
+            if (extension not in formats):
+                await ctx.send(f"{ctx.author.mention} Invalid format `{extension}`, valid formats are: {utils.format_code_brackets(formats)}")
+                return
+                
+            new_filename = f"{path}.{extension}"
+
+            im = Img.open(path).convert("RGB")
+            im.save(new_filename, extension)
+
+            await ctx.channel.send(file=discord.File(new_filename))
+
+            utils.remove_file_safe(new_filename)
+            utils.remove_file_safe(path)
+
+    @commands.command(description="extracts text from an image",
+                      brief="extracts text from an image")
+    @commands.cooldown(1, 5, commands.BucketType.user)
+    async def ocr(self, ctx, *, url: str = ""):
+        await ctx.trigger_typing()
+
+        if (not url):
             path = await self.find_and_download_image(ctx.message)
-        else:
-            path = await self.download_image(image)
 
-        if (not path):
-            await self.bot.messaging.reply(ctx.message, "No image found to rotate")
+            if (not path):
+                await ctx.send(f"{ctx.author.mention} No image found")
+                return
+        else:
+            path = await self.download_image(url)
+
+            if (isinstance(path, enums.ImageCodes)):
+                await self.image_error_message(ctx.message, path, url)
+                return
+
+        im = Img.open(path).convert("RGB")
+        text = pytesseract.image_to_string(im)
+
+        if (not text):
+            await ctx.send(f"{ctx.author.mention} No text found")
+        else:
+            await ctx.send(f"{ctx.author.mention} ```{text}```")
+
+        utils.remove_file_safe(path)
+
+    @commands.command(description="needs more jpeg",
+                      brief="needs more jpeg",
+                      aliases=["jpg"])
+    async def jpeg(self, ctx, quality: int = 1, url: str = ""):
+        await ctx.trigger_typing()
+
+        if (quality < 0 or quality > 100):
+            await ctx.send(f"{ctx.author.mention} Quality must be between 0 and 100")
             return
 
-        try:
-            im = Img.open(path)
-            im = im.rotate(degrees, expand=True)
-            im.save(path)
+        if (not url):
+            path = await self.find_and_download_image(ctx.message)
 
-            await self.bot.send_file(ctx.message.channel, path)
-        except Exception as e:
-            await self.bot.messaging.reply(ctx.message, f"An error occured processing the image: `{e}`")
-        finally:
-            utils.remove_file_safe(path)
+            if (not path):
+                await ctx.send(f"{ctx.author.mention} No image found")
+                return
+        else:
+            path = await self.download_image(url)
+
+            if (isinstance(path, enums.ImageCodes)):
+                await self.image_error_message(ctx.message, path, url)
+                return
+
+        filename, ext = os.path.splitext(path)
+
+        new_filename = f"{filename}_jpegged{ext}"
+
+        im = Img.open(path)
+        im = im.convert(im.mode)
+        im.save(new_filename, optimize=True, quality=quality)
+
+        await ctx.channel.send(file=discord.File(new_filename))
+
+        utils.remove_file_safe(new_filename)
+        utils.remove_file_safe(path)
 
 def setup(bot):
     bot.add_cog(Image(bot))

@@ -56,15 +56,15 @@ class Paginator:
             embed = self.embeds[self.index]
         
         if (not self.message):
-            self.message = await self.bot.send_message(self.ctx.message.channel, embed=embed)
+            self.message = await self.ctx.send(embed=embed)
             
             await self.bot.messaging.add_img_reactions(self.message)
 
             if (self.table):
                 for emoji in self.table:
-                    await self.bot.add_reaction(self.message, emoji)
+                    await self.message.add_reaction(emoji)
         else:
-            await self.bot.edit_message(self.message, embed=embed)
+            await self.message.edit(embed=embed)
 
         self.last_updated = time.time()
 
@@ -73,15 +73,20 @@ class Paginator:
         if (not self.message):
             return
         
-        await self.bot.clear_reactions(self.message)
+        await self.message.clear_reactions()
 
     # deletes the embed message and the command message
     async def delete(self):
         if (not self.message):
             return
         
-        await self.bot.bot_utils.delete_message(self.ctx.message)
-        await self.bot.bot_utils.delete_message(self.message)
+        try:
+            await self.ctx.message.delete()
+        except discord.errors.Forbidden:
+            pass
+        
+        await self.message.delete()
+
         self.message = None
 
     # call in on_reaction_add to update the paginator on reactions
@@ -97,15 +102,15 @@ class Paginator:
         if (message.id != self.message.id):
             return
 
-        if (self.ctx.message.author != user):
+        if (self.ctx.author != user):
             return
 
         emoji = reaction.emoji
 
         if (message.reactions and reaction in message.reactions):
-            if (self.bot.bot_utils.get_permissions(message.channel).manage_emojis):
+            if (not isinstance(message.channel, discord.abc.PrivateChannel) and message.channel.permissions_for(message.guild.me).manage_emojis):
                 try:
-                    await self.bot.remove_reaction(message, emoji, user) # remove the reaction so the user can react again
+                    await message.remove_reaction(emoji, user) # remove the reaction so the user can react again
                 except discord.DiscordException:
                     pass
 

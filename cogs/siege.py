@@ -450,7 +450,7 @@ class UbisoftAPI:
 
         return mostPlayedAttacker, mostPlayedDefender
 
-class Siege:
+class Siege(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
@@ -480,7 +480,7 @@ class Siege:
             print(f"Failed to log in to Ubisoft servers: {e}")
             self.siege.enabled = False
 
-    def __unload(self):
+    def cog_unload(self):
         self.bot.loop.create_task(self.ubi._session.close())
         self.siege_think_task.cancel()
     
@@ -628,95 +628,93 @@ class Siege:
 
     @commands.command(description="finds Rainbow Six: Siege stats for a user",
                       brief="finds Rainbow Six: Siege stats for a user",
-                      pass_context=True,
                       aliases=["sg", "r6", "r6s", "r6stats"])
     @commands.cooldown(2, 5, commands.BucketType.user)
     async def siege(self, ctx, username: str, platform: str = "uplay"):
-        await self.bot.send_typing(ctx.message.channel)
-
-        if (platform.lower() not in self.ubi._platforms.keys()):
-            await self.bot.messaging.reply(ctx.message, f"Invalid platform, options are: {utils.format_code_brackets(self.ubi._platforms.keys())}")
-            return
-
-        if (self.ubi.rateLimitedTime > time.time()):
-            await self.bot.messaging.reply(ctx.message, f"Can't fetch stats, rate limited by Ubisoft for {self.ubi.rateLimitedTime - time.time():.2f} more seconds")
-            return
-
-        if (username in self.SIEGE_CACHE and platform in self.SIEGE_CACHE[username]):
-            data = self.SIEGE_CACHE[username][platform]
-            profile = data["profile"]
-            level = data["level"]
-            rankedData = data["rankedData"]
-            statsData = data["statsData"]
-            operatorData = data["operatorData"]
-
-            self.SIEGE_CACHE[username]["time"] = time.time()
-        else:
-            try:
-                profiles = await self.ubi.searchPlayers(username, platform)
-            
-                if (not profiles):
-                    await self.bot.messaging.reply(ctx.message, f"Failed to find player `{username}` on `{platform}`")
-                    return
-
-                profile = profiles[0] # TODO: show list?
-
-                level = await self.ubi.getLevel(profile)
-
-                rankedData = {}
-
-                for region in self.ubi._regions:
-                    rankedData[region] = await self.ubi.getRankData(profile, region)
-
-                statsData = await self.ubi.getStatsData(profile)
-
-                operatorData = await self.ubi.getOperatorStats(profile)
-            except (UnauthorizedError, LoginFailure) as e:
-                await self.bot.messaging.reply(ctx.message, f"An error occured getting stats for player `{username}` on `{platform}`: {e}")
+        async with ctx.channel.typing():
+            if (platform.lower() not in self.ubi._platforms.keys()):
+                await ctx.send(f"{ctx.author.mention} Invalid platform, options are: {utils.format_code_brackets(self.ubi._platforms.keys())}")
                 return
 
-        if (not rankedData or not statsData):
-            await self.bot.messaging.reply(ctx.message, f"Failed to find stats for `{username}` on `{platform}`")
-            return
+            if (self.ubi.rateLimitedTime > time.time()):
+                await ctx.send(f"{ctx.author.mention} Can't fetch stats, rate limited by Ubisoft for {self.ubi.rateLimitedTime - time.time():.2f} more seconds")
+                return
 
-        embeds = self.create_siege_embeds(ctx.message.author, profile, statsData, rankedData, level, operatorData)
+            if (username in self.SIEGE_CACHE and platform in self.SIEGE_CACHE[username]):
+                data = self.SIEGE_CACHE[username][platform]
+                profile = data["profile"]
+                level = data["level"]
+                rankedData = data["rankedData"]
+                statsData = data["statsData"]
+                operatorData = data["operatorData"]
 
-        flags = {
-            "us": "\N{Regional Indicator Symbol Letter U}\N{Regional Indicator Symbol Letter S}",
-            "eu": "\N{Regional Indicator Symbol Letter E}\N{Regional Indicator Symbol Letter U}",
-            "as": "\N{Regional Indicator Symbol Letter J}\N{Regional Indicator Symbol Letter P}"
-        }
-        
-        pager = await paginator.create_paginator(
-            self.bot,
-            ctx,
-            embeds[list(embeds.keys())[0]],
-            extra_embeds=embeds,
-            table={
-                flags["us"]: "ncsa",
-                flags["eu"]: "emea",
-                flags["as"]: "apac"
-            },
-            expiry_time=60
-        )
+                self.SIEGE_CACHE[username]["time"] = time.time()
+            else:
+                try:
+                    profiles = await self.ubi.searchPlayers(username, platform)
+                
+                    if (not profiles):
+                        await ctx.send(f"{ctx.author.mention} Failed to find player `{username}` on `{platform}`")
+                        return
 
-        self.paginators.append(pager)
+                    profile = profiles[0] # TODO: show list?
 
-        self.SIEGE_CACHE[username] = {
-            platform: {
-                "profile": profile,
-                "level": level,
-                "rankedData": rankedData,
-                "statsData": statsData,
-                "operatorData": operatorData
-            },
-            "time": time.time()
-        }
+                    level = await self.ubi.getLevel(profile)
+
+                    rankedData = {}
+
+                    for region in self.ubi._regions:
+                        rankedData[region] = await self.ubi.getRankData(profile, region)
+
+                    statsData = await self.ubi.getStatsData(profile)
+
+                    operatorData = await self.ubi.getOperatorStats(profile)
+                except (UnauthorizedError, LoginFailure) as e:
+                    await ctx.send(f"{ctx.author.mention} An error occured getting stats for player `{username}` on `{platform}`: {e}")
+                    return
+
+            if (not rankedData or not statsData):
+                await ctx.send(f"{ctx.author.mention} Failed to find stats for `{username}` on `{platform}`")
+                return
+
+            embeds = self.create_siege_embeds(ctx.message.author, profile, statsData, rankedData, level, operatorData)
+
+            flags = {
+                "us": "\N{Regional Indicator Symbol Letter U}\N{Regional Indicator Symbol Letter S}",
+                "eu": "\N{Regional Indicator Symbol Letter E}\N{Regional Indicator Symbol Letter U}",
+                "as": "\N{Regional Indicator Symbol Letter J}\N{Regional Indicator Symbol Letter P}"
+            }
+            
+            pager = await paginator.create_paginator(
+                self.bot,
+                ctx,
+                embeds[list(embeds.keys())[0]],
+                extra_embeds=embeds,
+                table={
+                    flags["us"]: "ncsa",
+                    flags["eu"]: "emea",
+                    flags["as"]: "apac"
+                },
+                expiry_time=60
+            )
+
+            self.paginators.append(pager)
+
+            self.SIEGE_CACHE[username] = {
+                platform: {
+                    "profile": profile,
+                    "level": level,
+                    "rankedData": rankedData,
+                    "statsData": statsData,
+                    "operatorData": operatorData
+                },
+                "time": time.time()
+            }
 
     async def siege_think(self) -> None:
         await self.bot.wait_until_ready()
         
-        while (not self.bot.is_closed):
+        while (not self.bot.is_closed()):
             try:
                 # cache
                 siege_cache_copy = self.SIEGE_CACHE.copy()
@@ -746,6 +744,7 @@ class Siege:
             
             await asyncio.sleep(10)
 
+    @commands.Cog.listener()
     async def on_reaction_add(self, reaction, user):
         for pager in self.paginators:
             await pager.reaction_hook(reaction, user)

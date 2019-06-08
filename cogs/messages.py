@@ -5,7 +5,7 @@ from random import randint
 
 import time
 
-class Messages:
+class Messages(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
@@ -13,6 +13,7 @@ class Messages:
         self.times = {}
         self.cooldown = 2
 
+    @commands.Cog.listener()
     async def on_message(self, message):
         if (not message.content or not message.author):
             return
@@ -43,7 +44,7 @@ class Messages:
             if (self.bot.CONFIG["should_insult"]):
                 insult = await self.bot.misc.get_insult()
                 an = "an" if (insult[0].lower() in "aeiou") else "a"
-                await self.bot.messaging.reply(message, "you're {an} {insult}.".format(an=an, insult=insult))
+                await message.channel.send(f"{message.author.mention} you're {an} {insult}.")
                 return
         
         # respond to "^ this", "this", "^", etc.
@@ -56,19 +57,19 @@ class Messages:
                         this_msg = "^ this"
 
                     await self.bot.bot_utils.output_log(message)
-                    await self.bot.send_message(message.channel, this_msg)
+                    await message.channel.send(this_msg)
                     return
 
         if (message.content.lower() == "f"):
-            await self.bot.send_message(message.channel, "F")
+            await message.channel.send("F")
             return
 
         if ("thanks for the invite" in message.content.lower()):
-            await self.bot.messaging.reply(message, "shut the fuck up")
+            await message.channel.send(f"{message.author.mention} shut the fuck up")
             return
 
         if (message.content.lower() == "a"):
-            await self.bot.messaging.reply(message, "shut up dex")
+            await message.channel.send(f"{message.author.mention} shut up dex")
             return
 
 def setup(bot):

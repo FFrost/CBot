@@ -1,4 +1,5 @@
 import discord
+from discord.ext import commands
 
 from modules import utils
 
@@ -7,12 +8,13 @@ import re
 from lxml import html
 from typing import Optional
 
-class Amazon:
+class Amazon(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
         self.amazon_url_regex = re.compile(r"(https?:\/\/)?(www\.)?(amazon)\.(com|co\.uk|ca|de|fr|co\.jp|br|at|it|es|cn|nl|in)(\.(mx|au))?\/(\S)+", re.IGNORECASE)
 
+    @commands.Cog.listener()
     async def on_message(self, message):
         if (not self.bot.CONFIG["embeds"]["enabled"] or not self.bot.CONFIG["embeds"]["amazon"]):
             return
@@ -28,7 +30,7 @@ class Amazon:
 
                 if (embed):
                     try:
-                        await self.bot.send_message(message.channel, embed=embed)
+                        await message.channel.send(embed=embed)
                     except discord.errors.HTTPException:
                         pass
 

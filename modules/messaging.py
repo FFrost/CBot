@@ -19,85 +19,6 @@ class Messaging:
         self.EMOJI_CHARS["arrow_backward"] = "\N{BLACK LEFT-POINTING TRIANGLE}"
         self.EMOJI_CHARS["arrow_forward"] = "\N{BLACK RIGHT-POINTING TRIANGLE}"
         self.EMOJI_CHARS["stop_button"] = "\N{BLACK SQUARE FOR STOP}"
-        
-    # send a user a message and mention them in it
-    # input: dest, destination to send message to (string should be id of user)
-    #        msg, message to send
-    # output: the reply message object sent to the user
-    async def reply(self,
-                    dest: Union[discord.User, discord.Message, commands.Context, str],
-                    msg: str,
-                    channel: discord.Channel = None
-                    ) -> discord.Message:
-
-        try:
-            msg = str(msg)
-        except Exception:
-            pass
-        
-        # find the destination of the reply
-        if (isinstance(dest, discord.User)):
-            if (not channel):
-                destination = user = dest
-            else:
-                destination = channel
-                user = dest
-        elif (isinstance(dest, discord.Message)):
-            destination = dest.channel
-            user = dest.author
-        elif (isinstance(dest, str)):
-            user = await self.bot.bot_utils.find(dest)
-            
-            if (user):
-                destination = user
-            else:
-                return None
-        elif (isinstance(dest, commands.Context)):
-            destination = dest.message.channel
-            user = dest.message.author
-        else:
-            return None
-
-        # check if we have send message permissions
-        perms = None
-
-        if (channel):
-            perms = self.bot.bot_utils.get_permissions(channel)
-        elif (isinstance(destination, discord.Channel)):
-            perms = self.bot.bot_utils.get_permissions(destination)
-
-        if (perms and not perms.send_messages):
-            return
-        
-        # split the message into multiple replies if necessary
-        max_message_length = enums.DISCORD_MAX_MESSAGE_LENGTH - enums.DISCORD_MAX_MENTION_LENGTH - 1 # 1 for the space between mention and message
-        
-        if (len(msg) > max_message_length):
-            code_blocks = ""
-            
-            if (msg.startswith("```")):
-                max_message_length -= 6 # start and end each split with "```"
-                code_blocks = "```"
-            elif (msg.startswith("`")):
-                max_message_length -= 2 # start and end each split with "`"
-                code_blocks = "`"
-            
-            num_messages = math.ceil(len(msg) / max_message_length)
-            
-            for i in range(num_messages):
-                split_msg = msg[i * max_message_length : (i + 1) * max_message_length]
-                
-                if (not split_msg.startswith("`") and code_blocks is not None):
-                    split_msg = code_blocks + split_msg
-                if (not split_msg.endswith("`") and code_blocks is not None):
-                    split_msg += code_blocks
-                
-                await self.bot.send_message(destination, "{} {}".format(user.mention, split_msg))
-                await asyncio.sleep(1)
-                
-            return None # TODO: return a list of sent messages?
-        else:
-            return await self.bot.send_message(destination, "{} {}".format(user.mention, msg))
     
     # private message the developer
     # input: msg, message to send
@@ -105,44 +26,33 @@ class Messaging:
         if (not self.bot.dev_id):
             return
         
-        user = await self.bot.bot_utils.find(self.bot.dev_id)
+        user = self.bot.get_user(self.bot.dev_id)
             
         if (user is None):
             return
         
-        await self.reply(user, msg)
-    
-    # private message a user
-    # input: uid, id of user to message
-    #        msg, message content to send
-    async def private_message(self, uid: str, msg: str) -> None:
-        user = await self.bot.bot_utils.find(uid)
-            
-        if (user is None):
-            return
-        
-        await self.reply(user, msg)
+        await user.send(msg)
     
     # send message to the "admin" channel if it exists
     # input: msg, content of message to send
-    #        server, server to send message in
-    async def msg_admin_channel(self, msg: str, server: discord.Server) -> None:
+    #        guild, guild to send message in
+    async def msg_admin_channel(self, msg: str, guild: discord.Guild) -> None:
         if (not self.bot.CONFIG["admin"]["log_channel"]):
             return
 
         try:
-            if (not server):
+            if (not guild):
                 return
             
-            channel = discord.utils.get(server.channels, name=self.bot.CONFIG["admin"]["log_channel"], type=discord.ChannelType.text)
+            channel = discord.utils.find(lambda c: (c.name == self.bot.CONFIG["admin"]["log_channel"]), guild.channels)
             
             if (not channel):
                 return
             
-            if (not channel.permissions_for(server.me)):
+            if (not channel.permissions_for(guild.me).send_messages):
                 return
     
-            await self.bot.send_message(channel, msg)
+            await channel.send(msg)
 
         except discord.errors.HTTPException:
             return
@@ -150,17 +60,11 @@ class Messaging:
         except Exception as e:
             await self.error_alert(e)
             
-    # alerts a user if an error occurs, will always alert developer
+    # alerts the developer if an error occurs
     # input: e, the error to output
     #        uid, the user's unique id
     #        extra, any extra information to include
-    async def error_alert(self, e: Exception, uid: str = "", extra: str = "") -> None:
-        if (not uid):
-            if (not self.bot.dev_id):
-                return
-            
-            uid = self.bot.dev_id
-            
+    async def error_alert(self, e: Exception, extra: str = "") -> None:              
         function_name = inspect.stack()[1][3]
             
         caller_func = function_name or "NULL_FUNC"
@@ -168,16 +72,13 @@ class Messaging:
             caller_func = "main"
             
         if (extra):
-            extra = " (" + extra + ")"
+            extra = f" ({extra})"
     
         err = "{func}{extra}:\n```{error}```".format(func=caller_func,
                                                         error=str(e),
                                                         extra=extra)
         print(err)
-        await self.private_message(uid, err)
-            
-        if (uid != self.bot.dev_id and self.bot.dev_id):
-            await self.message_developer(err)
+        await self.message_developer(err)
             
     # add reaction to message if any keyword is in message
     # input: message, message to react to
@@ -190,7 +91,7 @@ class Messaging:
                     emojis: Union[str, List[str]],
                     partial: bool = True
                     ) -> None:
-        if (not self.bot.bot_utils.get_permissions(message.channel).add_reactions):
+        if (not message.channel.permissions_for(message.guild.me).add_reactions):
             return
     
         try:
@@ -228,7 +129,7 @@ class Messaging:
             if found:
                 # react with custom emojis
                 for custom_emoji in self.bot.get_all_emojis():
-                    if (custom_emoji.name in emojis and custom_emoji.server == message.server):
+                    if (custom_emoji.name in emojis and custom_emoji.guild == message.guild):
                         await self.bot.add_reaction(message, custom_emoji)
                 
                 for e in emojis:
@@ -249,10 +150,10 @@ class Messaging:
     async def add_img_reactions(self, message: discord.Message) -> None:
         try:
             for name, emoji in self.EMOJI_CHARS.items():
-                if (name == "stop_button" and not self.bot.bot_utils.get_permissions(message.channel).manage_messages): # skip delete if we can't delete messages
+                if (name == "stop_button" and not isinstance(message.channel, discord.abc.PrivateChannel) and not message.channel.permissions_for(message.guild.me).manage_messages): # skip delete if we can't delete messages
                     continue
                 
-                await self.bot.add_reaction(message, emoji)
+                await message.add_reaction(emoji)
         
         except discord.errors.NotFound:
             pass

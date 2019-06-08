@@ -11,17 +11,16 @@ from http.client import responses
 from googletrans import LANGUAGES, LANGCODES
 from datetime import datetime
 
-class Utility:
+class Utility(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
     @commands.command(description="info about a user",
-                      brief="info about a user",
-                      pass_context=True)
+                      brief="info about a user")
     @commands.cooldown(2, 5, commands.BucketType.user)
     async def info(self, ctx, user: discord.User = None):
         if (not user):
-            user = ctx.message.author
+            user = ctx.author
 
         is_member = isinstance(user, discord.Member)
 
@@ -33,7 +32,7 @@ class Utility:
 
         embed = discord.Embed()
 
-        embed.set_author(name=ctx.message.author.name, icon_url=ctx.message.author.avatar_url)
+        embed.set_author(name=ctx.author.name, icon_url=ctx.author.avatar_url)
 
         if (is_member and member.color):
             embed.color = member.color
@@ -64,34 +63,34 @@ class Utility:
 
         embed.set_thumbnail(url=user.avatar_url)
 
-        if (is_member and member.server):
-            embed.set_footer(text=f"Server: {utils.cap_string_and_ellipsis(member.server.name, 64, 1)}")
+        if (is_member and member.guild):
+            embed.set_footer(text=f"Server: {utils.cap_string_and_ellipsis(member.guild.name, 64, 1)}")
     
-        await self.bot.send_message(ctx.message.channel, embed=embed)
+        await ctx.message.channel.send(embed=embed)
         
-    @commands.command(description="get a user's avatar", brief="get a user's avatar", pass_context=True)
+    @commands.command(description="get a user's avatar",
+                      brief="get a user's avatar")
     @commands.cooldown(2, 5, commands.BucketType.user)
     async def avatar(self, ctx, user: discord.User = None):
         if (not user):
-            user = ctx.message.author
+            user = ctx.author
         
         embed = discord.Embed(color=discord.Colour.blue())
-        embed.set_author(name=ctx.message.author.name, icon_url=ctx.message.author.avatar_url)
+        embed.set_author(name=ctx.author.name, icon_url=ctx.author.avatar_url)
         embed.set_image(url=user.avatar_url)
 
-        await self.bot.send_message(ctx.message.channel, embed=embed)
+        await ctx.channel.send(embed=embed)
         
     @commands.command(description="deletes the last X messages",
-                      brief="deletes the last X messages",
-                      pass_context=True)
+                      brief="deletes the last X messages")
     @commands.cooldown(1, 10, commands.BucketType.channel)
     @commands.has_permissions(manage_messages=True)
-    @commands.bot_has_permissions(manage_messages=True)
+    @commands.bot_has_permissions(manage_messages=True, read_message_history=True)
     async def purge(self, ctx, num_to_delete: int = 1, user: str = ""):
         num_to_delete = abs(num_to_delete)
 
         if (num_to_delete > self.bot.CONFIG["max_purge"]):
-            await self.bot.messaging.reply(ctx.message, "Number of messages to delete too high, max: {}".format(self.bot.CONFIG["max_purge"]))
+            await ctx.send(f"{ctx.author.mention} Number of messages to delete too high, max: {self.bot.CONFIG['max_purge']}")
             return
 
         users = None
@@ -105,29 +104,24 @@ class Utility:
                 u = await self.bot.utils.find(user)
                 
                 if (not u):
-                    await self.bot.messaging.reply(ctx.message, "Failed to find user `{}`".format(user))
+                    await ctx.send(f"{ctx.author.mention} Failed to find user `{user}`")
                     return
                 else:
                     users = [u]
         
         num_deleted = await self.bot.bot_utils.purge(ctx, num_to_delete, users)
+
+        await ctx.send(f"Deleted last {num_deleted} message(s)", delete_after=5)
         
-        temp = await self.bot.say("Deleted last {} message(s)".format(num_deleted))
-        await asyncio.sleep(5)
-        
-        if (not ctx.message.channel.is_private):
-            await self.bot.bot_utils.delete_message(ctx.message)
-        
-        try: # if a user runs another purge command within 5 seconds, the temp message won't exist
-            await self.bot.bot_utils.delete_message(temp)
-        
-        except discord.errors.DiscordException:
-            pass
+        if (not isinstance(ctx.channel, discord.abc.PrivateChannel)):
+            try:
+                await ctx.message.delete()
+            except discord.errors.Forbidden:
+                pass
     
     @commands.command(description="translates text into another language\n" + \
                       "list of language codes: https://cloud.google.com/translate/docs/languages",
                       brief="translates text into another language",
-                      pass_context=True,
                       aliases=["tr"])
     async def translate(self, ctx, language: str = "en", *, string: str = ""):
         language = language.lower().strip()
@@ -144,36 +138,32 @@ class Utility:
             string = await self.bot.bot_utils.find_last_text(ctx.message)
             
             if (not string):
-                await self.bot.messaging.reply(ctx.message, "Failed to find text to translate")
+                await ctx.send(f"{ctx.author.mention} Failed to find text to translate")
                 return
         
         try:
             result = self.bot.translator.translate(string, dest=language)
         except Exception:
-            await self.bot.messaging.reply(ctx.message, "Failed to translate text")
+            await ctx.send(f"{ctx.author.mention} Failed to translate text")
             return
         
         src = LANGUAGES[result.src.lower()]
         dest = LANGUAGES[result.dest.lower()]
-        msg = "{src} to {dest}: {text}".format(src=src, dest=dest, text=result.text)
-        await self.bot.messaging.reply(ctx.message, msg)
+        msg = "`{src} to {dest}`: {text}".format(src=src, dest=dest, text=result.text)
+        await ctx.send(msg)
         
     @commands.command(description="searches for info on a game",
                       brief="searches for info on a game",
-                      pass_context=True,
                       enabled=False) # rate limited
     async def gameinfo(self, ctx, *, query: str):
         headers = {"User-Agent": "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/43.0.2357.134 Safari/537.36"}
-        url = "https://www.google.com/search?q={}".format(quote(query))  # escape query for url
+        url = f"https://www.google.com/search?q={quote(query)}"  # escape query for url
         
         conn = aiohttp.TCPConnector(verify_ssl=False) # for https
         async with aiohttp.ClientSession(connector=conn) as session:
             async with session.get(url, headers=headers) as r:
                 if (r.status != 200):
-                    await self.bot.messaging.reply(ctx, "Query for `{query}` failed with status code `{code} ({string})` (maybe try again)".format(
-                                query=query,
-                                code=r.status,
-                                string=responses[r.status]))
+                    await ctx.send(f"{ctx.author.mention} Query for `{query}` failed with status code `{r.status} ({responses[r.status]})` (maybe try again)")
                     return
                 
                 text = await r.text()
@@ -187,7 +177,7 @@ class Utility:
         header = tree.xpath("//div[@class='_fdf _odf']/div[@class='_Q1n']/div")
         
         if (not header or len(header) < 2):
-            await self.bot.messaging.reply(ctx, "No results found for `{}`".format(query))
+            await ctx.send(f"{ctx.author.mention} No results found for `{query}`")
             return
         elif (len(header) > 2):
             header = header[:2]
@@ -200,7 +190,7 @@ class Utility:
         info = tree.xpath("//div[@class='_RBg']/div[@class='mod']")
         
         if (not info or len(info) < 1):
-            await self.bot.messaging.reply(ctx.message, "Failed to find info for `{}`".format(query))
+            await ctx.send(f"{ctx.author.mention} Failed to find info for `{query}`")
             return
         
         body = info[0].text_content().strip()
@@ -239,21 +229,28 @@ class Utility:
         end_index       = game_img.find(end_tag)
         data["image"]   = game_img[start_index + len(start_tag) : end_index]
         
-        embed = utils.create_game_info_embed(data, ctx.message.author)
-        await self.bot.send_message(ctx.message.channel, embed=embed)
+        embed = utils.create_game_info_embed(data, ctx.author)
+        await ctx.channel.send(embed=embed)
         
     @commands.command(description="get info about a server",
                  brief="get info about a server",
-                 pass_context=True,
                  aliases=["sinfo"])
-    @commands.cooldown(1, 5, commands.BucketType.server)
+    @commands.cooldown(1, 5, commands.BucketType.guild)
     async def serverinfo(self, ctx, *, search: str = ""):
         embed = discord.Embed(color=discord.Color.dark_blue())
-        embed.set_author(name=ctx.message.author.name, icon_url=ctx.message.author.avatar_url)
+        embed.set_author(name=ctx.author.name, icon_url=ctx.author.avatar_url)
 
-        if (ctx.message.channel.is_private and not search):
-            channel = ctx.message.channel
+        channel = ctx.channel
 
+        if (isinstance(ctx.channel, discord.DMChannel)):
+            embed.title = ctx.author.name
+
+            embed.add_field(name="ID", value=channel.id)
+            embed.add_field(name="Created at", value=channel.created_at)
+
+            await ctx.send(embed=embed)
+            return
+        elif (isinstance(ctx.channel, discord.abc.PrivateChannel) and not search):
             embed.title = channel.name
 
             if (channel.owner is not None):
@@ -263,33 +260,33 @@ class Utility:
             embed.add_field(name="Users", value=len(channel.recipients))
             embed.add_field(name="Created at", value=channel.created_at)
             
-            await self.bot.send_message(ctx.message.channel, embed=embed)
+            await ctx.send(embed=embed)
             return
         
-        server = ctx.message.server
+        guild = ctx.message.guild
         
         if (checks.is_owner(ctx)): # only allow the bot owner to access the other servers the bot is in
             if (search):
-                server = self.bot.bot_utils.find_server(search)
+                guild = self.bot.bot_utils.find_guild(search)
         
-        if (not server):
-            await self.bot.messaging.reply(ctx.message, "No server found for `{}`".format(search))
+        if (not guild):
+            await ctx.send(f"{ctx.author.mention} No server found for `{search}`")
             return
         
-        if (server.unavailable):
-            await self.bot.messaging.reply(ctx.message, "Server `{}` ({}) is currently unavailable".format(server.id, search))
+        if (guild.unavailable):
+            await ctx.send(f"{ctx.author.mention} Server `{guild.id}` ({search}) is currently unavailable")
             return None
 
-        embed.title = server.name
+        embed.title = guild.name
 
-        embed.add_field(name="Owner", value="{}#{}".format(server.owner.name, server.owner.discriminator))
-        embed.add_field(name="ID", value=server.id)
-        embed.add_field(name="Number of members", value=server.member_count)
-        embed.add_field(name="Created at", value=server.created_at)
+        embed.add_field(name="Owner", value=f"{guild.owner.name}#{guild.owner.discriminator}")
+        embed.add_field(name="ID", value=guild.id)
+        embed.add_field(name="Number of members", value=guild.member_count)
+        embed.add_field(name="Created at", value=guild.created_at)
 
-        embed.set_thumbnail(url=server.icon_url)
+        embed.set_thumbnail(url=guild.icon_url)
         
-        await self.bot.send_message(ctx.message.channel, embed=embed)
+        await ctx.message.channel.send(embed=embed)
 
 def setup(bot):
     bot.add_cog(Utility(bot))

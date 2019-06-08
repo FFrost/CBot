@@ -5,11 +5,11 @@ import asyncio
 import time
 from enum import Enum
 
-class VoteTypes(Enum):
+class VoteType(Enum):
     POLL = 1
     MUTE = 2
 
-class Vote:
+class Vote(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
@@ -31,13 +31,11 @@ class Vote:
         # time in seconds to mute users
         self.MUTE_TIME = 60
 
-    def __unload(self):
+    def cog_unload(self):
         self.vote_task.cancel()
 
     @commands.group(description="starts a vote",
-                    brief="starts a vote",
-                    pass_context=True,
-                    no_pm=True)
+                    brief="starts a vote")
     async def vote(self, ctx):
         if (not ctx.invoked_subcommand):
             return
@@ -58,28 +56,27 @@ class Vote:
         return embed
 
     @vote.command(description="starts a vote to mute a user",
-                  brief="starts a vote to mute a user",
-                  pass_context=True)
+                  brief="starts a vote to mute a user")
     async def mute(self, ctx, user: discord.Member):
-        if (user == ctx.message.server.me):
-            await self.bot.messaging.reply(ctx.message, "nice try")
+        if (user == ctx.me):
+            await ctx.send(f"{ctx.author.mention} nice try")
             return
         
-        embed = self.make_mute_embed(ctx.message.author, user, self.MUTE_TIME)
+        embed = self.make_mute_embed(ctx.author, user, self.MUTE_TIME)
 
-        vote_message = await self.bot.send_message(ctx.message.channel, embed=embed)
+        vote_message = await ctx.channel.send(embed=embed)
         
         for emoji in self.emojis.values():
-            await self.bot.add_reaction(vote_message, emoji)
+            await vote_message.add_reaction(emoji)
 
         # add vote to vote list
         self.votes[vote_message.id] = {
             "time": time.time() + self.MUTE_TIME,
             "votes": 0,
             "message": vote_message,
-            "author": ctx.message.author,
+            "author": ctx.author,
             "target": user,
-            "type": VoteTypes.MUTE
+            "type": VoteType.MUTE
         }
 
     def is_valid_reaction(self, emoji: str, message: discord.Message, user: discord.User) -> bool:
@@ -94,6 +91,7 @@ class Vote:
 
         return True
 
+    @commands.Cog.listener()
     async def on_reaction_add(self, reaction: discord.Reaction, user: discord.User):
         message = reaction.message
         emoji = reaction.emoji
@@ -106,6 +104,7 @@ class Vote:
         elif (emoji == self.emojis["no"]):
             self.votes[message.id]["votes"] -= 1
 
+    @commands.Cog.listener()
     async def on_reaction_remove(self, reaction: discord.Reaction, user: discord.User):
         message = reaction.message
         emoji = reaction.emoji
@@ -121,24 +120,23 @@ class Vote:
 
     async def handle_mute(self, message_id: str, vote: dict):
         if (vote["time"] < time.time()):
-            await self.bot.clear_reactions(vote["message"])
+            await vote["message"].clear_reactions()
             total = vote["votes"]
 
             del self.votes[message_id]
 
             embed = self.make_mute_embed(vote["author"], vote["target"], -1)
-            await self.bot.edit_message(vote["message"], embed=embed)
+            await vote["message"].edit(embed=embed)
 
             if (total > 0):
-                await self.bot.send_message(vote["message"].channel,
-                    f"{vote['author'].mention}'s vote to mute {vote['target'].mention} passed, muting them for {self.MUTE_TIME} seconds")
+                await vote["message"].channel.send(f"{vote['author'].mention}'s vote to mute {vote['target'].mention} passed, muting them for {self.MUTE_TIME} seconds")
 
                 try:
-                    await self.bot.server_voice_state(vote["target"], mute=True)
+                    await vote["target"].edit(mute=True)
                 except discord.Forbidden:
-                    await self.bot.send_message(vote["message"].channel, "I don't have permissions to mute")
+                    await vote["message"].channel.send("I don't have permissions to mute")
                 except discord.HTTPException as e:
-                    await self.bot.send_message(vote["message"].channel, f"HTTPException: `{e}`")
+                    await vote["message"].channel.send(f"HTTPException: `{e}`")
 
                 self.muted_members[vote["target"].id] = {
                     "time": time.time() + self.MUTE_TIME,
@@ -146,24 +144,22 @@ class Vote:
                     "member": vote["target"]
                 }
             elif (total < 0):
-                await self.bot.send_message(vote["message"].channel,
-                    f"{vote['author'].mention}'s vote to mute {vote['target'].mention} failed, no action taken")
+                await vote["message"].channel.send(f"{vote['author'].mention}'s vote to mute {vote['target'].mention} failed, no action taken")
             else:
-                await self.bot.send_message(vote["message"].channel,
-                    f"{vote['author'].mention}'s vote to mute {vote['target'].mention} tied, no action taken")
+                await vote["message"].channel.send(f"{vote['author'].mention}'s vote to mute {vote['target'].mention} tied, no action taken")
         else:
             embed = self.make_mute_embed(vote["author"], vote["target"], int(vote["time"] - time.time()))
-            await self.bot.edit_message(vote["message"], embed=embed)
+            await vote["message"].edit(embed=embed)
 
     async def vote_think(self):
         await self.bot.wait_until_ready()
 
-        while (not self.bot.is_closed):
+        while (not self.bot.is_closed()):
             try:
                 vote_copy = self.votes.copy()
 
                 for message_id, vote in vote_copy.items():
-                    if (vote["type"] == VoteTypes.MUTE):
+                    if (vote["type"] == VoteType.MUTE):
                         await self.handle_mute(message_id, vote)
 
                 vote_copy.clear()
@@ -172,14 +168,14 @@ class Vote:
 
                 for member_id, muted_dict in muted_members.items():
                     if (muted_dict["time"] < time.time()):
-                        await self.bot.send_message(muted_dict["channel"], f"{muted_dict['member'].mention}'s mute expired, unmuting")
+                        await muted_dict["channel"].send(f"{muted_dict['member'].mention}'s mute expired, unmuting")
 
                         try:
-                            await self.bot.server_voice_state(vote["target"], mute=False)
+                            await vote["target"].edit(mute=False)
                         except discord.Forbidden:
-                            await self.bot.send_message(muted_dict["channel"], "I don't have permissions to unmute")
+                            await muted_dict["channel"].send("I don't have permissions to unmute")
                         except discord.HTTPException as e:
-                            await self.bot.send_message(muted_dict["channel"], f"HTTPException: `{e}`")
+                            await muted_dict["channel"].send(f"HTTPException: `{e}`")
 
                         del self.muted_members[member_id]
             except Exception as e:

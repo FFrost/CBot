@@ -8,7 +8,7 @@ import aiohttp
 from http.client import responses
 from typing import Optional
 
-class Fortnite:
+class Fortnite(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
@@ -87,69 +87,66 @@ class Fortnite:
 
     @commands.command(description="finds Fortnite stats for a user",
                       brief="finds Fortnite stats for a user",
-                      pass_context=True,
                       aliases=["fstats"])
-    @commands.cooldown(1, 1, commands.BucketType.server)
+    @commands.cooldown(1, 1, commands.BucketType.guild)
     async def fortnite(self, ctx, name: str, stats: str = "lifetime"):
-        await self.bot.send_typing(ctx.message.channel)
-
-        if (not "trn_api_key" in self.bot.CONFIG):
-            await self.bot.messaging.reply(ctx.message, "No Tracker API key found")
-            return
-
-        stats_options = ["lifetime", "solo", "duo", "squad"]
-        if (stats not in stats_options):
-            await self.bot.messaging.reply(ctx.message, "Invalid stat selection `{}`, options are: {}".format(stats,
-                ", ".join("`{}`".format(s) for s in stats_options)))
-            return
-
-        platforms = ["pc", "xbl", "psn"]
-
-        success = False
-
-        for platform in platforms:
-            data = await self.get_fortnite_stats(name, platform)
-            await asyncio.sleep(1) # cooldown in between each request, according to the api's guidelines
-
-            if (not data):
-                continue
-
-            if (isinstance(data, int)):
-                self.bot.bot_utils.log_error_to_file("Failed to get Fortnite stats for \"{name}\" ({platform}) failed with status code {code} ({string})".format(
-                        name=name,
-                        platform=platform,
-                        code=data,
-                        string=responses[data] if (data in responses) else "unknown"), prefix="Fortnite")
-                continue
-
-            try:
-                data = dict(data)
-
-            except Exception as e:
-                self.bot.bot_utils.log_error_to_file("Failed to find Fortnite stats for \"{}\" ({}) because of exception: {}".format(name, platform, e),
-                        prefix="Fortnite")
-                continue
-
-            if ("error" in data):
-                if (data["error"] != "Player Not Found"):
-                    self.bot.bot_utils.log_error_to_file("API error for \"{}\" ({}): {}".format(name, platform, data["error"]), prefix="Fortnite")
-                
-                continue
-
-            embed = self.create_fortnite_stats_embed(ctx.message.author,
-                                                        data,
-                                                        stats,
-                                                        title=name)
-
-            if (not embed):
-                await self.bot.messaging.reply(ctx.message, "Failed to find `{}` Fortnite stats for `{}`".format(stats, name))
+        async with ctx.channel.typing():
+            if (not "trn_api_key" in self.bot.CONFIG):
+                await ctx.send("No Tracker API key found")
                 return
 
-            await self.bot.send_message(ctx.message.channel, embed=embed)
-            success = True
+            stats_options = ["lifetime", "solo", "duo", "squad"]
+            if (stats not in stats_options):
+                await ctx.send(f"{ctx.author.mention} Invalid stat selection `{stats}`, options are: {', '.join('`{}`'.format(s) for s in stats_options)}")
+                return
 
-        if (not success):
-            await self.bot.messaging.reply(ctx.message, "Failed to find `{}` Fortnite stats for `{}`".format(stats, name))
+            platforms = ["pc", "xbl", "psn"]
+
+            success = False
+
+            for platform in platforms:
+                data = await self.get_fortnite_stats(name, platform)
+                await asyncio.sleep(1) # cooldown in between each request, according to the api's guidelines
+
+                if (not data):
+                    continue
+
+                if (isinstance(data, int)):
+                    self.bot.bot_utils.log_error_to_file("Failed to get Fortnite stats for \"{name}\" ({platform}) failed with status code {code} ({string})".format(
+                            name=name,
+                            platform=platform,
+                            code=data,
+                            string=responses[data] if (data in responses) else "unknown"), prefix="Fortnite")
+                    continue
+
+                try:
+                    data = dict(data)
+
+                except Exception as e:
+                    self.bot.bot_utils.log_error_to_file("Failed to find Fortnite stats for \"{}\" ({}) because of exception: {}".format(name, platform, e),
+                            prefix="Fortnite")
+                    continue
+
+                if ("error" in data):
+                    if (data["error"] != "Player Not Found"):
+                        self.bot.bot_utils.log_error_to_file("API error for \"{}\" ({}): {}".format(name, platform, data["error"]), prefix="Fortnite")
+                    
+                    continue
+
+                embed = self.create_fortnite_stats_embed(ctx.message.author,
+                                                            data,
+                                                            stats,
+                                                            title=name)
+
+                if (not embed):
+                    await ctx.send(f"{ctx.author.mention} Failed to find `{stats}` Fortnite stats for `{name}`")
+                    return
+
+                await ctx.send(embed=embed)
+                success = True
+
+            if (not success):
+                await ctx.send(f"{ctx.author.mention} Failed to find `{stats}` Fortnite stats for `{name}`")
 
 def setup(bot):
     bot.add_cog(Fortnite(bot))

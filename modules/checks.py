@@ -12,10 +12,10 @@ def is_owner(ctx: commands.Context) -> bool:
 # if the message author is in a voice channel
 # TODO: permission check if we can join the channel
 def is_in_voice_channel(ctx: commands.Context) -> bool:
-    if (ctx.message.channel.is_private):
+    if (isinstance(ctx.channel, discord.abc.PrivateChannel)):
         return False
     
-    if (ctx.message.author.voice_channel is None):
+    if (ctx.author.voice.channel is None):
         raise NoVoiceChannel()
     
     return True
@@ -32,7 +32,7 @@ TODO:
     can use CBot to kick/ban but not kick themselves)
 """
 def can_kick(ctx: commands.Context) -> bool:
-    return (ctx.message.author.server_permissions.kick_members)
+    return (ctx.channel.permissions_for(ctx.author).kick_members)
 
 def can_ban(ctx: commands.Context) -> bool:
-    return (ctx.message.author.server_permissions.ban_members)
+    return (ctx.channel.permissions_for(ctx.author).ban_members)

@@ -10,7 +10,7 @@ from lxml import html
 from datetime import datetime
 from typing import Optional, List
 
-class Steam:
+class Steam(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.steam_api_key = self.bot.CONFIG["steam_api_key"]
@@ -18,6 +18,7 @@ class Steam:
         self.steam_url_regex = re.compile(r"((https?:\/\/)(www.)?)?(steamcommunity.com\/(?P<type>id|profiles)\/(?P<id>[A-Za-z0-9_-]{2,32}))")
         self.steam_workshop_regex = re.compile(r"((https?:\/\/)(www.)?)?(steamcommunity.com\/sharedfiles\/filedetails\/\?id=([0-9]{10}))")
 
+    @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
         if (not self.bot.CONFIG["embeds"]["enabled"] or not self.bot.CONFIG["embeds"]["steam"]):
             return
@@ -33,7 +34,7 @@ class Steam:
                 embed = await self.create_steam_embed(message.author, content)
 
                 if (embed):
-                    await self.bot.send_message(message.channel, embed=embed)
+                    await message.channel.send(embed=embed)
 
             # workshop item
             if (self.steam_workshop_regex.match(content) is not None):
@@ -45,7 +46,7 @@ class Steam:
                 embed = await self.create_workshop_embed(message.author, workshop_id)
 
                 if (embed):
-                    await self.bot.send_message(message.channel, embed=embed)
+                    await message.channel.send(embed=embed)
 
         except Exception as e:
             self.bot.bot_utils.log_error_to_file(e, prefix="Steam")
@@ -112,30 +113,29 @@ class Steam:
             return None
 
     @commands.command(description="game recommendations from your steam profile",
-                  brief="game recommendations from your steam profile",
-                  pass_context=True)
+                  brief="game recommendations from your steam profile")
     async def game(self, ctx, url: str):
         if (not self.is_steam_url(url)):
-            await self.bot.messaging.reply(ctx.message, "Invalid Steam url")
+            await ctx.send(f"{ctx.author.mention} Invalid Steam url")
             return
 
         id64 = await self.extract_id64(url)
 
         if (not id64):
-            await self.bot.messaging.reply(ctx.message, "Invalid Steam url")
+            await ctx.send(f"{ctx.author.mention} Invalid Steam url")
             return
 
         games = await self.get_games(id64)
 
         if (not games):
-            await self.bot.messaging.reply(ctx.message, "Failed to find games")
+            await ctx.send(f"{ctx.author.mention} Failed to find games")
             return
 
         random_game = str(random.choice(games["games"])["appid"])
         random_game_name = await self.get_game_name(random_game)
         game_url = "http://store.steampowered.com/app/" + str(random_game)
 
-        await self.bot.messaging.reply(ctx.message, "You should play **{}**\n{}".format(random_game_name, game_url))
+        await ctx.send(f"{ctx.author.mention} You should play **{random_game_name}**\n{game_url}")
 
     async def resolve_vanity_url(self, sid: str) -> Optional[str]:
         try:
