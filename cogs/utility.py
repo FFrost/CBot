@@ -288,5 +288,11 @@ class Utility(commands.Cog):
         
         await ctx.message.channel.send(embed=embed)
 
+    @commands.command(aliases=["ss"])
+    @commands.check(checks.is_in_voice_channel)
+    async def screenshare(self, ctx):
+        url = f"http://www.discordapp.com/channels/{ctx.guild.id}/{ctx.author.voice.channel.id}"
+        await ctx.send(url)
+
 def setup(bot):
     bot.add_cog(Utility(bot))
