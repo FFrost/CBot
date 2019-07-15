@@ -289,11 +289,11 @@ def safe_div(x, y):
 def format_code_brackets(str_list: list) -> str:
     return ", ".join([f"`{s}`" for s in str_list])
 
-def pluralize(num: int, s: str) -> str:
+def pluralize(num: int, word: str) -> str:
     if (num == 1):
-        return f"{num} {s}"
+        return f"{num} {word}"
     
-    return f"{num} {s}s"
+    return f"{num} {word}s"
 
 def get_uptime(uptime: datetime.datetime) -> str:
     delta = datetime.datetime.utcnow() - uptime

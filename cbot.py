@@ -48,8 +48,12 @@ class CBot(commands.Bot):
 
         self.ERROR_FILEPATH = f"{self.REAL_PATH}/error.log"
 
+        self.TEMP_DIR = "/tmp/cbot"
+        if (not os.path.exists(self.TEMP_DIR)):
+            os.makedirs(self.TEMP_DIR)
+        
         # check if cbot exited properly on last run
-        self.PID_FILEPATH = "/tmp/cbot.pid"
+        self.PID_FILEPATH = f"{self.TEMP_DIR}/cbot.pid"
 
         if (os.path.exists(self.PID_FILEPATH)):
             with open(self.PID_FILEPATH, "r") as f:
@@ -61,6 +65,10 @@ class CBot(commands.Bot):
             else:
                 print("CBot may have crashed on last run, see error log at", self.ERROR_FILEPATH)
                 os.unlink(self.PID_FILEPATH)
+
+        # cleanup temp dir
+        for f in glob.glob(self.TEMP_DIR + "/*"):
+            os.remove(f)
 
         with open(self.PID_FILEPATH, "w") as f:
             f.write(str(os.getpid()))
@@ -260,7 +268,7 @@ class CBot(commands.Bot):
     
     async def on_ready(self):
         if (not hasattr(self, "uptime")):
-            self.uptime = datetime.now()
+            self.uptime = datetime.utcnow()
 
         print("Logged in as {name}#{disc} [{uid}]".format(name=self.user.name, disc=self.user.discriminator, uid=self.user.id))
         
