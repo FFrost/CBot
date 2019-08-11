@@ -387,7 +387,7 @@ class CBot(commands.Bot):
             msg = f"{utils.get_cur_time()} {utils.format_member_name(member)} [{member.id}] left"
 
             if (randint(0, 5) == 0):
-                msg = f"{utils.get_cur_time()} :crab: {utils.format_member_name(member)} [{member.id}] is gone :crab:"
+                msg = f"{utils.get_cur_time()} \N{CRAB} {utils.format_member_name(member)} [{member.id}] is gone \N{CRAB}"
             
             await self.messaging.msg_admin_channel(msg, member.guild)
         

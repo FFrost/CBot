@@ -176,6 +176,8 @@ class Vote(commands.Cog):
                             await muted_dict["channel"].send("I don't have permissions to unmute")
                         except discord.HTTPException as e:
                             await muted_dict["channel"].send(f"HTTPException: `{e}`")
+                        except Exception as e:
+                            await muted_dict["channel"].send(f"An error occured unmuting {vote['target']}: ```{e}```")
 
                         del self.muted_members[member_id]
             except Exception as e:

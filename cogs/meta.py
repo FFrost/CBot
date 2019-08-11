@@ -263,7 +263,8 @@ Manage Messages **(2FA)**, Read Messages, Send Messages, Embed Links, Attach Fil
             'guild': ctx.guild,
             'message': ctx.message,
             '_': self._last_result,
-            "send": ctx.send
+            "send": ctx.send,
+            "say": ctx.send
         }
 
         env.update(globals())
