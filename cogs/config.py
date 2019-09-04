@@ -70,13 +70,14 @@ class Config(commands.Cog):
         # set value
         old_val = utils.nested_set(self.bot.CONFIG, key_list, literal_val)
 
-        # reload
-        ctx.invoke(self.reload)
-
         # save to disk
-        self.bot.save_config()
+        if (self.bot.save_config()):
+            await ctx.send(f"Set `{key}`: `{literal_val}` (old value: `{old_val}`)")
+        else:
+            await ctx.send(f"An error occured saving the config")
 
-        await ctx.send(f"Set `{key}`: `{literal_val}` (old value: `{old_val}`)")
+        # reload
+        await ctx.invoke(self.reload)
 
 def setup(bot):
     bot.add_cog(Config(bot))

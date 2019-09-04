@@ -182,6 +182,18 @@ class CBot(commands.Bot):
                 print("Failed to read token from file, please reenter it")
                 self.save_token()
 
+    def get_all_keys(self, d: dict, parent: str=""):
+        keys = {}
+
+        for k, v in d.items():
+            if (isinstance(v, dict) and k not in keys):
+                keys.update({k: {}})
+                keys.update(self.get_all_keys(v, parent=f"{k}."))
+
+            keys.update({f"{parent}{k}": v})
+
+        return keys
+
     # creates a config file if it doesn't exist,
     # updates it if needed,
     # and loads it
@@ -203,7 +215,10 @@ class CBot(commands.Bot):
 
             # check if the saved config is up to date (do the keys match?)
             # if they do, no need to update it
-            if (set(data.keys()) == set(disk_config.keys())):
+            disk_dicts = self.get_all_keys(disk_config)
+            default_dicts = self.get_all_keys(data)
+
+            if (set(default_dicts.keys()) == set(disk_dicts.keys())):
                 self.CONFIG = disk_config
                 print("Loaded config from file")
                 return
@@ -212,9 +227,18 @@ class CBot(commands.Bot):
             print("Updating config....")
 
             # update the new config with the old values if they exist
-            for key, value in disk_config.items():
-                if (key in data):
-                    data[key] = value
+            for k, v in disk_dicts.items():
+                if (k not in default_dicts.keys()):
+                    continue
+                
+                if ("." in k):
+                    try:
+                        utils.nested_set(data, k.split("."), v)
+                    except KeyError as e:
+                        print(e)
+                        continue
+                else:
+                    data[k] = v
         
         with open(self.CONFIG_PATH, "w") as f:
             yaml.dump(data, f, default_flow_style=False)
