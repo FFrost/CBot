@@ -23,6 +23,10 @@ def format_time(datetime_obj: datetime.datetime) -> str:
     # Jul 9, 2018 @ 4:43pm
     return datetime_obj.strftime("%b %-d, %Y @ %-I:%M%p")
 
+def format_current_time() -> str:
+    time = datetime.datetime.now()
+    return format_time(time)
+
 # format message to log
 # input: message, message to format to be output
 # output: formatted string of message content

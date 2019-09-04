@@ -52,7 +52,7 @@ DEFAULT_CONFIG = {
     # siege cog options
     "siege": {
         # how long to keep siege stats cached in seconds
-        "cache_time": 120,
+        "cache_time": 90,
 
         # email and password for uplay account, used to get ticket
         "email": "",
@@ -66,5 +66,10 @@ DEFAULT_CONFIG = {
     "admin": {
         # what channel should the bot send administrative log messages to, leave blank to disable
         "log_channel": "admin",
+    },
+
+    "log": {
+        "enabled": False,
+        "channel_name": "vclog"
     }
 }
