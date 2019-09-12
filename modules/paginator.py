@@ -10,7 +10,6 @@ class Paginator:
         self.ctx = ctx # context the paginator was invoked in
 
         self.index = 0
-        self.max_index = len(embeds)
 
         self.embeds = embeds
 
@@ -41,9 +40,11 @@ class Paginator:
 
         self.index += direction
 
+        max_index = len(self.embeds)
+
         if (self.index < 0):
-            self.index = self.max_index - 1
-        elif (self.index >= self.max_index):
+            self.index = max_index - 1
+        elif (self.index >= max_index):
             self.index = 0
 
         embed = self.embeds[self.index]

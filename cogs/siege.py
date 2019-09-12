@@ -114,26 +114,29 @@ class UbisoftAPI:
 
         self._ranks = [
             "Unranked",
+            "Copper V",
             "Copper IV",
             "Copper III",
             "Copper II",
             "Copper I",
+            "Bronze V",
             "Bronze IV",
             "Bronze III",
             "Bronze II",
             "Bronze I",
+            "Silver V",
             "Silver IV",
             "Silver III",
             "Silver II",
             "Silver I",
-            "Gold IV",
             "Gold III",
             "Gold II",
             "Gold I",
             "Platinum III",
             "Platinum II",
             "Platinum I",
-            "Diamond"
+            "Diamond",
+            "Champion"
         ]
 
         self._rankImages = [
@@ -333,7 +336,7 @@ class UbisoftAPI:
         return "Unranked"
 
     async def _loadOperatorData(self) -> Optional[dict]:
-        url = "https://game-rainbow6.ubi.com/assets/data/operators.bbbf29a090.json"
+        url = "https://game-rainbow6.ubi.com/assets/data/operators.a45bd7c1.json"
 
         async with self._session.get(url) as r:
             try:
@@ -450,6 +453,27 @@ class UbisoftAPI:
 
         return mostPlayedAttacker, mostPlayedDefender
 
+    async def getPastSeasonsData(self, profile: dict, region: str="ncsa") -> List[Dict]:
+        userID = profile["userId"]
+        platform = profile["platformType"]
+
+        seasons = []
+
+        for season in range(1, 100):
+            url = f"{self._getRequestUrl(platform)}/r6karma/players?board_id=pvp_ranked&region_id={region}&season_id={season}&profile_ids={userID}"
+            data = await self._get(url)
+
+            if ("errorCode" in data):
+                break
+
+            # if max_mmr is 0, they were not ranked that season, so we should ignore that data
+            if (data["players"][userID]["max_mmr"] == 0.0):
+                continue
+
+            seasons.append(data)
+
+        return seasons
+
 class Siege(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -483,148 +507,183 @@ class Siege(commands.Cog):
     def cog_unload(self):
         self.bot.loop.create_task(self.ubi._session.close())
         self.siege_think_task.cancel()
-    
-    def create_siege_embeds(self, user: discord.User, profile: dict, stats: dict, rankedData: dict, level: int, operatorData: dict) -> discord.Embed:
-        embeds = {}
 
-        for region in self.ubi._regions:
-            try:
-                region_name = self.ubi._regions.get(region)
-                regionalRankedData = rankedData[region]
+    def create_ranked_embed(self, user: discord.User, profile: dict, rankedData: dict, stats: dict, region_name: str, level: int) -> discord.Embed:
+        ranked_embed = discord.Embed(color=discord.Color.red())
+        ranked_embed.set_author(name=user.name, icon_url=user.avatar_url)
+        ranked_embed.title = profile["nameOnPlatform"]
+        ranked_embed.set_footer(text=f"{self.ubi._platforms[profile['platformType']]['name']} | Ranked stats | {region_name} | UserID: {profile['userId']}")
 
-                # RANKED
-                ranked_embed = discord.Embed(color=discord.Color.red())
-                ranked_embed.set_author(name=user.name, icon_url=user.avatar_url)
-                ranked_embed.title = profile["nameOnPlatform"]
-                ranked_embed.set_footer(text=f"{self.ubi._platforms[profile['platformType']]['name']} | Ranked stats | {region_name} | UserID: {profile['userId']}")
+        rank_num = rankedData.get("rank", 0)
 
-                rank_num = regionalRankedData.get("rank", 0)
-
-                if (0 < rank_num < len(self.ubi._rankImages)):
-                    thumb_url = self.ubi._rankImages[rank_num]
-                    ranked_embed.set_thumbnail(url=thumb_url) # TODO: discord doesn't embed .svg
-                
-                wl_ratio = utils.safe_div(stats.get('rankedpvp_matchwon:infinite', 0), stats.get('rankedpvp_matchlost:infinite', 0))
-
-                ranked_embed.add_field(name=":medal: Win/Loss Ratio", value=f"{wl_ratio:.2f}")
-                ranked_embed.add_field(name=":trophy: Wins", value=f"{stats.get('rankedpvp_matchwon:infinite', 0):,}")
-                ranked_embed.add_field(name=":second_place: Losses", value=f"{stats.get('rankedpvp_matchlost:infinite', 0):,}")
-
-                kd_ratio = utils.safe_div(stats.get('rankedpvp_kills:infinite', 0), stats.get('rankedpvp_death:infinite', 0))
-
-                ranked_embed.add_field(name=":skull_crossbones: K/D Ratio", value=f"{kd_ratio:.2f}")
-                ranked_embed.add_field(name=":gun: Kills", value=f"{stats.get('rankedpvp_kills:infinite', 0):,}")
-                ranked_embed.add_field(name=":skull: Deaths", value=f"{stats.get('rankedpvp_death:infinite', 0):,}")
-
-                highest_rank = regionalRankedData.get("max_rank", 0)
-
-                if (highest_rank > 0):
-                    ranked_embed.add_field(name="MMR", value=f"{int(regionalRankedData['mmr'])}")
-                    ranked_embed.add_field(name="Rank", value=f"{self.ubi.getRankName(rank_num)}")
-
-                    ranked_embed.add_field(name="\N{ZERO WIDTH SPACE}", value="\N{ZERO WIDTH SPACE}")
-
-                    ranked_embed.add_field(name="Highest MMR", value=f"{ceil(regionalRankedData['max_mmr'])}")
-                    ranked_embed.add_field(name="Highest Rank", value=f"{self.ubi.getRankName(highest_rank)}")
-
-                    ranked_embed.add_field(name="\N{ZERO WIDTH SPACE}", value="\N{ZERO WIDTH SPACE}")
-                else:
-                    ranked_embed.add_field(name="Rank", value="Unranked")
-                
-                ranked_embed.add_field(name=":military_medal: Level", value=f"{level:,}")
-                ranked_embed.add_field(name=":video_game: Matches Played", value=f"{stats.get('rankedpvp_matchplayed:infinite', 0):,}")
-                ranked_embed.add_field(name=":stopwatch: Playtime", value=f"{stats.get('rankedpvp_timeplayed:infinite', 0) / 3600:,.0f} hours")
-                
-                # CASUAL
-                casual_embed = discord.Embed(color=discord.Color.blue())
-                casual_embed.set_author(name=user.name, icon_url=user.avatar_url)
-                casual_embed.title = profile["nameOnPlatform"]
-                casual_embed.set_footer(text=f"{self.ubi._platforms[profile['platformType']]['name']} | Casual stats | {region_name} | UserID: {profile['userId']}")
-                wl_ratio = utils.safe_div(stats.get('casualpvp_matchwon:infinite', 0),
-                    (stats.get('casualpvp_matchlost:infinite', 1) + stats.get('casualpvp_matchwon:infinite', 0)))
-                
-                casual_embed.add_field(name=":medal: Win/Loss Ratio", value=f"{wl_ratio:.2%}")
-                casual_embed.add_field(name=":trophy: Wins", value=f"{stats.get('casualpvp_matchwon:infinite', 0):,}")
-                casual_embed.add_field(name=":second_place: Losses", value=f"{stats.get('casualpvp_matchlost:infinite', 0):,}")
-
-                kd_ratio = utils.safe_div(stats.get('casualpvp_kills:infinite', 0), stats.get('casualpvp_death:infinite', 0))
-
-                casual_embed.add_field(name=":skull_crossbones: K/D Ratio", value=f"{kd_ratio:.2f}")
-                casual_embed.add_field(name=":gun: Kills", value=f"{stats.get('casualpvp_kills:infinite', 0):,}")
-                casual_embed.add_field(name=":skull: Deaths", value=f"{stats.get('casualpvp_death:infinite', 0):,}")
-                casual_embed.add_field(name=":video_game: Matches Played", value=f"{stats.get('casualpvp_matchplayed:infinite', 0):,}")
-                casual_embed.add_field(name=":stopwatch: Playtime", value=f"{stats.get('casualpvp_timeplayed:infinite', 0) / 3600:,.0f} hours")
-                casual_embed.add_field(name="\N{ZERO WIDTH SPACE}", value="\N{ZERO WIDTH SPACE}")
-                
-                # OVERALL
-                overall_embed = discord.Embed(color=discord.Color.green())
-                overall_embed.set_author(name=user.name, icon_url=user.avatar_url)
-                overall_embed.title = profile["nameOnPlatform"]
-                overall_embed.set_footer(text=f"{self.ubi._platforms[profile['platformType']]['name']} | Overall stats | UserID: {profile['userId']}")
-                accuracy = utils.safe_div(stats.get('generalpvp_bullethit:infinite', 0), stats.get('generalpvp_bulletfired:infinite', 0))
-
-                overall_embed.add_field(name=":gun: Accuracy", value=f"{accuracy:.2%}")
-
-                headshot_ratio = utils.safe_div(stats.get('generalpvp_headshot:infinite', 0), stats.get('generalpvp_bulletfired:infinite', 0))
-
-                overall_embed.add_field(name=":skull_crossbones: Headshot %", value=f"{headshot_ratio:.2%}")
-                overall_embed.add_field(name="Penetration Kills", value=f"{stats.get('generalpvp_penetrationkills:infinite', 0):,}")
-                overall_embed.add_field(name=":skull: Suicides", value=f"{stats.get('generalpvp_suicide:infinite', 0):,}")
-                overall_embed.add_field(name=":syringe: Revives", value=f"{stats.get('generalpvp_revive:infinite', 0):,}")
-                overall_embed.add_field(name=":handshake: Assists", value=f"{stats.get('generalpvp_killassists:infinite', 0):,}")
-                overall_embed.add_field(name=":knife: Melee Kills", value=f"{stats.get('generalpvp_meleekills:infinite', 0):,}")
-                overall_embed.add_field(name=":military_medal: Level", value=f"{level:,}")
-                overall_embed.add_field(name=":video_game: Total Playtime", value=f"{stats.get('generalpvp_timeplayed:infinite', 0) // 3600:,.0f} hours")
-                
-                # OPERATOR
-                operator_embed = discord.Embed(color=discord.Color.light_grey())
-                operator_embed.set_author(name=user.name, icon_url=user.avatar_url)
-                operator_embed.title = profile["nameOnPlatform"]
-                operator_embed.set_footer(text=f"{self.ubi._platforms[profile['platformType']]['name']} | Operator stats | UserID: {profile['userId']}")
-                opData = self.ubi.sortOperatorData(operatorData)
-
-                mostPlayedAttacker, mostPlayedDefender = self.ubi.findAtkAndDefOperators(opData["timeplayed"])
-
-                if (not mostPlayedAttacker):
-                    mostPlayedAttacker = (["1:1"], 0)
-                
-                if (not mostPlayedDefender):
-                    mostPlayedDefender = (["1:1"], 0)
-
-                mostKills = utils.safe_list_get(opData.get("kills"), 0)
-                mostDeaths = utils.safe_list_get(opData.get("death"), 0)
-                mostHeadshots = utils.safe_list_get(opData.get("headshot"), 0)
-                mostMeleeKills = utils.safe_list_get(opData.get("meleekills"), 0)
-                mostRoundsWon = utils.safe_list_get(opData.get("roundwon"), 0)
-                mostRoundsLost = utils.safe_list_get(opData.get("roundlost"), 0)
-
-                operator_embed.add_field(name="Most Played Attacker", value=f"{self.ubi.getOperatorName(mostPlayedAttacker[0])} ({mostPlayedAttacker[1] / 3600:,.0f} hours)")
-                operator_embed.add_field(name="Most Played Defender", value=f"{self.ubi.getOperatorName(mostPlayedDefender[0])} ({mostPlayedDefender[1] / 3600:,.0f} hours)")
-                operator_embed.add_field(name="\N{ZERO WIDTH SPACE}", value="\N{ZERO WIDTH SPACE}")
-                
-                if (mostKills):
-                    operator_embed.add_field(name="Most Kills", value=f"{self.ubi.getOperatorName(mostKills[0])} ({mostKills[1]:,})")
-                
-                if (mostDeaths):
-                    operator_embed.add_field(name="Most Deaths", value=f"{self.ubi.getOperatorName(mostDeaths[0])} ({mostDeaths[1]:,})")
-                
-                if (mostHeadshots):
-                    operator_embed.add_field(name="Most Headshots", value=f"{self.ubi.getOperatorName(mostHeadshots[0])} ({mostHeadshots[1]:,})")
-                
-                if (mostMeleeKills):
-                    operator_embed.add_field(name="Most Melee Kills", value=f"{self.ubi.getOperatorName(mostMeleeKills[0])} ({mostMeleeKills[1]:,})")
-                
-                if (mostRoundsWon):
-                    operator_embed.add_field(name="Most Rounds Won", value=f"{self.ubi.getOperatorName(mostRoundsWon[0])} ({mostRoundsWon[1]:,})")
-                
-                if (mostRoundsLost):
-                    operator_embed.add_field(name="Most Rounds Lost", value=f"{self.ubi.getOperatorName(mostRoundsLost[0])} ({mostRoundsLost[1]:,})")
-            except KeyError:
-                pass
-
-            embeds[region] = [ranked_embed, casual_embed, overall_embed, operator_embed]
+        if (0 < rank_num < len(self.ubi._rankImages)):
+            thumb_url = self.ubi._rankImages[rank_num]
+            ranked_embed.set_thumbnail(url=thumb_url) # TODO: discord doesn't embed .svg
         
-        return embeds
+        wl_ratio = utils.safe_div(stats.get('rankedpvp_matchwon:infinite', 0), stats.get('rankedpvp_matchlost:infinite', 0))
+
+        ranked_embed.add_field(name=":medal: Win/Loss Ratio", value=f"{wl_ratio:.2f}")
+        ranked_embed.add_field(name=":trophy: Wins", value=f"{stats.get('rankedpvp_matchwon:infinite', 0):,}")
+        ranked_embed.add_field(name=":second_place: Losses", value=f"{stats.get('rankedpvp_matchlost:infinite', 0):,}")
+
+        kd_ratio = utils.safe_div(stats.get('rankedpvp_kills:infinite', 0), stats.get('rankedpvp_death:infinite', 0))
+
+        ranked_embed.add_field(name=":skull_crossbones: K/D Ratio", value=f"{kd_ratio:.2f}")
+        ranked_embed.add_field(name=":gun: Kills", value=f"{stats.get('rankedpvp_kills:infinite', 0):,}")
+        ranked_embed.add_field(name=":skull: Deaths", value=f"{stats.get('rankedpvp_death:infinite', 0):,}")
+
+        highest_rank = rankedData.get("max_rank", 0)
+
+        if (highest_rank > 0):
+            ranked_embed.add_field(name="MMR", value=f"{int(rankedData['mmr'])}")
+            ranked_embed.add_field(name="Rank", value=f"{self.ubi.getRankName(rank_num)}")
+
+            ranked_embed.add_field(name="\N{ZERO WIDTH SPACE}", value="\N{ZERO WIDTH SPACE}")
+
+            ranked_embed.add_field(name="Highest MMR", value=f"{ceil(rankedData['max_mmr'])}")
+            ranked_embed.add_field(name="Highest Rank", value=f"{self.ubi.getRankName(highest_rank)}")
+
+            ranked_embed.add_field(name="\N{ZERO WIDTH SPACE}", value="\N{ZERO WIDTH SPACE}")
+        else:
+            ranked_embed.add_field(name="Rank", value="Unranked")
+        
+        ranked_embed.add_field(name=":military_medal: Level", value=f"{level:,}")
+        ranked_embed.add_field(name=":video_game: Matches Played", value=f"{stats.get('rankedpvp_matchplayed:infinite', 0):,}")
+        ranked_embed.add_field(name=":stopwatch: Playtime", value=f"{stats.get('rankedpvp_timeplayed:infinite', 0) / 3600:,.0f} hours")
+
+        return ranked_embed
+
+    def create_casual_embed(self, user: discord.User, profile: dict, stats: dict, region_name: str) -> discord.Embed:
+        casual_embed = discord.Embed(color=discord.Color.blue())
+        casual_embed.set_author(name=user.name, icon_url=user.avatar_url)
+        casual_embed.title = profile["nameOnPlatform"]
+        casual_embed.set_footer(text=f"{self.ubi._platforms[profile['platformType']]['name']} | Casual stats | {region_name} | UserID: {profile['userId']}")
+        wl_ratio = utils.safe_div(stats.get('casualpvp_matchwon:infinite', 0),
+            (stats.get('casualpvp_matchlost:infinite', 1) + stats.get('casualpvp_matchwon:infinite', 0)))
+        
+        casual_embed.add_field(name=":medal: Win/Loss Ratio", value=f"{wl_ratio:.2%}")
+        casual_embed.add_field(name=":trophy: Wins", value=f"{stats.get('casualpvp_matchwon:infinite', 0):,}")
+        casual_embed.add_field(name=":second_place: Losses", value=f"{stats.get('casualpvp_matchlost:infinite', 0):,}")
+
+        kd_ratio = utils.safe_div(stats.get('casualpvp_kills:infinite', 0), stats.get('casualpvp_death:infinite', 0))
+
+        casual_embed.add_field(name=":skull_crossbones: K/D Ratio", value=f"{kd_ratio:.2f}")
+        casual_embed.add_field(name=":gun: Kills", value=f"{stats.get('casualpvp_kills:infinite', 0):,}")
+        casual_embed.add_field(name=":skull: Deaths", value=f"{stats.get('casualpvp_death:infinite', 0):,}")
+        casual_embed.add_field(name=":video_game: Matches Played", value=f"{stats.get('casualpvp_matchplayed:infinite', 0):,}")
+        casual_embed.add_field(name=":stopwatch: Playtime", value=f"{stats.get('casualpvp_timeplayed:infinite', 0) / 3600:,.0f} hours")
+        casual_embed.add_field(name="\N{ZERO WIDTH SPACE}", value="\N{ZERO WIDTH SPACE}")
+
+        return casual_embed
+
+    def create_overall_embed(self, user: discord.User, profile: dict, stats: dict, level: int) -> discord.Embed:
+        overall_embed = discord.Embed(color=discord.Color.green())
+        overall_embed.set_author(name=user.name, icon_url=user.avatar_url)
+        overall_embed.title = profile["nameOnPlatform"]
+        overall_embed.set_footer(text=f"{self.ubi._platforms[profile['platformType']]['name']} | Overall stats | UserID: {profile['userId']}")
+        accuracy = utils.safe_div(stats.get('generalpvp_bullethit:infinite', 0), stats.get('generalpvp_bulletfired:infinite', 0))
+
+        overall_embed.add_field(name=":gun: Accuracy", value=f"{accuracy:.2%}")
+
+        headshot_ratio = utils.safe_div(stats.get('generalpvp_headshot:infinite', 0), stats.get('generalpvp_bulletfired:infinite', 0))
+
+        overall_embed.add_field(name=":skull_crossbones: Headshot %", value=f"{headshot_ratio:.2%}")
+        overall_embed.add_field(name="Penetration Kills", value=f"{stats.get('generalpvp_penetrationkills:infinite', 0):,}")
+        overall_embed.add_field(name=":skull: Suicides", value=f"{stats.get('generalpvp_suicide:infinite', 0):,}")
+        overall_embed.add_field(name=":syringe: Revives", value=f"{stats.get('generalpvp_revive:infinite', 0):,}")
+        overall_embed.add_field(name=":handshake: Assists", value=f"{stats.get('generalpvp_killassists:infinite', 0):,}")
+        overall_embed.add_field(name=":knife: Melee Kills", value=f"{stats.get('generalpvp_meleekills:infinite', 0):,}")
+        overall_embed.add_field(name=":military_medal: Level", value=f"{level:,}")
+        overall_embed.add_field(name=":video_game: Total Playtime", value=f"{stats.get('generalpvp_timeplayed:infinite', 0) // 3600:,.0f} hours")
+
+        return overall_embed
+    
+    def create_operator_embed(self, user: discord.User, profile: dict, operatorData: dict):
+        operator_embed = discord.Embed(color=discord.Color.light_grey())
+        operator_embed.set_author(name=user.name, icon_url=user.avatar_url)
+        operator_embed.title = profile["nameOnPlatform"]
+        operator_embed.set_footer(text=f"{self.ubi._platforms[profile['platformType']]['name']} | Operator stats | UserID: {profile['userId']}")
+        opData = self.ubi.sortOperatorData(operatorData)
+
+        mostPlayedAttacker, mostPlayedDefender = self.ubi.findAtkAndDefOperators(opData["timeplayed"])
+
+        if (not mostPlayedAttacker):
+            mostPlayedAttacker = (["1:1"], 0)
+        
+        if (not mostPlayedDefender):
+            mostPlayedDefender = (["1:1"], 0)
+
+        mostKills = utils.safe_list_get(opData.get("kills"), 0)
+        mostDeaths = utils.safe_list_get(opData.get("death"), 0)
+        mostHeadshots = utils.safe_list_get(opData.get("headshot"), 0)
+        mostMeleeKills = utils.safe_list_get(opData.get("meleekills"), 0)
+        mostRoundsWon = utils.safe_list_get(opData.get("roundwon"), 0)
+        mostRoundsLost = utils.safe_list_get(opData.get("roundlost"), 0)
+
+        operator_embed.add_field(name="Most Played Attacker", value=f"{self.ubi.getOperatorName(mostPlayedAttacker[0])} ({mostPlayedAttacker[1] / 3600:,.0f} hours)")
+        operator_embed.add_field(name="Most Played Defender", value=f"{self.ubi.getOperatorName(mostPlayedDefender[0])} ({mostPlayedDefender[1] / 3600:,.0f} hours)")
+        operator_embed.add_field(name="\N{ZERO WIDTH SPACE}", value="\N{ZERO WIDTH SPACE}")
+        
+        if (mostKills):
+            operator_embed.add_field(name="Most Kills", value=f"{self.ubi.getOperatorName(mostKills[0])} ({mostKills[1]:,})")
+        
+        if (mostDeaths):
+            operator_embed.add_field(name="Most Deaths", value=f"{self.ubi.getOperatorName(mostDeaths[0])} ({mostDeaths[1]:,})")
+        
+        if (mostHeadshots):
+            operator_embed.add_field(name="Most Headshots", value=f"{self.ubi.getOperatorName(mostHeadshots[0])} ({mostHeadshots[1]:,})")
+        
+        if (mostMeleeKills):
+            operator_embed.add_field(name="Most Melee Kills", value=f"{self.ubi.getOperatorName(mostMeleeKills[0])} ({mostMeleeKills[1]:,})")
+        
+        if (mostRoundsWon):
+            operator_embed.add_field(name="Most Rounds Won", value=f"{self.ubi.getOperatorName(mostRoundsWon[0])} ({mostRoundsWon[1]:,})")
+        
+        if (mostRoundsLost):
+            operator_embed.add_field(name="Most Rounds Lost", value=f"{self.ubi.getOperatorName(mostRoundsLost[0])} ({mostRoundsLost[1]:,})")
+
+        return operator_embed
+
+    def create_past_seasons_embed(self, user: discord.User, profile: dict, past_seasons: List[Dict], region_name: str) -> discord.Embed:
+        embed = discord.Embed(colors=discord.Color.blurple())
+        embed.title = profile["nameOnPlatform"]
+        embed.set_footer(text=f"{self.ubi._platforms[profile['platformType']]['name']} | Past Seasons stats | {region_name} | UserID: {profile['userId']}")
+
+        total_mmr = 0
+        total_max_mmr = 0
+
+        total_kills, total_deaths = 0, 0
+        total_wins, total_losses = 0, 0
+
+        for season in past_seasons:
+            season = season["players"][profile["userId"]]
+
+            total_mmr += season["mmr"]
+            total_max_mmr += season["max_mmr"]
+
+            total_kills += season["kills"]
+            total_deaths += season["deaths"]
+
+            total_wins += season["wins"]
+            total_losses += season["losses"]
+
+        avg_mmr = total_mmr / len(past_seasons)
+        avg_max_mmr = total_max_mmr / len(past_seasons)
+
+        avg_kd = utils.safe_div(total_kills, total_deaths)
+        avg_wl = utils.safe_div(total_wins, total_losses)
+
+        embed.add_field(name="Average MMR", value=f"{avg_mmr:.0f}")
+        embed.add_field(name="Average Highest MMR", value=f"{avg_max_mmr:.0f}")
+
+        embed.add_field(name="Average Rank", value="TODO")
+
+        embed.add_field(name="Average K/D", value=f"{avg_kd:.2f}")
+        embed.add_field(name="Average Win/Loss", value=f"{avg_wl:.2f}")
+
+        embed.add_field(name="\N{ZERO WIDTH SPACE}", value="\N{ZERO WIDTH SPACE}")
+        
+        return embed
 
     @commands.command(description="finds Rainbow Six: Siege stats for a user",
                       brief="finds Rainbow Six: Siege stats for a user",
@@ -647,6 +706,7 @@ class Siege(commands.Cog):
                 rankedData = data["rankedData"]
                 statsData = data["statsData"]
                 operatorData = data["operatorData"]
+                pastSeasonsData = data["pastSeasonsData"]
 
                 self.SIEGE_CACHE[username]["time"] = time.time()
             else:
@@ -662,9 +722,11 @@ class Siege(commands.Cog):
                     level = await self.ubi.getLevel(profile)
 
                     rankedData = {}
+                    pastSeasonsData = {}
 
                     for region in self.ubi._regions:
                         rankedData[region] = await self.ubi.getRankData(profile, region)
+                        pastSeasonsData[region] = await self.ubi.getPastSeasonsData(profile, region)
 
                     statsData = await self.ubi.getStatsData(profile)
 
@@ -677,7 +739,24 @@ class Siege(commands.Cog):
                 await ctx.send(f"{ctx.author.mention} Failed to find stats for `{username}` on `{platform}`")
                 return
 
-            embeds = self.create_siege_embeds(ctx.message.author, profile, statsData, rankedData, level, operatorData)
+            embeds = {}
+
+            for region in self.ubi._regions:
+                region_name = self.ubi._regions.get(region)
+                regionalRankedData = rankedData[region]
+
+                ranked_embed = self.create_ranked_embed(ctx.author, profile, regionalRankedData, statsData, region_name, level)
+                casual_embed = self.create_casual_embed(ctx.author, profile, statsData, region_name)
+                overall_embed = self.create_overall_embed(ctx.author, profile, statsData, level)
+                operator_embed = self.create_operator_embed(ctx.author, profile, operatorData)
+
+                embeds[region] = [ranked_embed, casual_embed, overall_embed, operator_embed]
+
+                # ex. new account?
+                regionalPastSeasonsData = pastSeasonsData[region]
+                if (regionalPastSeasonsData):
+                    past_seasons_embed = self.create_past_seasons_embed(ctx.author, profile, regionalPastSeasonsData, region_name)
+                    embeds[region] += [past_seasons_embed]
 
             flags = {
                 "us": "\N{Regional Indicator Symbol Letter U}\N{Regional Indicator Symbol Letter S}",
@@ -706,7 +785,8 @@ class Siege(commands.Cog):
                     "level": level,
                     "rankedData": rankedData,
                     "statsData": statsData,
-                    "operatorData": operatorData
+                    "operatorData": operatorData,
+                    "pastSeasonsData": pastSeasonsData
                 },
                 "time": time.time()
             }
