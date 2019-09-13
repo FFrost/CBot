@@ -10,7 +10,7 @@ import base64
 import iso8601
 from typing import List, Optional, Tuple, Dict
 from datetime import datetime, timezone
-from math import ceil
+from math import ceil, floor, inf
 
 class UbisoftAPIError(Exception):
     pass
@@ -334,6 +334,47 @@ class UbisoftAPI:
             return self._ranks[rank]
 
         return "Unranked"
+
+    def mmrToRankName(self, mmr: int) -> str:
+        rank = 0
+
+        mmr_ranks = [
+            0,      # unranked
+            1200,   # copper V
+            1300,   # IV
+            1400,   # III
+            1500,   # II
+            1600,   # I
+            1700,   # bronze V
+            1800,   # IV
+            1900,   # III
+            2000,   # II
+            2100,   # I
+            2200,   # silver V
+            2300,   # IV
+            2400,   # III
+            2500,   # II
+            2600,   # I
+            2800,   # gold III
+            3000,   # II
+            3200,   # I
+            3600,   # plat III
+            4000,   # II
+            4400,   # I
+            5000,   # diamond
+            inf     # champion
+        ]
+
+        for i in range(1, len(mmr_ranks)):
+            prev = i - 1
+            lower = mmr_ranks[prev] # lower bound of rank
+            upper = mmr_ranks[i] # upper bound of rank
+
+            if (lower <= mmr < upper):
+                rank = prev
+                break
+
+        return self.getRankName(rank)
 
     async def _loadOperatorData(self) -> Optional[dict]:
         url = "https://game-rainbow6.ubi.com/assets/data/operators.a45bd7c1.json"
@@ -667,16 +708,18 @@ class Siege(commands.Cog):
             total_wins += season["wins"]
             total_losses += season["losses"]
 
-        avg_mmr = total_mmr / len(past_seasons)
-        avg_max_mmr = total_max_mmr / len(past_seasons)
+        avg_mmr = int(total_mmr / len(past_seasons))
+        avg_max_mmr = int(total_max_mmr / len(past_seasons))
 
         avg_kd = utils.safe_div(total_kills, total_deaths)
         avg_wl = utils.safe_div(total_wins, total_losses)
 
-        embed.add_field(name="Average MMR", value=f"{avg_mmr:.0f}")
-        embed.add_field(name="Average Highest MMR", value=f"{avg_max_mmr:.0f}")
+        embed.add_field(name="Average MMR", value=f"{avg_mmr}")
 
-        embed.add_field(name="Average Rank", value="TODO")
+        avg_rank_name = self.ubi.mmrToRankName(avg_mmr)
+        embed.add_field(name="Average Rank", value=f"{avg_rank_name}")
+
+        embed.add_field(name="Average Highest MMR", value=f"{avg_max_mmr}")
 
         embed.add_field(name="Average K/D", value=f"{avg_kd:.2f}")
         embed.add_field(name="Average Win/Loss", value=f"{avg_wl:.2f}")
