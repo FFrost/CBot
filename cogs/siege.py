@@ -231,7 +231,10 @@ class UbisoftAPI:
         if (relog):
             self._headers.update({"Authorization": self._initialAuth})
 
-        data = await self._post("https://uplayconnect.ubi.com/ubiservices/v2/profiles/sessions", self._headers, is_login=relog)
+        data = await self._post("https://public-ubiservices.ubi.com/v3/profiles/sessions", self._headers, is_login=relog)
+
+        if (not data):
+            raise LoginFailure("Failed to get data from Ubisoft services")
 
         if ("errorCode" in data):
             if (data["errorCode"] == 1100): # rate limited
@@ -377,7 +380,7 @@ class UbisoftAPI:
         return self.getRankName(rank)
 
     async def _loadOperatorData(self) -> Optional[dict]:
-        url = "https://game-rainbow6.ubi.com/assets/data/operators.a45bd7c1.json"
+        url = "https://game-rainbow6.ubi.com/assets/data/operators.47a7f0d2.json"
 
         async with self._session.get(url) as r:
             try:
