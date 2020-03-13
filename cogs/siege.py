@@ -380,7 +380,7 @@ class UbisoftAPI:
         return self.getRankName(rank)
 
     async def _loadOperatorData(self) -> Optional[dict]:
-        url = "https://game-rainbow6.ubi.com/assets/data/operators.47a7f0d2.json"
+        url = "https://game-rainbow6.ubi.com/assets/data/operators.caa95d86.json"
 
         async with self._session.get(url) as r:
             try:
@@ -497,13 +497,35 @@ class UbisoftAPI:
 
         return mostPlayedAttacker, mostPlayedDefender
 
+    async def _loadSeasonsData(self):
+        url = "https://game-rainbow6.ubi.com/assets/data/seasons.c77d84ac.json"
+
+        async with self._session.get(url) as r:
+            try:
+                data = await r.json()
+            except Exception:
+                return None
+
+        if (not data or not isinstance(data, dict)):
+            return None
+
+        self._seasonsData = data
+        return data
+
     async def getPastSeasonsData(self, profile: dict, region: str="ncsa") -> List[Dict]:
+        if (not hasattr(self, "_seasonsData") or self._seasonsData is None):
+            await self._loadSeasonsData()
+
+        if (self._seasonsData is None):
+            return None
+
         userID = profile["userId"]
         platform = profile["platformType"]
 
         seasons = []
 
-        for season in range(1, 100):
+        for season in self._seasonsData["seasons"]:
+            season_name = self._seasonsData["seasons"][season]["name"]
             url = f"{self._getRequestUrl(platform)}/r6karma/players?board_id=pvp_ranked&region_id={region}&season_id={season}&profile_ids={userID}"
             data = await self._get(url)
 
@@ -514,6 +536,7 @@ class UbisoftAPI:
             if (data["players"][userID]["max_mmr"] == 0.0):
                 continue
 
+            data["season_name"] = season_name
             seasons.append(data)
 
         return seasons
