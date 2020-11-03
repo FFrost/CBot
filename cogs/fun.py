@@ -32,6 +32,8 @@ class Fun(commands.Cog):
         
         self.mention_regex = re.compile(r"(<@[0-9]{18}>)")
 
+        self.rolls = {}
+
     @commands.command(description="random number generator, supports hexadecimal and floats",
                       brief="random number generator, supports hex/floats",
                       name="random",
@@ -305,6 +307,69 @@ class Fun(commands.Cog):
             languages.append(source_lang_code)
 
             await ctx.send(f"`{times} translations: {' -> '.join([LANGUAGES[langcode].capitalize() for langcode in languages])}`\n{text}")
+
+    @commands.command(description="",
+                      brief="")
+    async def roll(self, ctx, max_roll: int=None):
+        if (not max_roll):
+            if (not ctx.channel.id in self.rolls):
+                await ctx.send(f"{ctx.author.mention} A maximum is required for the first roll")
+                return
+            
+            max_roll = self.rolls[ctx.channel.id]
+        elif (max_roll <= 1):
+            await ctx.send(f"{ctx.author.mention} Max roll must be greater than 1")
+            return
+
+        r = randint(1, max_roll)
+
+        if (r == 1):
+            await ctx.send(f"{ctx.author.mention} rolled a 1 and won!")
+
+            if (ctx.channel.id in self.rolls):
+                del self.rolls[ctx.channel.id]
+                
+            return
+
+        self.rolls[ctx.channel.id] = r
+        await ctx.send(f"{ctx.author.mention} rolled a {r}")
+
+    @commands.command(description="lists translations for a word in different languages",
+                      brief="lists translations for a word in different languages",
+                      aliases=["tl"])
+    async def translation_list(self, ctx, word: str):
+        await ctx.trigger_typing()
+        #async with ctx.channel.typing():
+        if True:
+            # remove discord mentions
+            word = self.mention_regex.sub("", word)
+            ret = {}
+
+            for lang_code in LANGUAGES.keys():
+                try:
+                    result = self.bot.translator.translate(word, dest=lang_code)
+                    if (not result or not result.text):
+                        continue
+
+                    ret[lang_code] = result.text
+                except Exception as e:
+                    print(e)
+                    continue
+
+            if (not ret):
+                await ctx.send("Failed to get translations, try again later")
+                return
+
+            s = "```\n"
+            for code, translated_text in ret.items():
+                s += f"{LANGUAGES[code]}: {translated_text}\n"
+            s += "```"
+
+            if (len(s) < 2000):
+                await ctx.send(s)
+            else:
+                for i in range(0, len(s) // 2000 + 1):
+                    await ctx.send(s[i * 2000 : (i + 1) * 2000])
 
 def setup(bot):
     bot.add_cog(Fun(bot))
