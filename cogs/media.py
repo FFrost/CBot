@@ -9,14 +9,13 @@ from modules import utils
 
 import asyncio
 import itertools
+import re
+import sys
+import traceback
 from functools import partial
 from async_timeout import timeout
 from youtube_dl import YoutubeDL
 from youtube_dl import DownloadError
-
-# TODO: necessary?
-import sys
-import traceback
 
 ytdlopts = {
     "no_color": True,
@@ -135,7 +134,12 @@ class MusicPlayer:
             if (not self._guild.voice_client):
                 continue
 
-            self._guild.voice_client.play(source, after=lambda _: self.bot.loop.call_soon_threadsafe(self.next.set))
+            try:
+                self._guild.voice_client.play(source, after=lambda _: self.bot.loop.call_soon_threadsafe(self.next.set))
+            except discord.errors.DiscordException as e: # TEST
+                print(e)
+                await self._channel.send("An error occured playing the song")
+                self.destroy(self._guild)
 
             data = source.data
 
@@ -156,10 +160,13 @@ class MusicPlayer:
         """Disconnect and cleanup the player."""
         return self.bot.loop.create_task(self._cog.cleanup(guild))
 
-class Music(commands.Cog):
+class Media(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.players = {}
+
+        self.reddit_regex = re.compile(r"((https?:\/\/)?(www.)?)?reddit.com\/r\/\w+\/comments\/([0-9A-Za-z]+)")
+        self.reddit_shortlink_regex = re.compile(r"((https?:\/\/)?(www.)?)?redd.it\/([0-9A-Za-z]+)")
 
     async def cleanup(self, guild):
         try:
@@ -178,7 +185,6 @@ class Music(commands.Cog):
             raise commands.NoPrivateMessage
         return True
 
-    # TODO: necessary?
     async def __error(self, ctx, error):
         """A local error handler for all errors arising from commands in this cog."""
         if isinstance(error, commands.NoPrivateMessage):
@@ -189,6 +195,8 @@ class Music(commands.Cog):
         elif isinstance(error, InvalidVoiceChannel):
             await ctx.send('Error connecting to Voice Channel. '
                            'Please make sure you are in a valid channel or provide me with one')
+        elif (isinstance(error, DownloadError)):
+            await ctx.send("An error occured playing the song")
 
         print('Ignoring exception in command {}:'.format(ctx.command), file=sys.stderr)
         traceback.print_exception(type(error), error, error.__traceback__, file=sys.stderr)
@@ -228,27 +236,34 @@ class Music(commands.Cog):
                       "https://rg3.github.io/youtube-dl/supportedsites.html",
                       brief="plays a video over voice")
     async def play(self, ctx, *, query: str = ""):
-        async with ctx.channel.typing():
-            if (not query):
-                query = await self.bot.bot_utils.find_last_youtube_embed(ctx.message)
-                
-                if (not query):
-                    await ctx.channel.send(f"{ctx.author.mention} No YouTube video found")
-                    return
+        #async with ctx.channel.typing():
+        await ctx.trigger_typing()
+        
+        if (not query):
+            query = await self.bot.bot_utils.find_last_youtube_embed(ctx.message)
             
-            vc = ctx.voice_client
+            if (not query):
+                await ctx.channel.send(f"{ctx.author.mention} No YouTube video found")
+                return
+        
+        vc = ctx.voice_client
 
-            if (not vc):
-                await self._connect(ctx)
+        if (not vc):
+            await self._connect(ctx)
 
-            player = self.get_player(ctx)
+        player = self.get_player(ctx)
 
+        try:
             source = await YTDLSource.create_source(ctx, query, loop=self.bot.loop)
+        except Exception as e:
+            error = utils.extract_yt_error(e)
+            await ctx.send(f"{ctx.author.mention} Failed to find `{query}`: `{error}`")
+            return
 
-            if (not player.queue.empty() or (ctx.voice_client is not None and ctx.voice_client.is_playing())):
-                await ctx.send(f"{ctx.author.mention} Queued **{source['data']['title']}**")
+        if (not player.queue.empty() or (ctx.voice_client is not None and ctx.voice_client.is_playing())):
+            await ctx.send(f"{ctx.author.mention} Queued **{source['data']['title']}**")
 
-            await player.queue.put(source)
+        await player.queue.put(source)
     
     @commands.command(description="skips the currently playing song and plays the next song in queue",
                       brief="skips the currently playing song and plays the next song in queue")
@@ -329,5 +344,31 @@ class Music(commands.Cog):
         embed = utils.create_youtube_embed(info, ctx.author)
         await ctx.send(embed=embed)
 
+    @commands.command(description="embeds videos from a reddit post link",
+                      brief="embeds videos from a reddit post link",
+                      aliases=["rd", "red"])
+    async def redditdownload(self, ctx, *, post: str):
+        await ctx.trigger_typing()
+
+        reddit_search = self.reddit_regex.search(post)
+        reddit_shortlink_search = self.reddit_shortlink_regex.search(post)
+
+        if (reddit_search):
+            post_id = reddit_search.groups()[-1]
+        elif (reddit_shortlink_search):
+            post_id = reddit_shortlink_search.groups()[-1]
+        else:
+            await ctx.send(f"{ctx.author.mention} `{post}` is not a valid Reddit link")
+            return
+
+        url = f"https://reddit.com/{post_id}"
+
+        try:
+            # download
+            pass
+        except Exception as e:
+            print(e)
+            return
+
 def setup(bot):
-    bot.add_cog(Music(bot))
+    bot.add_cog(Media(bot))
