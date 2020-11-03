@@ -519,6 +519,9 @@ class UbisoftAPI:
         if (self._seasonsData is None):
             return None
 
+        if (not "seasons" in self._seasonsData):
+            return None
+
         userID = profile["userId"]
         platform = profile["platformType"]
 
@@ -529,10 +532,16 @@ class UbisoftAPI:
             url = f"{self._getRequestUrl(platform)}/r6karma/players?board_id=pvp_ranked&region_id={region}&season_id={season}&profile_ids={userID}"
             data = await self._get(url)
 
+            if (not data):
+                continue
+
             if ("errorCode" in data):
                 break
 
             # if max_mmr is 0, they were not ranked that season, so we should ignore that data
+            if (not "players" in data or not userID in data["players"] or not "max_mmr" in data["players"][userID]):
+                continue
+
             if (data["players"][userID]["max_mmr"] == 0.0):
                 continue
 

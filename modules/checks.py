@@ -15,7 +15,7 @@ def is_in_voice_channel(ctx: commands.Context) -> bool:
     if (isinstance(ctx.channel, discord.abc.PrivateChannel)):
         return False
     
-    if (ctx.author.voice.channel is None):
+    if (not ctx.author.voice or ctx.author.voice.channel is None):
         raise NoVoiceChannel()
     
     return True

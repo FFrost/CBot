@@ -26,6 +26,10 @@ class Messages(commands.Cog):
         if (message.author.bot):
             return
 
+        # check if we have perms for the channel
+        if (not isinstance(message.channel, discord.channel.DMChannel) and not message.channel.permissions_for(message.channel.guild.me).send_messages):
+            return
+
         # cooldown
         author_id = message.author.id
 

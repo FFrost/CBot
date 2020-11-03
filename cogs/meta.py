@@ -347,10 +347,9 @@ Manage Messages **(2FA)**, Read Messages, Send Messages, Embed Links, Attach Fil
                       aliases=["cmd_del", "cd"])
     async def cmd_delete(self, ctx, command: str):
         command_obj = None
-
-        for com in self.bot.commands:
-            if (com.name == command):
-                command_obj = com
+        for cmd in self.bot.commands:
+            if (cmd.name == command):
+                command_obj = cmd
                 break
 
         if (not command_obj):
@@ -363,6 +362,24 @@ Manage Messages **(2FA)**, Read Messages, Send Messages, Embed Links, Attach Fil
             pass
         
         await command_obj.invoke(ctx)
+
+    @commands.command(description="repeat a command",
+                      brief="repeat a command",
+                      aliases=["rep"])
+    @commands.check(checks.is_owner)
+    # TODO: doesn't work for multiple arg commands ("!rep 5 cmd say hi" gives
+    # one "hi" and four "Invalid command"s (error msg is from cmd group, not discord.py))
+    async def repeat(self, ctx, times: int, command: str):
+        for command_obj in self.bot.commands:
+            if (command_obj.name == command):
+                break
+
+        if (not command_obj):
+            await ctx.send(f"Command `{command}` not found")
+            return
+        
+        for _ in range(times):
+            await command_obj.invoke(ctx)
 
 def setup(bot):
     bot.add_cog(Meta(bot))

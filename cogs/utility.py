@@ -42,8 +42,8 @@ class Utility(commands.Cog):
         embed.add_field(name="User", value="{}#{}".format(user.name, user.discriminator))
         embed.add_field(name="ID", value=user.id)
 
-        if (is_member and member.game):
-            embed.add_field(name="Playing", value=member.game)
+        if (is_member and member.activity):
+            embed.add_field(name="Playing", value=member.activity)
 
         created_at = datetime.strptime(str(user.created_at), "%Y-%m-%d %H:%M:%S.%f")
 
@@ -234,7 +234,7 @@ class Utility(commands.Cog):
         
     @commands.command(description="get info about a server",
                  brief="get info about a server",
-                 aliases=["sinfo"])
+                 aliases=["sinfo", "server"])
     @commands.cooldown(1, 5, commands.BucketType.guild)
     async def serverinfo(self, ctx, *, search: str = ""):
         embed = discord.Embed(color=discord.Color.dark_blue())
