@@ -3,11 +3,10 @@
 [<img src="https://img.shields.io/badge/discord-py-blue.svg">](https://github.com/Rapptz/discord.py)
 
 Work-in-progress Discord bot. Mainly a learning experience. Currently only Linux is supported.
-For general questions, feel free to contact me on Discord: Frost#0261
 
 ## Requirements
 
-* Python 3.6
+* Python 3.6+
 * [discord.py](https://github.com/Rapptz/discord.py)
 * All the modules defined in requirements.txt: `pip install -r requirements.txt`
 * [FFmpeg](https://www.ffmpeg.org)

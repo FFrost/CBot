@@ -28,7 +28,8 @@ handler.setFormatter(logging.Formatter("%(asctime)s:%(levelname)s:%(name)s: %(me
 class CBot(commands.Bot):
     def __init__(self):
         super().__init__(command_prefix="!",
-                         description="CBot rewrite") # TODO: ownerid here, help formatter that DMs help message
+                         description="CBot rewrite",
+                         intents=discord.Intents.all()) # TODO: ownerid here, help formatter that DMs help message
 
         self.source_url = "https://github.com/FFrost/CBot"
         

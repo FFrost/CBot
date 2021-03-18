@@ -294,5 +294,21 @@ class Utility(commands.Cog):
         url = f"http://www.discordapp.com/channels/{ctx.guild.id}/{ctx.author.voice.channel.id}"
         await ctx.send(url)
 
+    @commands.command(aliases=["h2d", "x2d"])
+    async def hex2dec(self, ctx, num: str):
+        try:
+            dec = int(num, 16)
+            await ctx.send(f"{ctx.author.mention} `{num}` in decimal is: `{dec}`")
+        except Exception:
+            await ctx.send(f"{ctx.author.mention} Invalid hexadecimal number")
+
+    @commands.command(aliases=["d2h", "d2x"])
+    async def dec2hex(self, ctx, num: int):
+        try:
+            hex_num = hex(num)
+            await ctx.send(f"{ctx.author.mention} `{num}` in hexadecimal is: `{hex_num}`")
+        except Exception:
+            await ctx.send(f"{ctx.author.mention} Invalid decimal number")
+
 def setup(bot):
     bot.add_cog(Utility(bot))
