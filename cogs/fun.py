@@ -6,6 +6,7 @@ from modules import utils, checks
 import re
 import random
 import aiohttp
+import asyncio
 from random import randint, uniform
 from lxml import html
 from urllib.parse import quote
@@ -18,17 +19,20 @@ class Fun(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-        self.magic8ball_choices = ["It is certain", "It is decidedly so",
-                                   "Without a doubt", "Yes definitely",
-                                   "You may rely on it", "As I see it, yes",
-                                   "Most likely", "Outlook good", "Yep",
-                                   "Signs point to yes", "Reply hazy try again",
-                                   "Ask again later", "Better not tell you now",
-                                   "Cannot predict now", "Concentrate and ask again",
-                                   "Don't count on it", "My reply is no",
-                                   "My sources say no", "Outlook not so good",
-                                   "Very doubtful"
-                                   ]
+        self.magic8ball_choices = [["It is certain", "yes"], ["It is decidedly so", "yes"],
+                                   ["Without a doubt", "yes"], ["Yes definitely", "yes"],
+                                   ["You may rely on it", "yes"], ["As I see it, yes", "yes"],
+                                   ["Most likely", "yes"], ["Outlook good", "yes"], ["Yep", "yes"],
+                                   ["Signs point to yes", "yes"],
+                                   
+                                   ["Reply hazy try again", "maybe"],
+                                   ["Ask again later", "maybe"], ["Better not tell you now", "maybe"],
+                                   ["Cannot predict now", "maybe"], ["Concentrate and ask again", "maybe"],
+
+                                   ["Don't count on it", "no"], ["My reply is no", "no"],
+                                   ["My sources say no", "no"], ["Outlook not so good", "no"],
+                                   ["Very doubtful", "no"],
+        ]
         
         self.mention_regex = re.compile(r"(<@[0-9]{18}>)")
 
@@ -157,7 +161,23 @@ class Fun(commands.Cog):
     @commands.cooldown(2, 5, commands.BucketType.user)
     async def magic8ball(self, ctx):
         choice = random.choice(self.magic8ball_choices)
-        await ctx.send(f"{ctx.author.mention} {choice}")
+        msg = await ctx.send(f"{ctx.author.mention} {choice[0]}")
+
+        if (choice[1] == "maybe"):
+            emoji = "\N{Clockwise Rightwards and Leftwards Open Circle Arrows}"
+            await msg.add_reaction(emoji)
+
+            def check(reaction, user):
+                return (user == ctx.author and str(reaction.emoji) == emoji)
+
+            try:
+                await self.bot.wait_for("reaction_add", timeout=60.0, check=check)
+                choice = random.choice([s for s in self.magic8ball_choices if s[1] != "maybe"])
+                await msg.edit(content=f"{ctx.author.mention} {choice[0]}")
+            except asyncio.TimeoutError:
+                pass
+            finally:
+                await msg.clear_reaction(emoji)
 
     @commands.command(description="annoys someone (owner only)",
                     brief="annoys someone (owner only)",
